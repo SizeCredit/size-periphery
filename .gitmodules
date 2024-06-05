@@ -4,3 +4,4 @@
 [submodule "lib/size-solidity"]
 	path = lib/size-solidity
 	url = https://github.com/SizeCredit/size-solidity
+	branch = main

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.23;
 
-import {ISize} from "@src/core/interfaces/ISize.sol";
+import {ISize} from "@size/src/core/interfaces/ISize.sol";
 
 import {FlashLoanReceiverBase} from "@aave/flashloan/base/FlashLoanReceiverBase.sol";
 import {IPool} from "@aave/interfaces/IPool.sol";
@@ -11,14 +11,14 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {Errors} from "@src/core/libraries/Errors.sol";
-import {LiquidateParams} from "@src/core/libraries/fixed/actions/Liquidate.sol";
-import {LiquidateWithReplacementParams} from "@src/core/libraries/fixed/actions/LiquidateWithReplacement.sol";
-import {DepositParams} from "@src/core/libraries/general/actions/Deposit.sol";
-import {WithdrawParams} from "@src/core/libraries/general/actions/Withdraw.sol";
-import {DexSwap, SwapParams} from "@src/periphery/DexSwap.sol";
+import {Errors} from "@size/src/core/libraries/Errors.sol";
+import {LiquidateParams} from "@size/src/core/libraries/fixed/actions/Liquidate.sol";
+import {LiquidateWithReplacementParams} from "@size/src/core/libraries/fixed/actions/LiquidateWithReplacement.sol";
+import {DepositParams} from "@size/src/core/libraries/general/actions/Deposit.sol";
+import {WithdrawParams} from "@size/src/core/libraries/general/actions/Withdraw.sol";
+import {DexSwap, SwapParams} from "src/DexSwap.sol";
 
-import {PeripheryErrors} from "@src/periphery/libraries/PeripheryErrors.sol";
+import {PeripheryErrors} from "src/libraries/PeripheryErrors.sol";
 
 struct ReplacementParams {
     uint256 minAPR;

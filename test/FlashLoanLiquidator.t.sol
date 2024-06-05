@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.23;
 
-import {SwapMethod} from "@src/periphery/DexSwap.sol";
-import {FlashLoanLiquidator, ReplacementParams, SwapParams} from "@src/periphery/FlashLoanLiquidation.sol";
-import {Mock1InchAggregator} from "@test/mocks/Mock1InchAggregator.sol";
+import {SwapMethod} from "src/DexSwap.sol";
+import {FlashLoanLiquidator, ReplacementParams, SwapParams} from "src/FlashLoanLiquidation.sol";
+import {Mock1InchAggregator} from "test/mocks/Mock1InchAggregator.sol";
 import {MockAavePool} from "@test/mocks/MockAavePool.sol";
 
-import {BaseTest} from "@test/BaseTest.sol";
-import {Vars} from "@test/BaseTestGeneral.sol";
+import {BaseTest} from "@size/test/BaseTest.sol";
+import {Vars} from "@size/test/BaseTestGeneral.sol";
 
-import {DebtPosition} from "@src/core/libraries/fixed/LoanLibrary.sol";
-import {YieldCurveHelper} from "@test/helpers/libraries/YieldCurveHelper.sol";
+import {DebtPosition} from "@size/src/core/libraries/fixed/LoanLibrary.sol";
+import {YieldCurveHelper} from "@size/test/helpers/libraries/YieldCurveHelper.sol";
 
 contract FlashLoanLiquidationTest is BaseTest {
     MockAavePool public mockAavePool;

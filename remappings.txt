@@ -1,0 +1,11 @@
+@openzeppelin/contracts=lib/size-solidity/lib/openzeppelin-contracts/contracts
+@openzeppelin/contracts-upgradeable=lib/size-solidity/lib/openzeppelin-contracts-upgradeable/contracts
+@chainlink=lib/size-solidity/lib/chainlink
+@solady=lib/size-solidity/lib/solady/src
+@chimera=lib/size-solidity/lib/chimera/src
+@crytic/properties=lib/size-solidity/lib/properties
+@aave=lib/size-solidity/lib/aave-v3-core/contracts
+@size=lib/size-solidity/
+@src=lib/size-solidity/src
+@script=lib/size-solidity/script
+@test=lib/size-solidity/test

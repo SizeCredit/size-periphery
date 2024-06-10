@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.23;
 
-import "@size/src/core/Size.sol";
+import "@size/src/Size.sol";
 
 import {Script} from "forge-std/Script.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {console2 as console} from "forge-std/console2.sol";
-import {UserView} from "@size/src/core/SizeViewData.sol";
+import {UserView} from "@size/src/SizeViewData.sol";
 
 
 contract DepositUSDCScript is Script {

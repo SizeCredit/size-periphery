@@ -3,9 +3,9 @@ pragma solidity 0.8.23;
 
 import "forge-std/Script.sol";
 
-import "@size/src/core/Size.sol";
+import "@size/src/Size.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {UserView} from "@size/src/core/SizeViewData.sol";
+import {UserView} from "@size/src/SizeViewData.sol";
 
 interface IWETH {
     function deposit(uint amt) external payable;
@@ -23,7 +23,7 @@ contract DepositWETHScript is Script {
 
         Size size = Size(payable(sizeContractAddress));
         IERC20 weth = IERC20(wethAddress);
-        uint256 amount = 0.01e18;  // 0.01 WETH
+        uint256 amount = 0.02e18;  // 0.02 WETH
 
         console.log("Lender Address:", lender);
         console.log("Borrower Address:", borrower);

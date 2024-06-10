@@ -1,0 +1,32 @@
+{
+  "transactions": [
+    {
+      "hash": "0xbb7e6caff1fbd06b353dd4110158fa5fee4c766f3eca557f57a7d9a62b98d2ea",
+      "transactionType": "CALL",
+      "contractName": null,
+      "contractAddress": "0x2345988ec6c0196821177b90f5e919f18f5324f3",
+      "function": "buyCreditMarket((address,uint256,uint256,uint256,uint256,uint256,bool))",
+      "arguments": [
+        "(0x1AE60A4910D4C9D09570e36F0E587888eA7cCFB7, 115792089237316195423570985008687907853269984665640564039457584007913129639935, 50000000, 172800, 1717994724, 150000000000000000, false)"
+      ],
+      "transaction": {
+        "from": "0x5b0ced6f9302676f2077a30dc990b19887add89a",
+        "to": "0x2345988ec6c0196821177b90f5e919f18f5324f3",
+        "gas": "0x8ddc3",
+        "value": "0x0",
+        "input": "0x19a7359b0000000000000000000000001ae60a4910d4c9d09570e36f0e587888ea7ccfb7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0000000000000000000000000000000000000000000000000000000002faf080000000000000000000000000000000000000000000000000000000000002a30000000000000000000000000000000000000000000000000000000000666684e40000000000000000000000000000000000000000000000000214e8348c4f00000000000000000000000000000000000000000000000000000000000000000000",
+        "nonce": "0x2",
+        "chainId": "0xaa36a7"
+      },
+      "additionalContracts": [],
+      "isFixedGasLimit": false
+    }
+  ],
+  "receipts": [],
+  "libraries": [],
+  "pending": [],
+  "returns": {},
+  "timestamp": 1717994751,
+  "chain": 11155111,
+  "commit": "e701b76"
+}

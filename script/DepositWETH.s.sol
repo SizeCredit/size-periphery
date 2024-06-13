@@ -23,7 +23,7 @@ contract DepositWETHScript is Script {
 
         Size size = Size(payable(sizeContractAddress));
         IERC20 weth = IERC20(wethAddress);
-        uint256 amount = 0.02e18;  // 0.02 WETH
+        uint256 amount = 0.5e18;  // 0.5 WETH
 
         console.log("Lender Address:", lender);
         console.log("Borrower Address:", borrower);

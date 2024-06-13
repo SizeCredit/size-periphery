@@ -6,10 +6,9 @@ import {FlashLoanLiquidator, ReplacementParams, SwapParams} from "src/FlashLoanL
 import {Mock1InchAggregator} from "test/mocks/Mock1InchAggregator.sol";
 import {MockAavePool} from "@test/mocks/MockAavePool.sol";
 
-import {BaseTest} from "@size/test/BaseTest.sol";
-import {Vars} from "@size/test/BaseTestGeneral.sol";
+import {BaseTest, Vars} from "@size/test/BaseTest.sol";
 
-import {DebtPosition} from "@size/src/core/libraries/fixed/LoanLibrary.sol";
+import {DebtPosition} from "@size/src/libraries/LoanLibrary.sol";
 import {YieldCurveHelper} from "@size/test/helpers/libraries/YieldCurveHelper.sol";
 
 contract FlashLoanLiquidationTest is BaseTest {

@@ -17,7 +17,7 @@ contract BuyCreditMarketScript is Script, Logger {
         address sizeContractAddress = vm.envAddress("SIZE_CONTRACT_ADDRESS");
         Size size = Size(payable(sizeContractAddress));
 
-        uint256 tenor = 2 days;
+        uint256 tenor = 2 hours;
 
         address lender = vm.envAddress("LENDER");
         address borrower = vm.envAddress("BORROWER");

@@ -18,7 +18,7 @@ contract SellCreditLimitScript is Script, Logger {
         Size size = Size(payable(sizeContractAddress));
 
         uint256[] memory tenors = new uint256[](2);
-        tenors[0] = 1 days;
+        tenors[0] = 1 hours;
         tenors[1] = 3 days;
 
         int256[] memory aprs = new int256[](2);

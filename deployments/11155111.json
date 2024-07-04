@@ -1,6 +1,6 @@
 {
   "deployments": {
-    "FlashLoanLiquidator": "0x8B841775e6Ea4Ef749cEd6DB18F28587c35F21C5",
+    "FlashLoanLiquidator": "0x34A1D3fff3958843C43aD80F30b94c510645C316",
     "addressProvider": "0x012bAC54348C0E635dCAc9D5FB99f06F24136C9A",
     "aggregator1inch": "0x425141165d3DE9FEC831896C016617a52363b687",
     "borrowToken": "0x94a9D9AC8a22534E3FaCa9F4e7F2E2cf85d5E4C8",

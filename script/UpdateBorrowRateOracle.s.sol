@@ -11,7 +11,7 @@ contract UpdateBorrowRateOracleScript is Script {
 
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         address sizeContractAddress = vm.envAddress("SIZE_CONTRACT_ADDRESS");
-        uint128 newBorrowRate = 60000000000000000; // borrow rate
+        uint128 newBorrowRate = 5000000000000000; // borrow rate
 
         console.log("Size Contract Address:", sizeContractAddress);
         console.log("New Borrow Rate (scaled for 18 decimals):", newBorrowRate);

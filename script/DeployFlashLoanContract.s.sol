@@ -1,4 +1,8 @@
 // SPDX-License-Identifier: MIT
+
+// usage:
+// forge script script/DeployFlashLoanContract.s.sol:DeployFlashLoanLiquidator --rpc-url sepolia --broadcast --sender [sender] --private-key [private-key]
+
 pragma solidity ^0.8.0;
 
 import "forge-std/Script.sol";

@@ -109,7 +109,7 @@ contract FlashLoanLiquidator is Ownable, FlashLoanReceiverBase, DexSwap {
         size.multicall(calls);
     }
 
-    function _liquidateDebtPosition(uint256 debtAmount, uint256 debtPositionId, uint256 minimumCollateralProfit)
+    function _liquidateDebtPosition(uint256 debtAmount, uint256 debtPositionId, uint256 minimumCollateralProfit, uint256 deadline)
         internal
     {
         // Approve USDC to repay the borrower's debt
@@ -123,7 +123,7 @@ contract FlashLoanLiquidator is Ownable, FlashLoanReceiverBase, DexSwap {
         // Encode Liquidate
         bytes memory liquidateCall = abi.encodeWithSelector(
             ISize.liquidate.selector,
-            LiquidateParams({debtPositionId: debtPositionId, minimumCollateralProfit: minimumCollateralProfit})
+            LiquidateParams({debtPositionId: debtPositionId, minimumCollateralProfit: minimumCollateralProfit, deadline: deadline})
         );
 
         // Encode Withdraw
@@ -230,7 +230,7 @@ contract FlashLoanLiquidator is Ownable, FlashLoanReceiverBase, DexSwap {
                 opParams.replacementParams
             );
         } else {
-            _liquidateDebtPosition(opParams.debtAmount, opParams.debtPositionId, opParams.minimumCollateralProfit);
+            _liquidateDebtPosition(opParams.debtAmount, opParams.debtPositionId, opParams.minimumCollateralProfit, opParams.replacementParams.deadline);
         }
 
         _swapCollateral(opParams.swapParams);

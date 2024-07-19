@@ -22,13 +22,14 @@ contract DeployFlashLoanLiquidator is Script {
         // address collateralToken = vm.envAddress("COLLATERAL_TOKEN");
         // address borrowToken = vm.envAddress("BORROW_TOKEN");
 
-        address addressProvider = 0x012bAC54348C0E635dCAc9D5FB99f06F24136C9A;
-        address size = 0x2345988Ec6c0196821177B90F5e919f18F5324F3;
+        // https://docs.aave.com/developers/deployed-contracts/v3-mainnet/base
+        address addressProvider = 0xe20fCBdBfFC4Dd138cE8b2E6FBb6CB49777ad64D;
+        address size = 0x44f269A2A520F18aF6215038a8FE1d660ed5986E;
         address aggregator1inch = 0x425141165d3DE9FEC831896C016617a52363b687;
         address unoswapRouter = 0x425141165d3DE9FEC831896C016617a52363b687;
-        address uniswapRouter = 0x425141165d3DE9FEC831896C016617a52363b687;
-        address collateralToken = 0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14;
-        address borrowToken = 0x94a9D9AC8a22534E3FaCa9F4e7F2E2cf85d5E4C8;
+        address uniswapRouter = 0x4752ba5DBc23f44D87826276BF6Fd6b1C372aD24;
+        address collateralToken = 0x4200000000000000000000000000000000000006;
+        address borrowToken = 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913;
 
         FlashLoanLiquidator flashLoanLiquidator = new FlashLoanLiquidator(
             addressProvider,

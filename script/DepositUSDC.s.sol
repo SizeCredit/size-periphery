@@ -26,7 +26,7 @@ contract DepositUSDCScript is Script {
 
         Size size = Size(payable(sizeContractAddress));
         IERC20 usdc = IERC20(usdcAddress);
-        uint256 amount = 100e6; // USDC has 6 decimals
+        uint256 amount = 50e6; // USDC has 6 decimals
 
         vm.startBroadcast(deployerPrivateKey);
         // Approve the Size contract to spend USDC

@@ -19,11 +19,11 @@ contract DepositWETHScript is Script {
         address wethAddress = vm.envAddress("WETH_ADDRESS");
 
         address lender = vm.envAddress("LENDER");
-        address borrower = vm.envAddress("BORROWER");
+        address borrower = vm.envAddress("DEPLOYER");
 
         Size size = Size(payable(sizeContractAddress));
         IERC20 weth = IERC20(wethAddress);
-        uint256 amount = 0.5e18;  // 0.5 WETH
+        uint256 amount = 0.03e18;  // 0.5 WETH
 
         console.log("Lender Address:", lender);
         console.log("Borrower Address:", borrower);

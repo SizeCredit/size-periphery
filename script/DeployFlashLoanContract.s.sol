@@ -24,7 +24,7 @@ contract DeployFlashLoanLiquidator is Script {
 
         // https://docs.aave.com/developers/deployed-contracts/v3-mainnet/base
         address addressProvider = 0xe20fCBdBfFC4Dd138cE8b2E6FBb6CB49777ad64D;
-        address size = 0x44f269A2A520F18aF6215038a8FE1d660ed5986E;
+        address size = 0xC2a429681CAd7C1ce36442fbf7A4a68B11eFF940;
         address aggregator1inch = 0x425141165d3DE9FEC831896C016617a52363b687;
         address unoswapRouter = 0x425141165d3DE9FEC831896C016617a52363b687;
         address uniswapRouter = 0x4752ba5DBc23f44D87826276BF6Fd6b1C372aD24;

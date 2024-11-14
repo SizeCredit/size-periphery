@@ -27,6 +27,9 @@ struct ReplacementParams {
 }
 
 struct OperationParams {
+    address sizeMarket;
+    address collateralToken;
+    address borrowToken;
     uint256 debtPositionId;
     uint256 minimumCollateralProfit;
     address recipient;
@@ -48,12 +51,9 @@ contract FlashLoanLiquidator is Ownable, FlashLoanReceiverBase, DexSwap {
 
     constructor(
         address _addressProvider,
-        address _size,
         address _1inchAggregator,
         address _unoswapRouter,
-        address _uniswapRouter,
-        address _collateralToken,
-        address _borrowToken
+        address _uniswapRouter
     )
         Ownable(msg.sender)
         FlashLoanReceiverBase(IPoolAddressesProvider(_addressProvider))
@@ -64,17 +64,21 @@ contract FlashLoanLiquidator is Ownable, FlashLoanReceiverBase, DexSwap {
         }
 
         POOL = IPool(IPoolAddressesProvider(_addressProvider).getPool());
-        size = ISize(_size);
     }
 
     function _liquidateDebtPositionWithReplacement(
+        address sizeMarket,
+        address collateralToken,
+        address borrowToken,
         uint256 debtAmount,
         uint256 debtPositionId,
         uint256 minimumCollateralProfit,
         ReplacementParams memory replacementParams
     ) internal {
         // Approve USDC to repay the borrower's debt
-        IERC20(borrowToken).forceApprove(address(size), debtAmount);
+        IERC20(borrowToken).forceApprove(sizeMarket, debtAmount);
+
+        ISize size = ISize(sizeMarket);
 
         // Encode Deposit
         bytes memory depositCall = abi.encodeWithSelector(
@@ -109,11 +113,19 @@ contract FlashLoanLiquidator is Ownable, FlashLoanReceiverBase, DexSwap {
         size.multicall(calls);
     }
 
-    function _liquidateDebtPosition(uint256 debtAmount, uint256 debtPositionId, uint256 minimumCollateralProfit, uint256 deadline)
-        internal
-    {
+    function _liquidateDebtPosition(
+        address sizeMarket,
+        address collateralToken,
+        address borrowToken,
+        uint256 debtAmount,
+        uint256 debtPositionId,
+        uint256 minimumCollateralProfit,
+        uint256 deadline
+    ) internal {
         // Approve USDC to repay the borrower's debt
-        IERC20(borrowToken).forceApprove(address(size), debtAmount);
+        IERC20(borrowToken).forceApprove(sizeMarket, debtAmount);
+
+        ISize size = ISize(sizeMarket);
 
         // Encode Deposit
         bytes memory depositCall = abi.encodeWithSelector(
@@ -170,6 +182,9 @@ contract FlashLoanLiquidator is Ownable, FlashLoanReceiverBase, DexSwap {
     }
 
     function liquidatePositionWithFlashLoan(
+        address sizeMarket,
+        address collateralToken,
+        address borrowToken,
         bool useReplacement,
         ReplacementParams memory replacementParams,
         uint256 debtPositionId,
@@ -181,10 +196,15 @@ contract FlashLoanLiquidator is Ownable, FlashLoanReceiverBase, DexSwap {
         if (supplementAmount > 0) {
             IERC20(borrowToken).transferFrom(msg.sender, address(this), supplementAmount);
         }
+
+        ISize size = ISize(sizeMarket);
         uint256 debtAmount = size.getDebtPosition(debtPositionId).futureValue;
 
         bool depositProfits = recipient != address(0);
         OperationParams memory opParams = OperationParams({
+            sizeMarket: sizeMarket,
+            collateralToken: collateralToken,
+            borrowToken: borrowToken,
             debtPositionId: debtPositionId,
             minimumCollateralProfit: minimumCollateralProfit,
             recipient: depositProfits ? recipient : msg.sender,
@@ -224,16 +244,32 @@ contract FlashLoanLiquidator is Ownable, FlashLoanReceiverBase, DexSwap {
         OperationParams memory opParams = abi.decode(params, (OperationParams));
         if (opParams.useReplacement) {
             _liquidateDebtPositionWithReplacement(
+                opParams.sizeMarket,
+                opParams.collateralToken,
+                opParams.borrowToken,
                 opParams.debtAmount,
                 opParams.debtPositionId,
                 opParams.minimumCollateralProfit,
                 opParams.replacementParams
             );
         } else {
-            _liquidateDebtPosition(opParams.debtAmount, opParams.debtPositionId, opParams.minimumCollateralProfit, opParams.replacementParams.deadline);
+            _liquidateDebtPosition(
+                opParams.sizeMarket,
+                opParams.collateralToken,
+                opParams.borrowToken,
+                opParams.debtAmount,
+                opParams.debtPositionId,
+                opParams.minimumCollateralProfit,
+                opParams.replacementParams.deadline
+            );
         }
 
-        _swapCollateral(opParams.swapParams);
+        _swapCollateral(
+            opParams.collateralToken,
+            opParams.borrowToken,
+            opParams.swapParams
+        );
+
         _settleFlashLoan(assets, amounts, premiums, opParams.recipient, opParams.depositProfits);
 
         return true;

@@ -57,9 +57,9 @@ contract FlashLoanLiquidator is Ownable, FlashLoanReceiverBase, DexSwap {
     )
         Ownable(msg.sender)
         FlashLoanReceiverBase(IPoolAddressesProvider(_addressProvider))
-        DexSwap(_1inchAggregator, _unoswapRouter, _uniswapRouter, _collateralToken, _borrowToken)
+        DexSwap(_1inchAggregator, _unoswapRouter, _uniswapRouter)
     {
-        if (_size == address(0) || _addressProvider == address(0)) {
+        if (_addressProvider == address(0)) {
             revert Errors.NULL_ADDRESS();
         }
 

@@ -24,36 +24,30 @@ contract DeployFlashLoanLiquidator is Script {
 
         // https://docs.aave.com/developers/deployed-contracts/v3-mainnet/base
         address addressProvider = 0xe20fCBdBfFC4Dd138cE8b2E6FBb6CB49777ad64D;
-        address size = 0xC2a429681CAd7C1ce36442fbf7A4a68B11eFF940;
+        // address size = 0xC2a429681CAd7C1ce36442fbf7A4a68B11eFF940;
         address aggregator1inch = 0x425141165d3DE9FEC831896C016617a52363b687;
         address unoswapRouter = 0x425141165d3DE9FEC831896C016617a52363b687;
         address uniswapRouter = 0x4752ba5DBc23f44D87826276BF6Fd6b1C372aD24;
-        address collateralToken = 0x4200000000000000000000000000000000000006;
-        address borrowToken = 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913;
+        // address collateralToken = 0x4200000000000000000000000000000000000006;
+        // address borrowToken = 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913;
 
         FlashLoanLiquidator flashLoanLiquidator = new FlashLoanLiquidator(
             addressProvider,
-            size,
             aggregator1inch,
             unoswapRouter,
-            uniswapRouter,
-            collateralToken,
-            borrowToken
+            uniswapRouter
         );
 
         console.log("Deployed FlashLoanLiquidator at:", address(flashLoanLiquidator));
-        exportDeploymentDetails(flashLoanLiquidator, addressProvider, size, aggregator1inch, unoswapRouter, uniswapRouter, collateralToken, borrowToken);
+        exportDeploymentDetails(flashLoanLiquidator, addressProvider, aggregator1inch, unoswapRouter, uniswapRouter);
     }
 
     function exportDeploymentDetails(
         FlashLoanLiquidator flashLoanLiquidator,
         address addressProvider,
-        address size,
         address aggregator1inch,
         address unoswapRouter,
-        address uniswapRouter,
-        address collateralToken,
-        address borrowToken
+        address uniswapRouter
     ) internal {
         string memory root = vm.projectRoot();
         string memory path = string.concat(root, "/deployments/");
@@ -66,12 +60,9 @@ contract DeployFlashLoanLiquidator is Script {
         // Serialize deployment details
         deploymentsObject = vm.serializeAddress(".deployments", "FlashLoanLiquidator", address(flashLoanLiquidator));
         deploymentsObject = vm.serializeAddress(".deployments", "addressProvider", addressProvider);
-        deploymentsObject = vm.serializeAddress(".deployments", "size", size);
         deploymentsObject = vm.serializeAddress(".deployments", "aggregator1inch", aggregator1inch);
         deploymentsObject = vm.serializeAddress(".deployments", "unoswapRouter", unoswapRouter);
         deploymentsObject = vm.serializeAddress(".deployments", "uniswapRouter", uniswapRouter);
-        deploymentsObject = vm.serializeAddress(".deployments", "collateralToken", collateralToken);
-        deploymentsObject = vm.serializeAddress(".deployments", "borrowToken", borrowToken);
 
         // Combine serialized data
         finalObject = vm.serializeString(".", "deployments", deploymentsObject);

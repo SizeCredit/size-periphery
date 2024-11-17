@@ -159,7 +159,8 @@ contract FlashLoanLiquidator is Ownable, FlashLoanReceiverBase, DexSwap {
         uint256[] calldata amounts,
         uint256[] calldata premiums,
         address recipient,
-        bool depositProfits
+        bool depositProfits,
+        address sizeMarket
     ) internal {
         uint256 totalDebt = amounts[0] + premiums[0];
         uint256 balance = IERC20(assets[0]).balanceOf(address(this));
@@ -171,7 +172,7 @@ contract FlashLoanLiquidator is Ownable, FlashLoanReceiverBase, DexSwap {
         // Send remainder back to liquidator
         uint256 amountToLiquidator = balance - totalDebt;
         if (depositProfits) {
-            IERC20(assets[0]).forceApprove(address(size), amountToLiquidator);
+            IERC20(assets[0]).forceApprove(sizeMarket, amountToLiquidator);
             size.deposit(DepositParams({token: assets[0], amount: amountToLiquidator, to: recipient}));
         } else {
             IERC20(assets[0]).transfer(recipient, amountToLiquidator);
@@ -270,7 +271,7 @@ contract FlashLoanLiquidator is Ownable, FlashLoanReceiverBase, DexSwap {
             opParams.swapParams
         );
 
-        _settleFlashLoan(assets, amounts, premiums, opParams.recipient, opParams.depositProfits);
+        _settleFlashLoan(assets, amounts, premiums, opParams.recipient, opParams.depositProfits, opParams.sizeMarket);
 
         return true;
     }

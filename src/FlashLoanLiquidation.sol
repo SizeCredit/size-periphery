@@ -173,7 +173,7 @@ contract FlashLoanLiquidator is Ownable, FlashLoanReceiverBase, DexSwap {
         uint256 amountToLiquidator = balance - totalDebt;
         if (depositProfits) {
             IERC20(assets[0]).forceApprove(sizeMarket, amountToLiquidator);
-            size.deposit(DepositParams({token: assets[0], amount: amountToLiquidator, to: recipient}));
+            ISize(sizeMarket).deposit(DepositParams({token: assets[0], amount: amountToLiquidator, to: recipient}));
         } else {
             IERC20(assets[0]).transfer(recipient, amountToLiquidator);
         }

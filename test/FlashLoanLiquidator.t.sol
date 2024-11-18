@@ -11,6 +11,8 @@ import {BaseTest, Vars} from "@size/test/BaseTest.sol";
 import {DebtPosition} from "@size/src/libraries/LoanLibrary.sol";
 import {YieldCurveHelper} from "@size/test/helpers/libraries/YieldCurveHelper.sol";
 
+import {console} from "forge-std/console.sol";
+
 contract FlashLoanLiquidationTest is BaseTest {
     MockAavePool public mockAavePool;
     Mock1InchAggregator public mock1InchAggregator;
@@ -30,12 +32,9 @@ contract FlashLoanLiquidationTest is BaseTest {
         // Initialize the FlashLoanLiquidator contract
         flashLoanLiquidator = new FlashLoanLiquidator(
             address(mockAavePool),
-            address(size),
             address(mock1InchAggregator),
             address(1), // placeholder for the unoswap router
-            address(1), // placeholder for the uniswapv2 aggregator
-            address(weth),
-            address(usdc)
+            address(1)  // placeholder for the uniswapv2 aggregator
         );
 
         // Set the FlashLoanLiquidator contract as the keeper
@@ -79,6 +78,9 @@ contract FlashLoanLiquidationTest is BaseTest {
         // Call the liquidatePositionWithFlashLoan function
         vm.prank(liquidator);
         flashLoanLiquidator.liquidatePositionWithFlashLoan(
+            address(size),
+            address(weth),
+            address(usdc),
             false, // useReplacement
             replacementParams, // Replacement parameters, not used here
             debtPositionId,
@@ -187,13 +189,16 @@ contract FlashLoanLiquidationTest is BaseTest {
         // Initialize the FlashLoanLiquidator contract
         flashLoanLiquidator = new FlashLoanLiquidator(
             address(mockAavePool),
-            address(size),
             address(mock1InchAggregator),
             address(1), // placeholder for the unoswap router
-            address(1), // placeholder for the uniswapv2 aggregator
-            address(weth),
-            address(usdc)
+            address(1) // placeholder for the uniswapv2 aggregator
         );
+
+        // Add debug logs
+        console.log("Mock AAVE Pool:", address(mockAavePool));
+        console.log("Mock 1Inch:", address(mock1InchAggregator));
+        console.log("Size Market:", address(size));
+        
 
         // Set the FlashLoanLiquidator contract as the keeper
         _setKeeperRole(address(flashLoanLiquidator));
@@ -236,6 +241,9 @@ contract FlashLoanLiquidationTest is BaseTest {
         // Call the liquidatePositionWithFlashLoan function
         vm.prank(liquidator);
         flashLoanLiquidator.liquidatePositionWithFlashLoan(
+            address(size),
+            address(weth),
+            address(usdc),
             false, // useReplacement
             replacementParams, // Replacement parameters, not used here
             debtPositionId,
@@ -273,12 +281,9 @@ contract FlashLoanLiquidationTest is BaseTest {
         // Initialize the FlashLoanLiquidator contract
         flashLoanLiquidator = new FlashLoanLiquidator(
             address(mockAavePool),
-            address(size),
             address(mock1InchAggregator),
             address(1), // placeholder for the unoswap router
-            address(1), // placeholder for the uniswapv2 aggregator
-            address(weth),
-            address(usdc)
+            address(1) // placeholder for the uniswapv2 aggregator
         );
 
         // Set the FlashLoanLiquidator contract as the keeper
@@ -327,6 +332,9 @@ contract FlashLoanLiquidationTest is BaseTest {
         // Call the liquidatePositionWithFlashLoan function
         vm.prank(liquidator);
         flashLoanLiquidator.liquidatePositionWithFlashLoan(
+            address(size),
+            address(weth),
+            address(usdc),
             false, // useReplacement
             replacementParams, // Replacement parameters, not used here
             debtPositionId,

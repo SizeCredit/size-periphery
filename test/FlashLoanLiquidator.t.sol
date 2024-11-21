@@ -34,7 +34,8 @@ contract FlashLoanLiquidationTest is BaseTest {
             address(mockAavePool),
             address(mock1InchAggregator),
             address(1), // placeholder for the unoswap router
-            address(1)  // placeholder for the uniswapv2 aggregator
+            address(1), // placeholder for the uniswapv2 aggregator
+            address(1) // placeholder for the uniswapv3 router
         );
 
         // Set the FlashLoanLiquidator contract as the keeper
@@ -191,7 +192,8 @@ contract FlashLoanLiquidationTest is BaseTest {
             address(mockAavePool),
             address(mock1InchAggregator),
             address(1), // placeholder for the unoswap router
-            address(1) // placeholder for the uniswapv2 aggregator
+            address(1), // placeholder for the uniswapv2 aggregator
+            address(1) // placeholder for the uniswapv3 router
         );
 
         // Add debug logs
@@ -283,7 +285,8 @@ contract FlashLoanLiquidationTest is BaseTest {
             address(mockAavePool),
             address(mock1InchAggregator),
             address(1), // placeholder for the unoswap router
-            address(1) // placeholder for the uniswapv2 aggregator
+            address(1), // placeholder for the uniswapv2 aggregator
+            address(1) // placeholder for the uniswapv3 router
         );
 
         // Set the FlashLoanLiquidator contract as the keeper

@@ -21,6 +21,11 @@
         "name": "_uniswapRouter",
         "type": "address",
         "internalType": "address"
+      },
+      {
+        "name": "_uniswapV3Router",
+        "type": "address",
+        "internalType": "address"
       }
     ],
     "stateMutability": "nonpayable"
@@ -265,6 +270,19 @@
         "name": "",
         "type": "address",
         "internalType": "contract IUniswapV2Router02"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "uniswapV3Router",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "contract IUniswapV3Router"
       }
     ],
     "stateMutability": "view"

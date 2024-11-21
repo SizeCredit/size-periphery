@@ -1,10 +1,10 @@
 {
   "deployments": {
-    "FlashLoanLiquidator": "0xfD91Ef01e9672428Ae4654783bf708E6552ec890",
+    "FlashLoanLiquidator": "0xF9cF4b66e721CFf93b2D32886780A2c49EaFB4E4",
     "addressProvider": "0xe20fCBdBfFC4Dd138cE8b2E6FBb6CB49777ad64D",
     "aggregator1inch": "0x425141165d3DE9FEC831896C016617a52363b687",
-    "uniswapRouter": "0x4752ba5DBc23f44D87826276BF6Fd6b1C372aD24",
-    "uniswapV3Router": "0x4752ba5DBc23f44D87826276BF6Fd6b1C372aD24",
+    "uniswapRouter": "0x2626664c2603336E57B271c5C0b26F421741e481",
+    "uniswapV3Router": "0x2626664c2603336E57B271c5C0b26F421741e481",
     "unoswapRouter": "0x425141165d3DE9FEC831896C016617a52363b687"
   }
 }

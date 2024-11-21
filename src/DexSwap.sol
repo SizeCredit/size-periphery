@@ -75,7 +75,6 @@ abstract contract DexSwap {
                 borrowToken,
                 fee,
                 sqrtPriceLimitX96,
-                swapParams.deadline,
                 swapParams.minimumReturnAmount
             );
         } else {
@@ -129,7 +128,6 @@ abstract contract DexSwap {
         address borrowToken,
         uint24 fee,
         uint160 sqrtPriceLimitX96,
-        uint256 deadline,
         uint256 minimumReturnAmount
     ) internal returns (uint256) {
         uint256 amountIn = IERC20(collateralToken).balanceOf(address(this));
@@ -140,7 +138,6 @@ abstract contract DexSwap {
             tokenOut: borrowToken,
             fee: fee,
             recipient: address(this),
-            deadline: deadline,
             amountIn: amountIn, 
             amountOutMinimum: minimumReturnAmount,
             sqrtPriceLimitX96: sqrtPriceLimitX96

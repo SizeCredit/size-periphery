@@ -1,6 +1,6 @@
 {
   "deployments": {
-    "FlashLoanLiquidator": "0xF9cF4b66e721CFf93b2D32886780A2c49EaFB4E4",
+    "FlashLoanLiquidator": "0x0d34e9e4d112d0067d34efC999Ef9D35EBB76d4c",
     "addressProvider": "0xe20fCBdBfFC4Dd138cE8b2E6FBb6CB49777ad64D",
     "aggregator1inch": "0x425141165d3DE9FEC831896C016617a52363b687",
     "uniswapRouter": "0x2626664c2603336E57B271c5C0b26F421741e481",

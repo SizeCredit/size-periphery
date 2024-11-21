@@ -9,3 +9,5 @@
 @src=lib/size-solidity/src
 @script=lib/size-solidity/script
 @test=lib/size-solidity/test
+@uniswap/v3-periphery/=lib/v3-periphery/
+@uniswap/v3-core/=lib/v3-core/

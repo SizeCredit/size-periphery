@@ -47,8 +47,6 @@ struct OperationParams {
 contract FlashLoanLiquidator is Ownable, FlashLoanReceiverBase, DexSwap {
     using SafeERC20 for IERC20;
 
-    ISize public immutable size;
-
     constructor(
         address _addressProvider,
         address _1inchAggregator,

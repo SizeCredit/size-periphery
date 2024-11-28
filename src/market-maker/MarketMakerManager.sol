@@ -66,6 +66,4 @@ contract MarketMakerManager is UUPSUpgradeable, Ownable2StepUpgradeable {
         emit BotSet(bot, _bot);
         bot = _bot;
     }
-
-    receive() external payable {}
 }

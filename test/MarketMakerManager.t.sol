@@ -3,11 +3,13 @@ pragma solidity 0.8.23;
 
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {BaseTest, Vars} from "@size/test/BaseTest.sol";
-import {Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {MarketMakerManager} from "src/market-maker/MarketMakerManager.sol";
-import {DepositParams, WithdrawParams, BuyCreditLimitParams} from "@size/src/interfaces/ISize.sol";
+import {
+    DepositParams, WithdrawParams, BuyCreditLimitParams, SellCreditLimitParams
+} from "@size/src/interfaces/ISize.sol";
 import {YieldCurveHelper} from "@size/test/helpers/libraries/YieldCurveHelper.sol";
+import {YieldCurve} from "@size/src/libraries/YieldCurveLibrary.sol";
 
 contract MarketMakerManagerTest is BaseTest {
     address public bot;
@@ -21,16 +23,26 @@ contract MarketMakerManagerTest is BaseTest {
         bot = makeAddr("bot");
 
         marketMakerManager = MarketMakerManager(
-            payable(new ERC1967Proxy(
-                payable(new MarketMakerManager()),
-                abi.encodeCall(MarketMakerManager.initialize, (mm, bot))
-            ))
+            payable(
+                new ERC1967Proxy(
+                    address(new MarketMakerManager()), abi.encodeCall(MarketMakerManager.initialize, (mm, bot))
+                )
+            )
         );
     }
 
     function test_MarketMakerManager_initialize() public {
         assertEq(marketMakerManager.owner(), mm);
         assertEq(marketMakerManager.bot(), bot);
+    }
+
+    function test_MarketMakerManager_upgrade_onlyOwner() public {
+        address newImplementation = address(new MarketMakerManager());
+        vm.expectRevert(abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, bot));
+        vm.prank(bot);
+        marketMakerManager.upgradeToAndCall(
+            payable(newImplementation), abi.encodeCall(MarketMakerManager.initialize, (bot, bot))
+        );
     }
 
     function test_MarketMakerManager_setBot() public {
@@ -59,7 +71,7 @@ contract MarketMakerManagerTest is BaseTest {
         marketMakerManager.deposit(size, usdc, amount);
 
         uint256 balanceAfter = size.getUserView(address(marketMakerManager)).borrowATokenBalance;
-        assertEq(balanceAfter , balanceBefore + amount);
+        assertEq(balanceAfter, balanceBefore + amount);
     }
 
     function test_MarketMakerManager_deposit_onlyOwner() public {
@@ -78,7 +90,7 @@ contract MarketMakerManagerTest is BaseTest {
 
         uint256 amount2 = 30e6;
         uint256 balanceBefore = usdc.balanceOf(mm);
-        uint256 balanceBeforeSize = size.getUserView(address(marketMakerManager)).borrowATokenBalance; 
+        uint256 balanceBeforeSize = size.getUserView(address(marketMakerManager)).borrowATokenBalance;
 
         vm.prank(mm);
         marketMakerManager.withdraw(size, usdc, amount2);
@@ -95,7 +107,34 @@ contract MarketMakerManagerTest is BaseTest {
     }
 
     function test_MarketMakerManager_buyCreditLimit() public {
+        YieldCurve memory curve = YieldCurveHelper.normalCurve();
         vm.prank(bot);
-        marketMakerManager.buyCreditLimit(size, BuyCreditLimitParams({maxDueDate: block.timestamp + 365 days, curveRelativeTime: YieldCurveHelper.normalCurve()}));
+        marketMakerManager.buyCreditLimit(
+            size, BuyCreditLimitParams({maxDueDate: block.timestamp + 365 days, curveRelativeTime: curve})
+        );
+    }
+
+    function test_MarketMakerManager_buyCreditLimit_onlyBot() public {
+        YieldCurve memory curve = YieldCurveHelper.normalCurve();
+        vm.expectRevert(abi.encodeWithSelector(MarketMakerManager.OnlyBot.selector));
+        marketMakerManager.buyCreditLimit(
+            size, BuyCreditLimitParams({maxDueDate: block.timestamp + 365 days, curveRelativeTime: curve})
+        );
+    }
+
+    function test_MarketMakerManager_sellCreditLimit() public {
+        YieldCurve memory curve = YieldCurveHelper.normalCurve();
+        vm.prank(bot);
+        marketMakerManager.sellCreditLimit(
+            size, SellCreditLimitParams({maxDueDate: block.timestamp + 365 days, curveRelativeTime: curve})
+        );
+    }
+
+    function test_MarketMakerManager_sellCreditLimit_onlyBot() public {
+        YieldCurve memory curve = YieldCurveHelper.normalCurve();
+        vm.expectRevert(abi.encodeWithSelector(MarketMakerManager.OnlyBot.selector));
+        marketMakerManager.sellCreditLimit(
+            size, SellCreditLimitParams({maxDueDate: block.timestamp + 365 days, curveRelativeTime: curve})
+        );
     }
 }

@@ -9,7 +9,6 @@ import "forge-std/Script.sol";
 import "../src/FlashLoanLiquidation.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 
-
 contract DeployFlashLoanLiquidator is Script {
     function run() external {
         vm.startBroadcast();
@@ -32,16 +31,13 @@ contract DeployFlashLoanLiquidator is Script {
         // address collateralToken = 0x4200000000000000000000000000000000000006;
         // address borrowToken = 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913;
 
-        FlashLoanLiquidator flashLoanLiquidator = new FlashLoanLiquidator(
-            addressProvider,
-            aggregator1inch,
-            unoswapRouter,
-            uniswapRouter,
-            uniswapV3Router
-        );
+        FlashLoanLiquidator flashLoanLiquidator =
+            new FlashLoanLiquidator(addressProvider, aggregator1inch, unoswapRouter, uniswapRouter, uniswapV3Router);
 
         console.log("Deployed FlashLoanLiquidator at:", address(flashLoanLiquidator));
-        exportDeploymentDetails(flashLoanLiquidator, addressProvider, aggregator1inch, unoswapRouter, uniswapRouter, uniswapV3Router);
+        exportDeploymentDetails(
+            flashLoanLiquidator, addressProvider, aggregator1inch, unoswapRouter, uniswapRouter, uniswapV3Router
+        );
     }
 
     function exportDeploymentDetails(

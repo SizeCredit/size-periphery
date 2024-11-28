@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.23;
 
-
 import {Size} from "@src/Size.sol";
 import {ClaimParams} from "@src/libraries/actions/Claim.sol";
 import {Script} from "forge-std/Script.sol";
@@ -16,7 +15,9 @@ contract ClaimScript is Script {
 
         Size size = Size(payable(sizeContractAddress));
 
-        ClaimParams memory params = ClaimParams({creditPositionId: 57896044618658097711785492504343953926634992332820282019728792003956564819967});
+        ClaimParams memory params = ClaimParams({
+            creditPositionId: 57896044618658097711785492504343953926634992332820282019728792003956564819967
+        });
 
         vm.startBroadcast(deployerPrivateKey);
         size.claim(params);

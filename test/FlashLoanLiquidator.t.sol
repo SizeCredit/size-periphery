@@ -200,7 +200,6 @@ contract FlashLoanLiquidationTest is BaseTest {
         console.log("Mock AAVE Pool:", address(mockAavePool));
         console.log("Mock 1Inch:", address(mock1InchAggregator));
         console.log("Size Market:", address(size));
-        
 
         // Set the FlashLoanLiquidator contract as the keeper
         _setKeeperRole(address(flashLoanLiquidator));

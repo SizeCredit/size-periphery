@@ -8,7 +8,6 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {console2 as console} from "forge-std/console2.sol";
 import {UserView} from "@size/src/SizeViewData.sol";
 
-
 contract DepositUSDCScript is Script {
     function run() external {
         console.log("Deposit USDC...");

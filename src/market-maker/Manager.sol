@@ -1,84 +1,130 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.23;
 
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
-import {SignatureChecker} from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
+import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 import {ISize} from "@size/src/interfaces/ISize.sol";
+import {ISizeFactory} from "@size/src/v1.5/interfaces/ISizeFactory.sol";
 import {BuyCreditLimitParams, SellCreditLimitParams} from "@size/src/interfaces/ISize.sol";
-import {Enum} from "@safe/contracts/common/Enum.sol";
-import {BaseGuard} from "@safe/contracts/base/GuardManager.sol";
-import {Safe} from "@safe/contracts/Safe.sol";
+import {Address} from "@openzeppelin/contracts/utils/Address.sol";
+import {WithdrawParams} from "@size/src/interfaces/ISize.sol";
+import {DataView} from "@size/src/SizeViewData.sol";
 
-interface ISizeRegistry {
-    function isMarket(address candidate) external view returns (bool);
-}
+contract Manager is UUPSUpgradeable, Ownable2StepUpgradeable {
+    ISizeFactory public sizeFactory;
+    address public bot;
 
-contract Manager is Ownable2Step, BaseGuard {
-    ISizeRegistry public immutable sizeRegistry;
-    address public proposer;
+    event BotSet(address indexed oldBot, address indexed newBot);
+    event FactorySet(ISizeFactory indexed oldFactory, ISizeFactory indexed newFactory);
 
-    event ProposerSet(address indexed oldProposer, address indexed newProposer);
+    error NullAddress();
+    error ArrayLengthsMismatch();
+    error OnlyBot();
 
-    error OnlyProposer();
-    error InvalidTarget();
-    error InvalidSelector();
-    error InvalidData();
-
-    constructor(address _owner, address _proposer, ISizeRegistry _sizeRegistry) Ownable(_owner) {
-        proposer = _proposer;
-        sizeRegistry = _sizeRegistry;
+    // @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
     }
 
-    function setProposer(address _proposer) external onlyOwner {
-        emit ProposerSet(proposer, _proposer);
-        proposer = _proposer;
+    function initialize(address _owner, address _bot, ISizeFactory _sizeFactory) public initializer {
+        __Ownable2Step_init();
+        __Ownable_init(_owner);
+        __UUPSUpgradeable_init();
+
+        _setBot(_bot);
+        _setFactory(_sizeFactory);
     }
 
-    /// @notice Checks if the transaction is valid by a 1/2 multisig
-    ///         If the proposer is the signer, then it can only call buyCreditMarket or sellCreditMarket on Size markets
-    ///         If the owner is the signer, then it can always execute the transaction
-    /// @dev See https://github.com/safe-global/safe-smart-account/blob/786dadce5ca12fd7f1340c3a7fe6916eb807128a/contracts/examples/guards/DebugTransactionGuard.sol
-    ///      for details about how to get the transaction hash on a Safe Guard
-    function checkTransaction(
-        address to,
-        uint256 value,
-        bytes calldata data,
-        Enum.Operation operation,
-        uint256 safeTxGas,
-        uint256 baseGas,
-        uint256 gasPrice,
-        address gasToken,
-        address payable refundReceiver,
-        bytes memory signatures,
-        address /* msgSender */
-    ) external view {
-        Safe safe = Safe(payable(msg.sender));
-        uint256 nonce = safe.nonce() - 1;
-        bytes32 txHash = safe.getTransactionHash(to, value, data, operation, safeTxGas, baseGas, gasPrice, gasToken, refundReceiver, nonce);
-        bool isProposer = SignatureChecker.isValidSignatureNow(proposer, txHash, signatures);
+    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 
-        if (!isProposer) {
-            return;
+    modifier onlyBot() {
+        if (msg.sender != bot) {
+            revert OnlyBot();
+        }
+        _;
+    }
+
+    function setBot(address _bot) external onlyOwner {
+        _setBot(_bot);
+    }
+
+    function setFactory(ISizeFactory _sizeFactory) external onlyOwner {
+        _setFactory(_sizeFactory);
+    }
+
+    function _setBot(address _bot) internal {
+        emit BotSet(bot, _bot);
+        bot = _bot;
+    }
+
+    function _setFactory(ISizeFactory _sizeFactory) internal {
+        emit FactorySet(sizeFactory, _sizeFactory);
+        sizeFactory = _sizeFactory;
+    }
+
+    function proxy(address target, bytes memory data) public onlyOwner returns (bytes memory returnData) {
+        if (target == address(0)) {
+            revert NullAddress();
+        }
+        bool success;
+        (success, returnData) = address(target).call(data);
+        Address.verifyCallResult(success, returnData);
+    }
+
+    function proxy(address target, bytes memory data, uint256 value)
+        public
+        onlyOwner
+        returns (bytes memory returnData)
+    {
+        if (target == address(0)) {
+            revert NullAddress();
+        }
+        bool success;
+        (success, returnData) = address(target).call{value: value}(data);
+        Address.verifyCallResult(success, returnData);
+    }
+
+    function proxy(address[] memory targets, bytes[] memory datas)
+        public
+        onlyOwner
+        returns (bytes[] memory returnDatas)
+    {
+        if (targets.length != datas.length) {
+            revert ArrayLengthsMismatch();
         }
 
-        bool isMarket = sizeRegistry.isMarket(to);
-        if (!isMarket) {
-            revert InvalidTarget();
-        }
-
-        if (data.length < 4) {
-            revert InvalidData();
-        }
-
-        bytes4 selector = bytes4(data[:4]);
-
-        if (selector != ISize.buyCreditMarket.selector && selector != ISize.sellCreditMarket.selector) {
-            revert InvalidSelector();
+        returnDatas = new bytes[](datas.length);
+        bool success;
+        for (uint256 i = 0; i < targets.length; i++) {
+            if (targets[i] == address(0)) {
+                revert NullAddress();
+            }
+            // slither-disable-next-line calls-loop
+            (success, returnDatas[i]) = address(targets[i]).call(datas[i]);
+            Address.verifyCallResult(success, returnDatas[i]);
         }
     }
 
-    function checkAfterExecution(bytes32, /* txHash */ bool /* success */ ) external pure {
-        // no after execution checks
+    function emergencyWithdraw() external onlyOwner {
+        ISize[] memory sizes = sizeFactory.getMarkets();
+        for (uint256 i = 0; i < sizes.length; i++) {
+            DataView memory data = sizes[i].data();
+            sizes[i].withdraw(
+                WithdrawParams({to: owner(), token: address(data.underlyingCollateralToken), amount: type(uint256).max})
+            );
+            sizes[i].withdraw(
+                WithdrawParams({to: owner(), token: address(data.underlyingBorrowToken), amount: type(uint256).max})
+            );
+        }
     }
+
+    function buyCreditLimit(ISize size, BuyCreditLimitParams memory params) external onlyBot {
+        size.buyCreditLimit(params);
+    }
+
+    function sellCreditLimit(ISize size, SellCreditLimitParams memory params) external onlyBot {
+        size.sellCreditLimit(params);
+    }
+
+    receive() external payable {}
 }

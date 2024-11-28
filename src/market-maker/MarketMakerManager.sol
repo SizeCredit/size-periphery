@@ -44,14 +44,14 @@ contract MarketMakerManager is UUPSUpgradeable, Ownable2StepUpgradeable {
         _setBot(_bot);
     }
 
-    function deposit(ISize size, DepositParams memory params) external onlyOwner {
-        IERC20Metadata(params.token).safeTransferFrom(msg.sender, address(this), params.amount);
-        IERC20Metadata(params.token).forceApprove(address(size), params.amount);
-        size.deposit(params);
+    function deposit(ISize size, IERC20Metadata token, uint256 amount) external onlyOwner {
+        token.safeTransferFrom(msg.sender, address(this), amount);
+        token.forceApprove(address(size), amount);
+        size.deposit(DepositParams({token: address(token), amount: amount, to: address(this)}));
     }
 
-    function withdraw(ISize size, WithdrawParams memory params) external onlyOwner {
-        size.withdraw(params);
+    function withdraw(ISize size, IERC20Metadata token, uint256 amount) external onlyOwner {
+        size.withdraw(WithdrawParams({token: address(token), amount: amount, to: msg.sender}));
     }
 
     function buyCreditLimit(ISize size, BuyCreditLimitParams memory params) external onlyBot {

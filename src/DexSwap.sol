@@ -90,7 +90,7 @@ abstract contract DexSwap {
 
     function _swapCollateralUniswap(
         address collateralToken,
-        address borrowToken,
+        address, /* borrowToken */
         address[] memory tokenPaths,
         uint256 deadline,
         uint256 minimumReturnAmount
@@ -104,7 +104,7 @@ abstract contract DexSwap {
 
     function _swapCollateralUnoswap(
         address collateralToken,
-        address borrowToken,
+        address, /* borrowToken */
         address pool,
         uint256 minimumReturnAmount
     ) internal returns (uint256) {

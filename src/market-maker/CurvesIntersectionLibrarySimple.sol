@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.23;
 
-import {console2 as console} from "forge-std/console2.sol";
 import {YieldCurve, YieldCurveLibrary, VariablePoolBorrowRateParams} from "@size/src/libraries/YieldCurveLibrary.sol";
 import {FixedPointMathLib} from "@solady/utils/FixedPointMathLib.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
@@ -17,69 +16,6 @@ library CurvesIntersectionLibrarySimple {
         int256 y3;
         int256 x4;
         int256 y4;
-    }
-
-    struct IntersectionVars {
-        int256 o1;
-        int256 o2;
-        int256 o3;
-        int256 o4;
-    }
-
-    // Internal helper function for orientation
-    function orientation(uint256 ax, uint256 ay, uint256 bx, uint256 by, uint256 cx, uint256 cy)
-        internal
-        pure
-        returns (int256)
-    {
-        // Cross product to determine orientation
-        // Positive -> Counterclockwise
-        // Negative -> Clockwise
-        // Zero -> Collinear
-        return (int256(bx) - int256(ax)) * (int256(cy) - int256(ay))
-            - (int256(by) - int256(ay)) * (int256(cx) - int256(ax));
-    }
-
-    // Internal helper function to check if a point is on a segment
-    function onSegment(uint256 px, uint256 py, uint256 qx, uint256 qy, uint256 rx, uint256 ry)
-        internal
-        pure
-        returns (bool)
-    {
-        return rx >= (px < qx ? px : qx) && rx <= (px > qx ? px : qx) && ry >= (py < qy ? py : qy)
-            && ry <= (py > qy ? py : qy);
-    }
-
-    function pieceWiseLinearIntersection(
-        uint256 x1,
-        uint256 y1,
-        uint256 x2,
-        uint256 y2,
-        uint256 X1,
-        uint256 Y1,
-        uint256 X2,
-        uint256 Y2
-    ) public pure returns (bool intersects) {
-        IntersectionVars memory vars;
-
-        // Compute orientations
-        vars.o1 = orientation(x1, y1, x2, y2, X1, Y1);
-        vars.o2 = orientation(x1, y1, x2, y2, X2, Y2);
-        vars.o3 = orientation(X1, Y1, X2, Y2, x1, y1);
-        vars.o4 = orientation(X1, Y1, X2, Y2, x2, y2);
-
-        // General case: segments intersect if orientations are different
-        if (vars.o1 * vars.o2 < 0 && vars.o3 * vars.o4 < 0) {
-            return true;
-        }
-
-        // Special case: check if collinear points lie on the segment
-        if (vars.o1 == 0 && onSegment(x1, y1, x2, y2, X1, Y1)) return true;
-        if (vars.o2 == 0 && onSegment(x1, y1, x2, y2, X2, Y2)) return true;
-        if (vars.o3 == 0 && onSegment(X1, Y1, X2, Y2, x1, y1)) return true;
-        if (vars.o4 == 0 && onSegment(X1, Y1, X2, Y2, x2, y2)) return true;
-
-        return false;
     }
 
     function curvesIntersect(
@@ -116,11 +52,6 @@ library CurvesIntersectionLibrarySimple {
                         curve2.aprs[j + 1], curve2.marketRateMultipliers[j + 1], variablePoolBorrowRateParams
                     )
                 );
-
-                console.log("(x1, y1)", SafeCast.toUint256(vars.x1), SafeCast.toUint256(vars.y1));
-                console.log("(x2, y2)", SafeCast.toUint256(vars.x2), SafeCast.toUint256(vars.y2));
-                console.log("(X1, Y1)", SafeCast.toUint256(vars.x3), SafeCast.toUint256(vars.y3));
-                console.log("(X2, Y2)", SafeCast.toUint256(vars.x4), SafeCast.toUint256(vars.y4));
 
                 // Early exit if x-ranges do not overlap
                 if (

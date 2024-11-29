@@ -2,7 +2,7 @@
 pragma solidity 0.8.23;
 
 import {console2 as console} from "forge-std/console2.sol";
-import {CurvesIntersectionLibrary} from "src/market-maker/CurvesIntersectionLibrary.sol";
+import {CurvesIntersectionLibrarySimple} from "src/market-maker/CurvesIntersectionLibrarySimple.sol";
 import {PiecewiseIntersectionLibrary} from "src/market-maker/PiecewiseIntersectionLibrary.sol";
 import {YieldCurveHelper} from "@size/test/helpers/libraries/YieldCurveHelper.sol";
 import {YieldCurve, VariablePoolBorrowRateParams} from "@size/src/libraries/YieldCurveLibrary.sol";
@@ -10,57 +10,63 @@ import {AssertsHelper} from "@size/test/helpers/AssertsHelper.sol";
 import {PERCENT, YEAR} from "@size/src/libraries/Math.sol";
 import {Test} from "forge-std/Test.sol";
 
-contract CurvesIntersectionLibraryTest is Test {
-    function test_CurvesIntersectionLibrary_curvesIntersect_normal_flat() public {
+contract CurvesIntersectionLibrarySimpleTest is Test {
+    function test_CurvesIntersectionLibrarySimple_normal_flat() public {
         YieldCurve memory curve1 = YieldCurveHelper.normalCurve();
         YieldCurve memory curve2 = YieldCurveHelper.flatCurve();
         VariablePoolBorrowRateParams memory variablePoolBorrowRateParams;
-        bool intersects = CurvesIntersectionLibrary.curvesIntersect(curve1, curve2, variablePoolBorrowRateParams);
+        bool intersects =
+            CurvesIntersectionLibrarySimple.curvesIntersect(curve1, curve2, variablePoolBorrowRateParams, 0, 0);
         assertTrue(intersects);
     }
 
-    function test_CurvesIntersectionLibrary_curvesIntersect_normal_inverted() public {
+    function test_CurvesIntersectionLibrarySimple_curvesIntersect_normal_inverted() public {
         YieldCurve memory curve1 = YieldCurveHelper.normalCurve();
         YieldCurve memory curve2 = YieldCurveHelper.invertedCurve();
         VariablePoolBorrowRateParams memory variablePoolBorrowRateParams;
-        bool intersects = CurvesIntersectionLibrary.curvesIntersect(curve1, curve2, variablePoolBorrowRateParams);
+        bool intersects =
+            CurvesIntersectionLibrarySimple.curvesIntersect(curve1, curve2, variablePoolBorrowRateParams, 0, 0);
         assertTrue(intersects);
     }
 
-    function test_CurvesIntersectionLibrary_curvesIntersect_normal_steep() public {
+    function test_CurvesIntersectionLibrarySimple_curvesIntersect_normal_steep() public {
         YieldCurve memory normal = YieldCurveHelper.normalCurve();
         YieldCurve memory steep = YieldCurveHelper.steepCurve();
         VariablePoolBorrowRateParams memory variablePoolBorrowRateParams;
-        bool intersects = CurvesIntersectionLibrary.curvesIntersect(normal, steep, variablePoolBorrowRateParams);
+        bool intersects =
+            CurvesIntersectionLibrarySimple.curvesIntersect(normal, steep, variablePoolBorrowRateParams, 0, 0);
         assertTrue(!intersects);
     }
 
-    function test_CurvesIntersectionLibrary_curvesIntersect_flat_inverted() public {
+    function test_CurvesIntersectionLibrarySimple_curvesIntersect_flat_inverted() public {
         YieldCurve memory flat = YieldCurveHelper.flatCurve();
         YieldCurve memory inverted = YieldCurveHelper.invertedCurve();
         VariablePoolBorrowRateParams memory variablePoolBorrowRateParams;
-        bool intersects = CurvesIntersectionLibrary.curvesIntersect(flat, inverted, variablePoolBorrowRateParams);
+        bool intersects =
+            CurvesIntersectionLibrarySimple.curvesIntersect(flat, inverted, variablePoolBorrowRateParams, 0, 0);
         assertTrue(intersects);
     }
 
-    function test_CurvesIntersectionLibrary_curvesIntersect_humped_negative() public {
+    function test_CurvesIntersectionLibrarySimple_curvesIntersect_humped_negative() public {
         YieldCurve memory humped = YieldCurveHelper.humpedCurve();
         YieldCurve memory negative = YieldCurveHelper.negativeCurve();
         VariablePoolBorrowRateParams memory variablePoolBorrowRateParams;
-        bool intersects = CurvesIntersectionLibrary.curvesIntersect(humped, negative, variablePoolBorrowRateParams);
+        bool intersects =
+            CurvesIntersectionLibrarySimple.curvesIntersect(humped, negative, variablePoolBorrowRateParams, 0, 0);
         assertTrue(!intersects);
     }
 
-    function testFuzz_CurvesIntersectionLibrary_curvesIntersect_pointCurve_fails(uint256 x, int256 y) public {
-        x = bound(x, uint256(0), uint256(YEAR * YEAR));
-        y = bound(y, int256(0), int256(PERCENT * PERCENT));
+    function testFailFuzz_CurvesIntersectionLibrarySimple_curvesIntersect_pointCurve_fails(uint256 x, int256 y)
+        public
+    {
         YieldCurve memory curve = YieldCurveHelper.pointCurve(x, y);
         VariablePoolBorrowRateParams memory variablePoolBorrowRateParams;
-        bool intersects = CurvesIntersectionLibrary.curvesIntersect(curve, curve, variablePoolBorrowRateParams);
+        bool intersects =
+            CurvesIntersectionLibrarySimple.curvesIntersect(curve, curve, variablePoolBorrowRateParams, 0, 0);
         assertTrue(intersects);
     }
 
-    function testFuzz_CurvesIntersectionLibrary_curvesIntersect(
+    function _testFuzz_CurvesIntersectionLibrarySimple_curvesIntersect(
         uint256 x1,
         uint256 y1,
         uint256 x2,
@@ -69,8 +75,8 @@ contract CurvesIntersectionLibraryTest is Test {
         uint256 Y1,
         uint256 X2,
         uint256 Y2,
-        bool expected
-    ) private {
+        uint256 tolerance
+    ) public {
         x1 = bound(x1, 0, 10 * YEAR);
         y1 = bound(y1, 0, 100 * PERCENT);
         x2 = bound(x2, x1 + 1, 10 * YEAR + 1);
@@ -79,24 +85,27 @@ contract CurvesIntersectionLibraryTest is Test {
         Y1 = bound(Y1, 0, 100 * PERCENT);
         X2 = bound(X2, X1 + 1, 10 * YEAR + 1);
         Y2 = bound(Y2, 0, 100 * PERCENT);
+        tolerance = bound(tolerance, 0, PERCENT / 100);
 
         console.log("(x1, y1)", x1, y1);
         console.log("(x2, y2)", x2, y2);
         console.log("(X1, Y1)", X1, Y1);
         console.log("(X2, Y2)", X2, Y2);
+        console.log("tolerance", tolerance);
 
-        bool pieceWiseLinearIntersection =
-            PiecewiseIntersectionLibrary.pieceWiseLinearIntersection(x1, y1, x2, y2, X1, Y1, X2, Y2);
+        vm.assume(PiecewiseIntersectionLibrary.pieceWiseLinearIntersection(x1, y1, x2, y2, X1, Y1, X2, Y2));
 
         YieldCurve memory curve1 = YieldCurveHelper.customCurve(x1, y1, x2, y2);
         YieldCurve memory curve2 = YieldCurveHelper.customCurve(X1, Y1, X2, Y2);
 
         VariablePoolBorrowRateParams memory variablePoolBorrowRateParams;
-        bool intersects = CurvesIntersectionLibrary.curvesIntersect(curve1, curve2, variablePoolBorrowRateParams);
-        assertTrue(pieceWiseLinearIntersection == expected ? intersects : !intersects);
+        bool intersects = CurvesIntersectionLibrarySimple.curvesIntersect(
+            curve1, curve2, variablePoolBorrowRateParams, tolerance, tolerance
+        );
+        assertTrue(intersects);
     }
 
-    function test_CurvesIntersectionLibrary_curvesIntersect_concrete_1() public {
+    function testFail_CurvesIntersectionLibrarySimple_curvesIntersect_concrete_fails() public {
         uint256 x1 = 1469;
         uint256 y1 = 4662;
         uint256 x2 = 2891;
@@ -105,10 +114,10 @@ contract CurvesIntersectionLibraryTest is Test {
         uint256 Y1 = 5725;
         uint256 X2 = 315359080;
         uint256 Y2 = 1053;
-        testFuzz_CurvesIntersectionLibrary_curvesIntersect(x1, y1, x2, y2, X1, Y1, X2, Y2, true);
+        _testFuzz_CurvesIntersectionLibrarySimple_curvesIntersect(x1, y1, x2, y2, X1, Y1, X2, Y2, 0);
     }
 
-    function test_CurvesIntersectionLibrary_curvesIntersect_concrete_2() public {
+    function test_CurvesIntersectionLibrarySimple_curvesIntersect_concrete_succeeds_1_pct_tolerance() public {
         uint256 x1 = 1469;
         uint256 y1 = 4662;
         uint256 x2 = 2891;
@@ -117,10 +126,10 @@ contract CurvesIntersectionLibraryTest is Test {
         uint256 Y1 = 5725;
         uint256 X2 = 315359080;
         uint256 Y2 = 1053;
-        testFuzz_CurvesIntersectionLibrary_curvesIntersect(x1, y1, x2, y2, X1, Y1, X2, Y2, true);
+        _testFuzz_CurvesIntersectionLibrarySimple_curvesIntersect(x1, y1, x2, y2, X1, Y1, X2, Y2, PERCENT / 100);
     }
 
-    function test_CurvesIntersectionLibrary_curvesIntersect_concrete_3() public {
+    function testFail_CurvesIntersectionLibrarySimple_curvesIntersect_concrete_fails_001_pct_tolerance() public {
         uint256 x1 = 315359999;
         uint256 y1 = 1178651033205;
         uint256 x2 = 315360000;
@@ -129,10 +138,10 @@ contract CurvesIntersectionLibraryTest is Test {
         uint256 Y1 = 3;
         uint256 X2 = 315360001;
         uint256 Y2 = 128551179;
-        testFuzz_CurvesIntersectionLibrary_curvesIntersect(x1, y1, x2, y2, X1, Y1, X2, Y2, true);
+        _testFuzz_CurvesIntersectionLibrarySimple_curvesIntersect(x1, y1, x2, y2, X1, Y1, X2, Y2, PERCENT / 1e4);
     }
 
-    function test_CurvesIntersectionLibrary_curvesIntersect_concrete_4() public {
+    function testFail_CurvesIntersectionLibrarySimple_curvesIntersect_concrete_fails_1_pct_tolerance() public {
         uint256 x1 = 315359999;
         uint256 y1 = 1178651033205;
         uint256 x2 = 315360000;
@@ -141,10 +150,10 @@ contract CurvesIntersectionLibraryTest is Test {
         uint256 Y1 = 3;
         uint256 X2 = 315360001;
         uint256 Y2 = 128551179;
-        testFuzz_CurvesIntersectionLibrary_curvesIntersect(x1, y1, x2, y2, X1, Y1, X2, Y2, true);
+        _testFuzz_CurvesIntersectionLibrarySimple_curvesIntersect(x1, y1, x2, y2, X1, Y1, X2, Y2, PERCENT / 100);
     }
 
-    function test_CurvesIntersectionLibrary_curvesIntersect_concrete_5() public {
+    function testFail_CurvesIntersectionLibrarySimple_curvesIntersect_concrete_fails_005_pct_tolerance() public {
         uint256 x1 = 315359999;
         uint256 y1 = 1178651033205;
         uint256 x2 = 315360000;
@@ -154,6 +163,6 @@ contract CurvesIntersectionLibraryTest is Test {
         uint256 X2 = 315360001;
         uint256 Y2 = 128551179;
         uint256 tolerance = 55295820855837;
-        testFuzz_CurvesIntersectionLibrary_curvesIntersect(x1, y1, x2, y2, X1, Y1, X2, Y2, true);
+        _testFuzz_CurvesIntersectionLibrarySimple_curvesIntersect(x1, y1, x2, y2, X1, Y1, X2, Y2, tolerance);
     }
 }

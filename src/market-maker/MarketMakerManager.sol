@@ -3,13 +3,14 @@ pragma solidity 0.8.23;
 
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
+import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import {ISize} from "@size/src/interfaces/ISize.sol";
 import {BuyCreditLimitParams, SellCreditLimitParams} from "@size/src/interfaces/ISize.sol";
 import {DepositParams, WithdrawParams} from "@size/src/interfaces/ISize.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
-contract MarketMakerManager is UUPSUpgradeable, Ownable2StepUpgradeable {
+contract MarketMakerManager is Ownable2StepUpgradeable, PausableUpgradeable, UUPSUpgradeable {
     using SafeERC20 for IERC20Metadata;
 
     address public bot;
@@ -26,6 +27,7 @@ contract MarketMakerManager is UUPSUpgradeable, Ownable2StepUpgradeable {
     function initialize(address _owner, address _bot) public initializer {
         __Ownable2Step_init();
         __Ownable_init(_owner);
+        __Pausable_init();
         __UUPSUpgradeable_init();
 
         _setBot(_bot);
@@ -44,6 +46,14 @@ contract MarketMakerManager is UUPSUpgradeable, Ownable2StepUpgradeable {
         _setBot(_bot);
     }
 
+    function pause() external onlyOwner {
+        _pause();
+    }
+
+    function unpause() external onlyOwner {
+        _unpause();
+    }
+
     function deposit(ISize size, IERC20Metadata token, uint256 amount) external onlyOwner {
         token.safeTransferFrom(msg.sender, address(this), amount);
         token.forceApprove(address(size), amount);
@@ -54,11 +64,11 @@ contract MarketMakerManager is UUPSUpgradeable, Ownable2StepUpgradeable {
         size.withdraw(WithdrawParams({token: address(token), amount: amount, to: msg.sender}));
     }
 
-    function buyCreditLimit(ISize size, BuyCreditLimitParams memory params) external onlyBot {
+    function buyCreditLimit(ISize size, BuyCreditLimitParams memory params) external onlyBot whenNotPaused {
         size.buyCreditLimit(params);
     }
 
-    function sellCreditLimit(ISize size, SellCreditLimitParams memory params) external onlyBot {
+    function sellCreditLimit(ISize size, SellCreditLimitParams memory params) external onlyBot whenNotPaused {
         size.sellCreditLimit(params);
     }
 

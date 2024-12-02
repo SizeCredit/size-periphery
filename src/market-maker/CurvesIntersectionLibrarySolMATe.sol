@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.23;
 
+import {console2 as console} from "forge-std/console2.sol";
 import {YieldCurve, YieldCurveLibrary, VariablePoolBorrowRateParams} from "@size/src/libraries/YieldCurveLibrary.sol";
 import {PERCENT} from "@size/src/libraries/Math.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
@@ -43,12 +44,15 @@ library CurvesIntersectionLibrarySolMATe {
         int256 threshold2
     ) public view returns (bool intersects) {
         Vars memory vars;
+
+        console.log("1");
         // Handle single-point curves
         if (curve1.tenors.length == 1 && curve2.tenors.length == 1) {
             (vars.x1, vars.y1) = _getPointValue(0, curve1, variablePoolBorrowRateParams);
             (vars.x2, vars.y2) = _getPointValue(0, curve2, variablePoolBorrowRateParams);
             return _checkPointIntersection(vars.x1, vars.y1, vars.x2, vars.y2, threshold2);
         }
+        console.log("2");
 
         // Handle case where one curve is a point and the other is a line
         if (curve1.tenors.length == 1 || curve2.tenors.length == 1) {
@@ -71,6 +75,7 @@ library CurvesIntersectionLibrarySolMATe {
             }
             return false;
         }
+        console.log("3");
 
         Vars2 memory vars2;
         // Handle curves with multiple points
@@ -80,6 +85,7 @@ library CurvesIntersectionLibrarySolMATe {
                 (vars2.x1End, vars2.y1End) = _getPointValue(i + 1, curve1, variablePoolBorrowRateParams);
                 (vars2.x2Start, vars2.y2Start) = _getPointValue(j, curve2, variablePoolBorrowRateParams);
                 (vars2.x2End, vars2.y2End) = _getPointValue(j + 1, curve2, variablePoolBorrowRateParams);
+                console.log("4");
 
                 if (
                     _findSegmentIntersection(
@@ -162,13 +168,39 @@ library CurvesIntersectionLibrarySolMATe {
         return matrix[0][0] * matrix[1][1] - matrix[0][1] * matrix[1][0];
     }
 
+    function _print(int256[] memory vector) private pure {
+        for (uint256 i = 0; i < vector.length; i++) {
+            console.log("vector[%s]:", i);
+            console.log("            %s", vector[i]);
+        }
+        console.log("");
+    }
+
+    function _print(int256[][] memory matrix) private pure {
+        for (uint256 i = 0; i < matrix.length; i++) {
+            for (uint256 j = 0; j < matrix[i].length; j++) {
+                console.log("matrix[%s][%s]:", i, j);
+                console.log("                %s", matrix[i][j]);
+            }
+        }
+        console.log("");
+    }
+
     function _solve2x2(int256[][] memory A, int256[] memory b) private pure returns (int256, int256) {
+        console.log("x4");
         int256[][] memory q;
         int256[][] memory r;
         int256[][] memory b_mat = VectorUtils.toMatrix(VectorUtils.convertTo59x18(b));
+        console.log("x5");
+        int256[][] memory converted = MatrixUtils.convertTo59x18(A);
+        _print(A);
+        _print(b);
+        _print(converted);
         (q, r) = MatrixUtils.QRDecomposition(MatrixUtils.convertTo59x18(A));
+        console.log("x6");
         int256[][] memory res = MatrixUtils.backSubstitute(r, MatrixUtils.dot(MatrixUtils.T(q), b_mat));
-        return (res[0][0], res[0][1]);
+        console.log("x7");
+        return (res[0][0], res[1][0]);
     }
 
     function _findSegmentIntersection(
@@ -198,6 +230,7 @@ library CurvesIntersectionLibrarySolMATe {
             return false;
         }
 
+        console.log("x1");
         // Formulate the problem as Ax = b
         int256[][] memory A = new int256[][](2);
         A[0] = new int256[](2);
@@ -211,10 +244,14 @@ library CurvesIntersectionLibrarySolMATe {
         b[0] = x3 - x1;
         b[1] = y3 - y1;
 
+        console.log("x2");
+
         // Check if the lines are parallel or nearly parallel
         if (SafeCast.toInt256(FixedPointMathLib.abs(_determinant(A))) <= threshold1) {
             return false; // Assuming we don't need to handle parallel segments for boolean output
         }
+
+        console.log("x3");
 
         // Solve the linear system
         (int256 t, int256 s) = _solve2x2(A, b);

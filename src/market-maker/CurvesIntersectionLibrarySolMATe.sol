@@ -3,6 +3,7 @@ pragma solidity 0.8.23;
 
 import {console2 as console} from "forge-std/console2.sol";
 import {YieldCurve, YieldCurveLibrary, VariablePoolBorrowRateParams} from "@size/src/libraries/YieldCurveLibrary.sol";
+import {PRBMathSD59x18} from "prb-math/contracts/PRBMathSD59x18.sol";
 import {PERCENT} from "@size/src/libraries/Math.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {FixedPointMathLib} from "@solady/utils/FixedPointMathLib.sol";
@@ -12,6 +13,9 @@ import {MatrixUtils} from "@SolMATe/MatrixUtils.sol";
 int256 constant IPERCENT = int256(PERCENT);
 
 library CurvesIntersectionLibrarySolMATe {
+    error ExpectedMatrixNxM(uint256 n, uint256 m);
+    error ExpectedVectorN(uint256 n);
+
     struct Vars {
         int256 x1;
         int256 y1;
@@ -120,7 +124,7 @@ library CurvesIntersectionLibrarySolMATe {
         YieldCurve memory curve,
         VariablePoolBorrowRateParams memory variablePoolBorrowRateParams
     ) internal view returns (int256, int256) {
-        int256 x = SafeCast.toInt256(curve.tenors[pointIndex]);
+        int256 x = PRBMathSD59x18.fromInt(SafeCast.toInt256(curve.tenors[pointIndex]));
         int256 y = SafeCast.toInt256(
             YieldCurveLibrary.getAdjustedAPR(
                 curve.aprs[pointIndex], curve.marketRateMultipliers[pointIndex], variablePoolBorrowRateParams
@@ -139,8 +143,7 @@ library CurvesIntersectionLibrarySolMATe {
 
     // https://numpy.org/doc/2.1/reference/generated/numpy.isclose.html#numpy-isclose
     function _isClose(int256 a, int256 b, int256 atol, int256 rtol) internal pure returns (bool) {
-        return SafeCast.toInt256(FixedPointMathLib.abs(a - b))
-            <= (atol + rtol * SafeCast.toInt256(FixedPointMathLib.abs(b)));
+        return PRBMathSD59x18.abs(a - b) <= (atol + PRBMathSD59x18.mul(rtol, PRBMathSD59x18.abs(a - b)));
     }
 
     function _checkPointOnLineSegment(int256 x, int256 y, int256 x1, int256 y1, int256 x2, int256 y2, int256 threshold)
@@ -159,12 +162,15 @@ library CurvesIntersectionLibrarySolMATe {
         }
 
         // Calculate expected y using linear interpolation
-        int256 t = IPERCENT * (x - x1) / (x2 - x1);
-        int256 yExpected = y1 + (t * (y2 - y1)) / IPERCENT;
+        int256 t = PRBMathSD59x18.div((x - x1), (x2 - x1));
+        int256 yExpected = y1 + PRBMathSD59x18.mul(t, (y2 - y1));
         return _isClose(y, yExpected, threshold, IPERCENT / 1e8);
     }
 
     function _determinant(int256[][] memory matrix) private pure returns (int256) {
+        if (matrix.length != 2 || matrix[0].length != 2 || matrix[1].length != 2) {
+            revert ExpectedMatrixNxM(2, 2);
+        }
         return matrix[0][0] * matrix[1][1] - matrix[0][1] * matrix[1][0];
     }
 
@@ -187,16 +193,21 @@ library CurvesIntersectionLibrarySolMATe {
     }
 
     function _solve2x2(int256[][] memory A, int256[] memory b) private pure returns (int256, int256) {
+        if (A.length != 2 || A[0].length != 2 || A[1].length != 2) {
+            revert ExpectedMatrixNxM(2, 2);
+        }
+        if (b.length != 2) {
+            revert ExpectedVectorN(2);
+        }
+
         console.log("x4");
         int256[][] memory q;
         int256[][] memory r;
-        int256[][] memory b_mat = VectorUtils.toMatrix(VectorUtils.convertTo59x18(b));
+        int256[][] memory b_mat = VectorUtils.toMatrix(b);
         console.log("x5");
-        int256[][] memory converted = MatrixUtils.convertTo59x18(A);
         _print(A);
         _print(b);
-        _print(converted);
-        (q, r) = MatrixUtils.QRDecomposition(MatrixUtils.convertTo59x18(A));
+        (q, r) = MatrixUtils.QRDecomposition(A);
         console.log("x6");
         int256[][] memory res = MatrixUtils.backSubstitute(r, MatrixUtils.dot(MatrixUtils.T(q), b_mat));
         console.log("x7");
@@ -247,7 +258,7 @@ library CurvesIntersectionLibrarySolMATe {
         console.log("x2");
 
         // Check if the lines are parallel or nearly parallel
-        if (SafeCast.toInt256(FixedPointMathLib.abs(_determinant(A))) <= threshold1) {
+        if (PRBMathSD59x18.abs(_determinant(A)) <= threshold1) {
             return false; // Assuming we don't need to handle parallel segments for boolean output
         }
 

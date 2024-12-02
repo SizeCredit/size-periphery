@@ -6,7 +6,6 @@ import {CurvesIntersectionLibrarySolMATe} from "src/market-maker/CurvesIntersect
 import {PiecewiseIntersectionLibrary} from "src/market-maker/PiecewiseIntersectionLibrary.sol";
 import {YieldCurveHelper} from "@size/test/helpers/libraries/YieldCurveHelper.sol";
 import {YieldCurve, VariablePoolBorrowRateParams} from "@size/src/libraries/YieldCurveLibrary.sol";
-import {AssertsHelper} from "@size/test/helpers/AssertsHelper.sol";
 import {PERCENT, YEAR} from "@size/src/libraries/Math.sol";
 import {Test} from "forge-std/Test.sol";
 

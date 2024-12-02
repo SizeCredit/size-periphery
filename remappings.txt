@@ -12,3 +12,5 @@
 @uniswap/v3-periphery/=lib/v3-periphery/
 @uniswap/v3-core/=lib/v3-core/
 @safe=lib/safe-smart-account
+@SolMATe=lib/SolMATe/contracts
+@prb-math=lib/prb-math/src

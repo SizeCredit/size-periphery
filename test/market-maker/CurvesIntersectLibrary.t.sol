@@ -11,7 +11,7 @@ import {PERCENT, YEAR} from "@size/src/libraries/Math.sol";
 import {Test} from "forge-std/Test.sol";
 
 contract CurvesIntersectionLibraryTest is Test {
-    function test_CurvesIntersectionLibrary_curvesIntersect_normal_flat() public {
+    function test_CurvesIntersectionLibrary_curvesIntersect_normal_flat() public view {
         YieldCurve memory curve1 = YieldCurveHelper.normalCurve();
         YieldCurve memory curve2 = YieldCurveHelper.flatCurve();
         VariablePoolBorrowRateParams memory variablePoolBorrowRateParams;
@@ -19,7 +19,7 @@ contract CurvesIntersectionLibraryTest is Test {
         assertTrue(intersects);
     }
 
-    function test_CurvesIntersectionLibrary_curvesIntersect_normal_inverted() public {
+    function test_CurvesIntersectionLibrary_curvesIntersect_normal_inverted() public view {
         YieldCurve memory curve1 = YieldCurveHelper.normalCurve();
         YieldCurve memory curve2 = YieldCurveHelper.invertedCurve();
         VariablePoolBorrowRateParams memory variablePoolBorrowRateParams;
@@ -27,7 +27,7 @@ contract CurvesIntersectionLibraryTest is Test {
         assertTrue(intersects);
     }
 
-    function test_CurvesIntersectionLibrary_curvesIntersect_normal_steep() public {
+    function test_CurvesIntersectionLibrary_curvesIntersect_normal_steep() public view {
         YieldCurve memory normal = YieldCurveHelper.normalCurve();
         YieldCurve memory steep = YieldCurveHelper.steepCurve();
         VariablePoolBorrowRateParams memory variablePoolBorrowRateParams;
@@ -35,7 +35,7 @@ contract CurvesIntersectionLibraryTest is Test {
         assertTrue(!intersects);
     }
 
-    function test_CurvesIntersectionLibrary_curvesIntersect_flat_inverted() public {
+    function test_CurvesIntersectionLibrary_curvesIntersect_flat_inverted() public view {
         YieldCurve memory flat = YieldCurveHelper.flatCurve();
         YieldCurve memory inverted = YieldCurveHelper.invertedCurve();
         VariablePoolBorrowRateParams memory variablePoolBorrowRateParams;
@@ -43,7 +43,7 @@ contract CurvesIntersectionLibraryTest is Test {
         assertTrue(intersects);
     }
 
-    function test_CurvesIntersectionLibrary_curvesIntersect_humped_negative() public {
+    function test_CurvesIntersectionLibrary_curvesIntersect_humped_negative() public view {
         YieldCurve memory humped = YieldCurveHelper.humpedCurve();
         YieldCurve memory negative = YieldCurveHelper.negativeCurve();
         VariablePoolBorrowRateParams memory variablePoolBorrowRateParams;
@@ -51,7 +51,7 @@ contract CurvesIntersectionLibraryTest is Test {
         assertTrue(!intersects);
     }
 
-    function testFuzz_CurvesIntersectionLibrary_curvesIntersect_pointCurve_fails(uint256 x, int256 y) public {
+    function testFuzz_CurvesIntersectionLibrary_curvesIntersect_pointCurve_fails(uint256 x, int256 y) public view {
         x = bound(x, uint256(0), uint256(YEAR * YEAR));
         y = bound(y, int256(0), int256(PERCENT * PERCENT));
         YieldCurve memory curve = YieldCurveHelper.pointCurve(x, y);
@@ -70,7 +70,7 @@ contract CurvesIntersectionLibraryTest is Test {
         uint256 X2,
         uint256 Y2,
         bool expected
-    ) private {
+    ) private view {
         x1 = bound(x1, 0, 10 * YEAR);
         y1 = bound(y1, 0, 100 * PERCENT);
         x2 = bound(x2, x1 + 1, 10 * YEAR + 1);
@@ -85,6 +85,7 @@ contract CurvesIntersectionLibraryTest is Test {
         console.log("(X1, Y1)", X1, Y1);
         console.log("(X2, Y2)", X2, Y2);
 
+        // revert("This is biased since this function is used inside CurvesIntersectionLibrary");
         bool pieceWiseLinearIntersection =
             PiecewiseIntersectionLibrary.pieceWiseLinearIntersection(x1, y1, x2, y2, X1, Y1, X2, Y2);
 
@@ -96,7 +97,7 @@ contract CurvesIntersectionLibraryTest is Test {
         assertTrue(pieceWiseLinearIntersection == expected ? intersects : !intersects);
     }
 
-    function test_CurvesIntersectionLibrary_curvesIntersect_concrete_1() public {
+    function test_CurvesIntersectionLibrary_curvesIntersect_concrete_1() public view {
         uint256 x1 = 1469;
         uint256 y1 = 4662;
         uint256 x2 = 2891;
@@ -108,7 +109,7 @@ contract CurvesIntersectionLibraryTest is Test {
         testFuzz_CurvesIntersectionLibrary_curvesIntersect(x1, y1, x2, y2, X1, Y1, X2, Y2, true);
     }
 
-    function test_CurvesIntersectionLibrary_curvesIntersect_concrete_2() public {
+    function test_CurvesIntersectionLibrary_curvesIntersect_concrete_2() public view {
         uint256 x1 = 1469;
         uint256 y1 = 4662;
         uint256 x2 = 2891;
@@ -120,7 +121,7 @@ contract CurvesIntersectionLibraryTest is Test {
         testFuzz_CurvesIntersectionLibrary_curvesIntersect(x1, y1, x2, y2, X1, Y1, X2, Y2, true);
     }
 
-    function test_CurvesIntersectionLibrary_curvesIntersect_concrete_3() public {
+    function test_CurvesIntersectionLibrary_curvesIntersect_concrete_3() public view {
         uint256 x1 = 315359999;
         uint256 y1 = 1178651033205;
         uint256 x2 = 315360000;
@@ -132,7 +133,7 @@ contract CurvesIntersectionLibraryTest is Test {
         testFuzz_CurvesIntersectionLibrary_curvesIntersect(x1, y1, x2, y2, X1, Y1, X2, Y2, true);
     }
 
-    function test_CurvesIntersectionLibrary_curvesIntersect_concrete_4() public {
+    function test_CurvesIntersectionLibrary_curvesIntersect_concrete_4() public view {
         uint256 x1 = 315359999;
         uint256 y1 = 1178651033205;
         uint256 x2 = 315360000;
@@ -144,7 +145,7 @@ contract CurvesIntersectionLibraryTest is Test {
         testFuzz_CurvesIntersectionLibrary_curvesIntersect(x1, y1, x2, y2, X1, Y1, X2, Y2, true);
     }
 
-    function test_CurvesIntersectionLibrary_curvesIntersect_concrete_5() public {
+    function test_CurvesIntersectionLibrary_curvesIntersect_concrete_5() public view {
         uint256 x1 = 315359999;
         uint256 y1 = 1178651033205;
         uint256 x2 = 315360000;
@@ -153,7 +154,6 @@ contract CurvesIntersectionLibraryTest is Test {
         uint256 Y1 = 3;
         uint256 X2 = 315360001;
         uint256 Y2 = 128551179;
-        uint256 tolerance = 55295820855837;
         testFuzz_CurvesIntersectionLibrary_curvesIntersect(x1, y1, x2, y2, X1, Y1, X2, Y2, true);
     }
 }

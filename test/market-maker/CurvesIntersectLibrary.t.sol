@@ -6,7 +6,6 @@ import {CurvesIntersectionLibrary} from "src/market-maker/CurvesIntersectionLibr
 import {PiecewiseIntersectionLibrary} from "src/market-maker/PiecewiseIntersectionLibrary.sol";
 import {YieldCurveHelper} from "@size/test/helpers/libraries/YieldCurveHelper.sol";
 import {YieldCurve, VariablePoolBorrowRateParams} from "@size/src/libraries/YieldCurveLibrary.sol";
-import {AssertsHelper} from "@size/test/helpers/AssertsHelper.sol";
 import {PERCENT, YEAR} from "@size/src/libraries/Math.sol";
 import {Test} from "forge-std/Test.sol";
 
@@ -183,8 +182,8 @@ contract CurvesIntersectionLibraryTest is Test {
         p1x = bound(p1x, 1, 1 * YEAR);
         p2x = bound(p2x, p1x + 1, 1 * YEAR + 1);
 
-        p1y = bound(p1y, 0 + 2, 1 * PERCENT + 2);
-        p2y = bound(p2y, p1y + 1, 1 * PERCENT + 1);
+        p1y = bound(p1y, 1 + 2, 1 * PERCENT + 2);
+        p2y = bound(p2y, p1y + 1, 1 * PERCENT + 2 + 1);
 
         uint256 p3x = p1x;
         p3y = bound(p3y, 0 + 1, p1y - 1);
@@ -201,5 +200,166 @@ contract CurvesIntersectionLibraryTest is Test {
         VariablePoolBorrowRateParams memory variablePoolBorrowRateParams;
         bool intersects = CurvesIntersectionLibrary.curvesIntersect(curve1, curve2, variablePoolBorrowRateParams);
         assertTrue(intersects);
+    }
+
+    function testFuzz_CurvesIntersectionLibrary_curvesIntersect_not(
+        uint256 p1x,
+        uint256 p1y,
+        uint256 p2x,
+        uint256 p2y,
+        uint256 p3y,
+        uint256 p4y
+    ) public view {
+        /*
+      |     P2
+      |    /
+      |   /
+      | P1
+      |
+      | P3
+      |   \
+      |    \
+      |     P4
+      +-----------------
+        */
+
+        p1x = bound(p1x, 1, 1 * YEAR);
+        p2x = bound(p2x, p1x + 1, 1 * YEAR + 1);
+
+        p1y = bound(p1y, 0 + 2, 1 * PERCENT + 2);
+        p2y = bound(p2y, p1y + 1, 1 * PERCENT + 2 + 1);
+
+        uint256 p3x = p1x;
+        p3y = bound(p3y, 0 + 1, p1y - 1);
+        uint256 p4x = p2x;
+        p4y = bound(p4y, 0, p3y - 1);
+
+        console.log("P1 = (%s,%s)", p1x, p1y);
+        console.log("P2 = (%s,%s)", p2x, p2y);
+        console.log("P3 = (%s,%s)", p3x, p3y);
+        console.log("P4 = (%s,%s)", p4x, p4y);
+
+        YieldCurve memory curve1 = YieldCurveHelper.customCurve(p1x, p1y, p2x, p2y);
+        YieldCurve memory curve2 = YieldCurveHelper.customCurve(p3x, p3y, p4x, p4y);
+        VariablePoolBorrowRateParams memory variablePoolBorrowRateParams;
+        bool intersects = CurvesIntersectionLibrary.curvesIntersect(curve1, curve2, variablePoolBorrowRateParams);
+        assertTrue(!intersects);
+    }
+
+    function testFuzz_CurvesIntersectionLibrary_curvesIntersect_same_initial_point(
+        uint256 p1x,
+        uint256 p1y,
+        uint256 p2x,
+        uint256 p2y,
+        uint256 p4y
+    ) public view {
+        /*
+      |     P2
+      |    /
+      |   /
+      | P1
+      |   \
+      |    \
+      |     P4
+      +-----------------
+        */
+
+        p1x = bound(p1x, 1, 1 * YEAR);
+        p2x = bound(p2x, p1x + 1, 1 * YEAR + 1);
+
+        p1y = bound(p1y, 0 + 2, 1 * PERCENT + 2);
+        p2y = bound(p2y, p1y + 1, 1 * PERCENT + 2 + 1);
+
+        uint256 p4x = p2x;
+        p4y = bound(p4y, 0, p1y - 1);
+
+        console.log("P1 = (%s,%s)", p1x, p1y);
+        console.log("P2 = (%s,%s)", p2x, p2y);
+        console.log("P4 = (%s,%s)", p4x, p4y);
+
+        YieldCurve memory curve1 = YieldCurveHelper.customCurve(p1x, p1y, p2x, p2y);
+        YieldCurve memory curve2 = YieldCurveHelper.customCurve(p1x, p1y, p4x, p4y);
+        VariablePoolBorrowRateParams memory variablePoolBorrowRateParams;
+        bool intersects = CurvesIntersectionLibrary.curvesIntersect(curve1, curve2, variablePoolBorrowRateParams);
+        assertTrue(intersects);
+    }
+
+    function testFuzz_CurvesIntersectionLibrary_curvesIntersect_same_final_point(
+        uint256 p1x,
+        uint256 p1y,
+        uint256 p2x,
+        uint256 p2y,
+        uint256 p3y
+    ) public view {
+        /*
+      | P1
+      |   \
+      |     P2
+      |   /
+      | P3
+      +-----------------
+        */
+
+        p1x = bound(p1x, 1, 1 * YEAR);
+        p2x = bound(p2x, p1x + 1, 1 * YEAR + 1);
+
+        p1y = bound(p1y, 0 + 2, 1 * PERCENT + 2);
+        p2y = bound(p2y, p1y + 1, 1 * PERCENT + 2 + 1);
+
+        uint256 p3x = p1x;
+        p3y = bound(p3y, 0 + 1, p1y - 1);
+
+        console.log("P1 = (%s,%s)", p1x, p1y);
+        console.log("P2 = (%s,%s)", p2x, p2y);
+        console.log("P3 = (%s,%s)", p3x, p3y);
+
+        YieldCurve memory curve1 = YieldCurveHelper.customCurve(p1x, p1y, p2x, p2y);
+        YieldCurve memory curve2 = YieldCurveHelper.customCurve(p3x, p3y, p2x, p2y);
+        VariablePoolBorrowRateParams memory variablePoolBorrowRateParams;
+        bool intersects = CurvesIntersectionLibrary.curvesIntersect(curve1, curve2, variablePoolBorrowRateParams);
+        assertTrue(intersects);
+    }
+
+    function testFuzzFFI_CurvesIntersectionLibrary_curvesIntersect(
+        uint256 p1x,
+        uint256 p2x,
+        uint256 p1y,
+        uint256 p2y,
+        uint256 p3y,
+        uint256 p4y
+    ) public {
+        p1x = bound(p1x, 1, 1 * YEAR);
+        p2x = bound(p2x, p1x + 1, 1 * YEAR + 1);
+        uint256 p3x = p1x;
+        uint256 p4x = p2x;
+
+        p1y = bound(p1y, 0, 1 * PERCENT);
+        p2y = bound(p2y, 0, 1 * PERCENT);
+        p3y = bound(p3y, 0, 1 * PERCENT);
+        p4y = bound(p4y, 0, 1 * PERCENT);
+
+        string[] memory inputs = new string[](10);
+        inputs[0] = "python3";
+        inputs[1] = "./script/curves_intersect.py";
+        inputs[2] = vm.toString(p1x);
+        inputs[3] = vm.toString(p1y);
+        inputs[4] = vm.toString(p2x);
+        inputs[5] = vm.toString(p2y);
+        inputs[6] = vm.toString(p3x);
+        inputs[7] = vm.toString(p3y);
+        inputs[8] = vm.toString(p4x);
+        inputs[9] = vm.toString(p4y);
+
+        bytes memory result = vm.ffi(inputs);
+
+        bool pythonResult = keccak256(result) == keccak256(bytes("True"));
+
+        YieldCurve memory curve1 = YieldCurveHelper.customCurve(p1x, p1y, p4x, p4y);
+        YieldCurve memory curve2 = YieldCurveHelper.customCurve(p3x, p3y, p2x, p2y);
+        VariablePoolBorrowRateParams memory variablePoolBorrowRateParams;
+
+        bool intersects = CurvesIntersectionLibrary.curvesIntersect(curve1, curve2, variablePoolBorrowRateParams);
+
+        assertEq(intersects, pythonResult, "Mismatch between Python script result and Solidity library result");
     }
 }

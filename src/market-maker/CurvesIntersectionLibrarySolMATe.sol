@@ -49,8 +49,9 @@ library CurvesIntersectionLibrarySolMATe {
     ) public view returns (bool intersects) {
         Vars memory vars;
 
-        if(vars.x1 == 0)
+        if (vars.x1 == 0) {
             revert SolMATeIsNotReliable("https://github.com/NTA-Capital/SolMATe/issues/1");
+        }
 
         // Handle single-point curves
         if (curve1.tenors.length == 1 && curve2.tenors.length == 1) {

@@ -320,7 +320,7 @@ contract CurvesIntersectionLibraryTest is Test {
         assertTrue(intersects);
     }
 
-    function testFuzzFFI_CurvesIntersectionLibrary_curvesIntersect(
+    function testFuzzFFI_CurvesIntersectionLibrary_curvesIntersect_open(
         uint256 p1x,
         uint256 p2x,
         uint256 p1y,
@@ -337,6 +337,11 @@ contract CurvesIntersectionLibraryTest is Test {
         p2y = bound(p2y, 0, 1 * PERCENT);
         p3y = bound(p3y, 0, 1 * PERCENT);
         p4y = bound(p4y, 0, 1 * PERCENT);
+
+        console.log("P1 = (%s,%s)", p1x, p1y);
+        console.log("P2 = (%s,%s)", p2x, p2y);
+        console.log("P3 = (%s,%s)", p3x, p3y);
+        console.log("P4 = (%s,%s)", p4x, p4y);
 
         string[] memory inputs = new string[](10);
         inputs[0] = "python3";
@@ -360,6 +365,61 @@ contract CurvesIntersectionLibraryTest is Test {
 
         bool intersects = CurvesIntersectionLibrary.curvesIntersect(curve1, curve2, variablePoolBorrowRateParams);
 
-        assertEq(intersects, pythonResult, "Mismatch between Python script result and Solidity library result");
+        assertEq(intersects, pythonResult, "Solidity != Python");
+    }
+
+    function testFFI_CurvesIntersectionLibrary_curvesIntersect_concrete_1() public {
+        // python false negative
+        // testFuzzFFI_CurvesIntersectionLibrary_curvesIntersect_open(
+        //     843, 7499, 3464, 2647, 548433759612690140 , 2578
+        // );
+    }
+
+    function testFuzzFFI_CurvesIntersectionLibrary_curvesIntersect_closed(
+        uint256 p1x,
+        uint256 p2x,
+        uint256 p1y,
+        uint256 p2y,
+        uint256 p3y,
+        uint256 p4y
+    ) public {
+        p1x = bound(p1x, 1 days, 30 days);
+        p2x = bound(p2x, p1x + 30 days, 2 * 30 days);
+        uint256 p3x = p1x;
+        uint256 p4x = p2x;
+
+        p1y = bound(p1y, PERCENT / 100, 5 * PERCENT / 100);
+        p2y = bound(p2y, PERCENT / 100, 5 * PERCENT / 100);
+        p3y = bound(p3y, PERCENT / 100, 5 * PERCENT / 100);
+        p4y = bound(p4y, PERCENT / 100, 5 * PERCENT / 100);
+
+        console.log("P1 = (%s,%s)", p1x, p1y);
+        console.log("P2 = (%s,%s)", p2x, p2y);
+        console.log("P3 = (%s,%s)", p3x, p3y);
+        console.log("P4 = (%s,%s)", p4x, p4y);
+
+        string[] memory inputs = new string[](10);
+        inputs[0] = "python3";
+        inputs[1] = "./script/curves_intersect.py";
+        inputs[2] = vm.toString(p1x);
+        inputs[3] = vm.toString(p1y);
+        inputs[4] = vm.toString(p2x);
+        inputs[5] = vm.toString(p2y);
+        inputs[6] = vm.toString(p3x);
+        inputs[7] = vm.toString(p3y);
+        inputs[8] = vm.toString(p4x);
+        inputs[9] = vm.toString(p4y);
+
+        bytes memory result = vm.ffi(inputs);
+
+        bool pythonResult = keccak256(result) == keccak256(bytes("True"));
+
+        YieldCurve memory curve1 = YieldCurveHelper.customCurve(p1x, p1y, p4x, p4y);
+        YieldCurve memory curve2 = YieldCurveHelper.customCurve(p3x, p3y, p2x, p2y);
+        VariablePoolBorrowRateParams memory variablePoolBorrowRateParams;
+
+        bool intersects = CurvesIntersectionLibrary.curvesIntersect(curve1, curve2, variablePoolBorrowRateParams);
+
+        assertEq(intersects, pythonResult, "Solidity != Python");
     }
 }

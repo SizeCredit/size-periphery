@@ -2,8 +2,6 @@
 pragma solidity 0.8.23;
 
 import {YieldCurve, YieldCurveLibrary, VariablePoolBorrowRateParams} from "@size/src/libraries/YieldCurveLibrary.sol";
-import {FixedPointMathLib} from "@solady/utils/FixedPointMathLib.sol";
-import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {PiecewiseIntersectionLibrary} from "./PiecewiseIntersectionLibrary.sol";
 
 library CurvesIntersectionLibrary {
@@ -12,6 +10,10 @@ library CurvesIntersectionLibrary {
         YieldCurve memory curve2,
         VariablePoolBorrowRateParams memory variablePoolBorrowRateParams
     ) public view returns (bool intersects) {
+        // null curves don't intersect
+        if (curve1.tenors.length == 0 || curve2.tenors.length == 0) {
+            return false;
+        }
         // Handle point curve cases
         if (curve1.tenors.length == 1 && curve2.tenors.length == 1) {
             // Both are single points, check if they coincide

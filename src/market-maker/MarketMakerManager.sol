@@ -5,10 +5,15 @@ import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/U
 import {Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import {ISize} from "@size/src/interfaces/ISize.sol";
-import {BuyCreditLimitParams, SellCreditLimitParams} from "@size/src/interfaces/ISize.sol";
-import {DepositParams, WithdrawParams} from "@size/src/interfaces/ISize.sol";
+import {ISizeView} from "@size/src/interfaces/ISizeView.sol";
+import {
+    DepositParams, WithdrawParams, BuyCreditLimitParams, SellCreditLimitParams
+} from "@size/src/interfaces/ISize.sol";
+import {VariablePoolBorrowRateParams} from "@src/libraries/YieldCurveLibrary.sol";
+import {YieldCurve} from "@size/src/libraries/YieldCurveLibrary.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import {CurvesIntersectionLibrary} from "./CurvesIntersectionLibrary.sol";
 
 contract MarketMakerManager is Ownable2StepUpgradeable, PausableUpgradeable, UUPSUpgradeable {
     using SafeERC20 for IERC20Metadata;
@@ -18,6 +23,8 @@ contract MarketMakerManager is Ownable2StepUpgradeable, PausableUpgradeable, UUP
     event BotSet(address indexed oldBot, address indexed newBot);
 
     error OnlyBot();
+    error CurvesIntersect();
+    error OnlyNullMultipliersAllowed();
 
     // @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -65,14 +72,39 @@ contract MarketMakerManager is Ownable2StepUpgradeable, PausableUpgradeable, UUP
     }
 
     function buyCreditLimit(ISize size, BuyCreditLimitParams memory params) external onlyBot whenNotPaused {
+        _validateCurvesDoNotIntersect(
+            params.curveRelativeTime,
+            ISizeView(address(size)).getUserView(address(this)).user.borrowOffer.curveRelativeTime
+        );
         size.buyCreditLimit(params);
     }
 
     function sellCreditLimit(ISize size, SellCreditLimitParams memory params) external onlyBot whenNotPaused {
+        _validateCurvesDoNotIntersect(
+            params.curveRelativeTime,
+            ISizeView(address(size)).getUserView(address(this)).user.loanOffer.curveRelativeTime
+        );
         size.sellCreditLimit(params);
     }
 
-    function _setBot(address _bot) internal {
+    function _validateNullMultipliers(YieldCurve memory curve) private pure {
+        for (uint256 i = 0; i < curve.marketRateMultipliers.length; i++) {
+            if (curve.marketRateMultipliers[i] != 0) {
+                revert OnlyNullMultipliersAllowed();
+            }
+        }
+    }
+
+    function _validateCurvesDoNotIntersect(YieldCurve memory a, YieldCurve memory b) private view {
+        VariablePoolBorrowRateParams memory variablePoolBorrowRateParams;
+        _validateNullMultipliers(a);
+        _validateNullMultipliers(b);
+        if (CurvesIntersectionLibrary.curvesIntersect(a, b, variablePoolBorrowRateParams)) {
+            revert CurvesIntersect();
+        }
+    }
+
+    function _setBot(address _bot) private {
         emit BotSet(bot, _bot);
         bot = _bot;
     }

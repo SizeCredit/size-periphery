@@ -18,7 +18,7 @@ def _get_point_value(point_index: int, curve: OfferCurve, aave_rate: int) -> tup
 
 def _check_point_intersection(point1: tuple[float, float], point2: tuple[float, float], threshold: float) -> bool:
     """Check if two points intersect within a given threshold."""
-    return np.isclose(point1[0], point2[0], atol=threshold) and np.isclose(point1[1], point2[1], atol=threshold)
+    return bool(np.isclose(point1[0], point2[0], atol=threshold) and np.isclose(point1[1], point2[1], atol=threshold))
 
 def _check_point_on_line_segment(point: tuple[float, float], segment_start: tuple[float, float], 
                                segment_end: tuple[float, float], threshold: float) -> bool:
@@ -38,7 +38,7 @@ def _check_point_on_line_segment(point: tuple[float, float], segment_start: tupl
     # Calculate expected y using linear interpolation
     t = (x - x1) / (x2 - x1)
     y_expected = y1 + t * (y2 - y1)
-    return np.isclose(y, y_expected, atol=threshold)
+    return bool(np.isclose(y, y_expected, atol=threshold))
 
 def _find_segment_intersection(segment1_start: tuple[float, float], segment1_end: tuple[float, float],
                              segment2_start: tuple[float, float], segment2_end: tuple[float, float],
@@ -48,35 +48,61 @@ def _find_segment_intersection(segment1_start: tuple[float, float], segment1_end
     x2, y2 = segment1_end
     x3, y3 = segment2_start
     x4, y4 = segment2_end
-    
     # Early exit if x-ranges do not overlap
-    if max(x1, x2) < min(x3, x4) or max(x3, x4) < min(x1, x2):
+    if max(x1, x2) + threshold2 < min(x3, x4) or max(x3, x4) + threshold2 < min(x1, x2):
         return set()
 
     # Early exit if one segment is completely above or below the other
-    if min(y1, y2) > max(y3, y4) or max(y1, y2) < min(y3, y4):
+    if min(y1, y2) - threshold2 > max(y3, y4) or max(y1, y2) + threshold2 < min(y3, y4):
         return set()
 
-    # Formulate the problem as Ax = b
-    A = np.array([
-        [x2 - x1, -(x4 - x3)],
-        [y2 - y1, -(y4 - y3)]
-    ])
-    b = np.array([x3 - x1, y3 - y1])
-
-    # Check if the lines are parallel or nearly parallel
-    if abs(np.linalg.det(A)) <= threshold1:
-        return _handle_parallel_segments(segment1_start, segment1_end, segment2_start, segment2_end, threshold2)
-
     try:
-        # Solve the linear system
-        t, s = np.linalg.solve(A, b)
-        # Check if the intersection point is within the segment bounds
-        if 0 <= t <= 1 and 0 <= s <= 1:
-            x_intersect = x1 + t * (x2 - x1)
+        # Calculate slopes
+        dx1 = x2 - x1
+        dx2 = x4 - x3
+        dy1 = y2 - y1
+        dy2 = y4 - y3
+
+        # Handle vertical and near-vertical lines
+        if abs(dx1) < threshold1:  # First line vertical
+            if abs(dx2) < threshold1:  # Both lines vertical
+                if abs(x1 - x3) < threshold2:  # Same x-coordinate
+                    return _handle_parallel_segments(segment1_start, segment1_end,
+                                                  segment2_start, segment2_end, threshold2)
+                return set()
+            
+            x_intersect = x1
+            t = (x_intersect - x3) / dx2 if dx2 != 0 else 0
+            y_intersect = y3 + t * dy2
+            
+        elif abs(dx2) < threshold1:  # Second line vertical
+            x_intersect = x3
+            t = (x_intersect - x1) / dx1 if dx1 != 0 else 0
+            y_intersect = y1 + t * dy1
+            
+        else:
+            slope1 = dy1 / dx1
+            slope2 = dy2 / dx2
+            
+            # Check if lines are parallel
+            if abs(slope1 - slope2) < threshold1:
+                return _handle_parallel_segments(segment1_start, segment1_end,
+                                              segment2_start, segment2_end, threshold2)
+                
+            # Calculate intersection
+            x_intersect = ((y3 - y1 + slope1 * x1 - slope2 * x3) / 
+                         (slope1 - slope2))
+            y_intersect = y1 + slope1 * (x_intersect - x1)
+
+        # Check if intersection point lies within both segments with threshold
+        if (min(x1, x2) - threshold2 <= x_intersect <= max(x1, x2) + threshold2 and
+            min(x3, x4) - threshold2 <= x_intersect <= max(x3, x4) + threshold2 and
+            min(y1, y2) - threshold2 <= y_intersect <= max(y1, y2) + threshold2 and
+            min(y3, y4) - threshold2 <= y_intersect <= max(y3, y4) + threshold2):
             return {x_intersect}
-    except np.linalg.LinAlgError:
-        logger.debug("LinAlgError encountered when solving for intersection")
+            
+    except (ZeroDivisionError, OverflowError):
+        print("Numerical error encountered when solving for intersection")
     
     return set()
 

@@ -48,6 +48,7 @@ def _find_segment_intersection(segment1_start: tuple[float, float], segment1_end
     x2, y2 = segment1_end
     x3, y3 = segment2_start
     x4, y4 = segment2_end
+    # print(f"Finding intersection between segments: {segment1_start} to {segment1_end} and {segment2_start} to {segment2_end}")
     # Early exit if x-ranges do not overlap
     if max(x1, x2) + threshold2 < min(x3, x4) or max(x3, x4) + threshold2 < min(x1, x2):
         return set()
@@ -83,6 +84,7 @@ def _find_segment_intersection(segment1_start: tuple[float, float], segment1_end
         else:
             slope1 = dy1 / dx1
             slope2 = dy2 / dx2
+            # print(f"Slope1: {slope1}, slope2: {slope2}")
             
             # Check if lines are parallel
             if abs(slope1 - slope2) < threshold1:
@@ -93,12 +95,11 @@ def _find_segment_intersection(segment1_start: tuple[float, float], segment1_end
             x_intersect = ((y3 - y1 + slope1 * x1 - slope2 * x3) / 
                          (slope1 - slope2))
             y_intersect = y1 + slope1 * (x_intersect - x1)
+            # print(f"Intersection: {x_intersect}, {y_intersect}")
 
         # Check if intersection point lies within both segments with threshold
-        if (min(x1, x2) - threshold2 <= x_intersect <= max(x1, x2) + threshold2 and
-            min(x3, x4) - threshold2 <= x_intersect <= max(x3, x4) + threshold2 and
-            min(y1, y2) - threshold2 <= y_intersect <= max(y1, y2) + threshold2 and
-            min(y3, y4) - threshold2 <= y_intersect <= max(y3, y4) + threshold2):
+        if (min(x1, x2) <= x_intersect <= max(x1, x2) and
+            min(x3, x4) <= x_intersect <= max(x3, x4)):
             return {x_intersect}
             
     except (ZeroDivisionError, OverflowError):

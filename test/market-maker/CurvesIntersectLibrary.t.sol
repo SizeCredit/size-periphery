@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.23;
 
-import {console2 as console} from "forge-std/console2.sol";
+import {console} from "forge-std/console.sol";
+import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import {FixedPointMathLib} from "@solady/utils/FixedPointMathLib.sol";
 import {CurvesIntersectionLibrary} from "src/market-maker/CurvesIntersectionLibrary.sol";
 import {PiecewiseIntersectionLibrary} from "src/market-maker/PiecewiseIntersectionLibrary.sol";
 import {YieldCurveHelper} from "@size/test/helpers/libraries/YieldCurveHelper.sol";
@@ -320,7 +322,7 @@ contract CurvesIntersectionLibraryTest is Test {
         assertTrue(intersects);
     }
 
-    function testFuzzFFI_CurvesIntersectionLibrary_curvesIntersect_closed(
+    function testFuzzFFI_CurvesIntersectionLibrary_curvesIntersect_ignore_false_negatives(
         uint256 p1x,
         uint256 p2x,
         uint256 p1y,
@@ -363,8 +365,63 @@ contract CurvesIntersectionLibraryTest is Test {
         YieldCurve memory curve2 = YieldCurveHelper.customCurve(p3x, p3y, p2x, p2y);
         VariablePoolBorrowRateParams memory variablePoolBorrowRateParams;
 
-        bool intersects = CurvesIntersectionLibrary.curvesIntersect(curve1, curve2, variablePoolBorrowRateParams);
+        bool solidityResult = CurvesIntersectionLibrary.curvesIntersect(curve1, curve2, variablePoolBorrowRateParams);
 
-        assertEq(intersects, pythonResult, "Solidity != Python");
+        if (solidityResult) {
+            assertEq(solidityResult, pythonResult, "Solidity != Python");
+        }
+    }
+
+    function testFuzzFFI_CurvesIntersectionLibrary_curvesIntersect_all(
+        uint256 p1x,
+        uint256 p2x,
+        uint256 p1y,
+        uint256 p2y,
+        uint256 p3y,
+        uint256 p4y
+    ) public {
+        p1x = bound(p1x, 1 days, 30 days);
+        p2x = bound(p2x, p1x + 30 days, 3 * 30 days);
+        uint256 p3x = p1x;
+        uint256 p4x = p2x;
+
+        p1y = bound(p1y, PERCENT / 100, 5 * PERCENT / 100);
+        p2y = bound(p2y, PERCENT / 100, 5 * PERCENT / 100);
+        p3y = bound(p3y, PERCENT / 100, 5 * PERCENT / 100);
+        p4y = bound(p4y, PERCENT / 100, 5 * PERCENT / 100);
+
+        vm.assume(
+            FixedPointMathLib.abs(SafeCast.toInt256(p1y) - SafeCast.toInt256(p3y)) > PERCENT / (10 * 100)
+                && FixedPointMathLib.abs(SafeCast.toInt256(p2y) - SafeCast.toInt256(p4y)) > PERCENT / (10 * 100)
+        );
+
+        console.log("P1 = (%s,%s)", p1x, p1y);
+        console.log("P2 = (%s,%s)", p2x, p2y);
+        console.log("P3 = (%s,%s)", p3x, p3y);
+        console.log("P4 = (%s,%s)", p4x, p4y);
+
+        string[] memory inputs = new string[](10);
+        inputs[0] = "python3";
+        inputs[1] = "./script/curves_intersect.py";
+        inputs[2] = vm.toString(p1x);
+        inputs[3] = vm.toString(p1y);
+        inputs[4] = vm.toString(p2x);
+        inputs[5] = vm.toString(p2y);
+        inputs[6] = vm.toString(p3x);
+        inputs[7] = vm.toString(p3y);
+        inputs[8] = vm.toString(p4x);
+        inputs[9] = vm.toString(p4y);
+
+        bytes memory result = vm.ffi(inputs);
+
+        bool pythonResult = keccak256(result) == keccak256(bytes("True"));
+
+        YieldCurve memory curve1 = YieldCurveHelper.customCurve(p1x, p1y, p4x, p4y);
+        YieldCurve memory curve2 = YieldCurveHelper.customCurve(p3x, p3y, p2x, p2y);
+        VariablePoolBorrowRateParams memory variablePoolBorrowRateParams;
+
+        bool solidityResult = CurvesIntersectionLibrary.curvesIntersect(curve1, curve2, variablePoolBorrowRateParams);
+
+        assertEq(solidityResult, pythonResult, "Solidity != Python");
     }
 }

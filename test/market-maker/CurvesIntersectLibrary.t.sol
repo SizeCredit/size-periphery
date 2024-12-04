@@ -248,6 +248,74 @@ contract CurvesIntersectionLibraryTest is Test {
         assertTrue(!intersects);
     }
 
+    function testFuzz_CurvesIntersectionLibrary_curvesIntersect_point_true(uint256 p1x, uint256 p1y, uint256 p4x)
+        public
+        view
+    {
+        /*
+      |
+      | P1 ---- P5 ---- P4        
+      |
+      +-----------------
+        */
+
+        p1x = bound(p1x, 1, 1 * YEAR);
+        p4x = bound(p4x, p1x + 3, 1 * YEAR + 3);
+
+        p1y = bound(p1y, 1, 1 * PERCENT);
+        uint256 p4y = p1y;
+
+        uint256 p5x = (p1x + p4x) / 2;
+        uint256 p5y = p1y;
+
+        console.log("P1 = (%s,%s)", p1x, p1y);
+        console.log("P4 = (%s,%s)", p4x, p4y);
+        console.log("P5 = (%s,%s)", p5x, p5y);
+
+        YieldCurve memory curve1 = YieldCurveHelper.customCurve(p1x, p1y, p4x, p4y);
+        YieldCurve memory curve2 = YieldCurveHelper.pointCurve(p5x, SafeCast.toInt256(p5y));
+        VariablePoolBorrowRateParams memory variablePoolBorrowRateParams;
+        bool intersects = CurvesIntersectionLibrary.curvesIntersect(curve1, curve2, variablePoolBorrowRateParams);
+        assertTrue(intersects);
+
+        intersects = CurvesIntersectionLibrary.curvesIntersect(curve2, curve1, variablePoolBorrowRateParams);
+        assertTrue(intersects);
+    }
+
+    function testFuzz_CurvesIntersectionLibrary_curvesIntersect_point_false(uint256 p1x, uint256 p1y, uint256 p4x)
+        public
+        view
+    {
+        /*
+      |
+      | P1 ---- P4      P5        
+      |
+      +-----------------
+        */
+
+        p1x = bound(p1x, 1, 1 * YEAR);
+        p4x = bound(p4x, p1x + 3, 1 * YEAR + 3);
+
+        p1y = bound(p1y, 1, 1 * PERCENT);
+        uint256 p4y = p1y;
+
+        uint256 p5x = (p1x + p4x);
+        uint256 p5y = p1y;
+
+        console.log("P1 = (%s,%s)", p1x, p1y);
+        console.log("P4 = (%s,%s)", p4x, p4y);
+        console.log("P5 = (%s,%s)", p5x, p5y);
+
+        YieldCurve memory curve1 = YieldCurveHelper.customCurve(p1x, p1y, p4x, p4y);
+        YieldCurve memory curve2 = YieldCurveHelper.pointCurve(p5x, SafeCast.toInt256(p5y));
+        VariablePoolBorrowRateParams memory variablePoolBorrowRateParams;
+        bool intersects = CurvesIntersectionLibrary.curvesIntersect(curve1, curve2, variablePoolBorrowRateParams);
+        assertTrue(!intersects);
+
+        intersects = CurvesIntersectionLibrary.curvesIntersect(curve2, curve1, variablePoolBorrowRateParams);
+        assertTrue(!intersects);
+    }
+
     function testFuzz_CurvesIntersectionLibrary_curvesIntersect_same_initial_point(
         uint256 p1x,
         uint256 p1y,

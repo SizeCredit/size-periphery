@@ -2,7 +2,7 @@
 pragma solidity 0.8.23;
 
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import {BaseTest, Vars} from "@size/test/BaseTest.sol";
+import {BaseTest} from "@size/test/BaseTest.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {MarketMakerManager} from "src/market-maker/MarketMakerManager.sol";
 import {
@@ -136,5 +136,108 @@ contract MarketMakerManagerTest is BaseTest {
         marketMakerManager.sellCreditLimit(
             size, SellCreditLimitParams({maxDueDate: block.timestamp + 365 days, curveRelativeTime: curve})
         );
+    }
+
+    function test_MarketMakerManager_validateCurvesDoNotIntersect_whenCurvesDoNotIntersect_1() public {
+        YieldCurve memory borrowCurve = YieldCurveHelper.normalCurve();
+        YieldCurve memory loanCurve = YieldCurveHelper.steepCurve();
+
+        BuyCreditLimitParams memory params =
+            BuyCreditLimitParams({maxDueDate: block.timestamp + 365 days, curveRelativeTime: loanCurve});
+        SellCreditLimitParams memory params2 =
+            SellCreditLimitParams({maxDueDate: block.timestamp + 365 days, curveRelativeTime: borrowCurve});
+
+        vm.prank(bot);
+        marketMakerManager.buyCreditLimit(size, params);
+
+        vm.prank(bot);
+        marketMakerManager.sellCreditLimit(size, params2);
+    }
+
+    function test_MarketMakerManager_validateCurvesDoNotIntersect_whenCurvesDoNotIntersect_2() public {
+        YieldCurve memory borrowCurve = YieldCurveHelper.normalCurve();
+        YieldCurve memory loanCurve = YieldCurveHelper.steepCurve();
+
+        BuyCreditLimitParams memory params =
+            BuyCreditLimitParams({maxDueDate: block.timestamp + 365 days, curveRelativeTime: loanCurve});
+        SellCreditLimitParams memory params2 =
+            SellCreditLimitParams({maxDueDate: block.timestamp + 365 days, curveRelativeTime: borrowCurve});
+
+        vm.prank(bot);
+        marketMakerManager.sellCreditLimit(size, params2);
+
+        vm.prank(bot);
+        marketMakerManager.buyCreditLimit(size, params);
+    }
+
+    function test_MarketMakerManager_validateCurvesDoNotIntersect_whenCurvesIntersect_1() public {
+        YieldCurve memory borrowCurve = YieldCurveHelper.flatCurve();
+        YieldCurve memory loanCurve = YieldCurveHelper.normalCurve();
+
+        BuyCreditLimitParams memory params =
+            BuyCreditLimitParams({maxDueDate: block.timestamp + 365 days, curveRelativeTime: loanCurve});
+        SellCreditLimitParams memory params2 =
+            SellCreditLimitParams({maxDueDate: block.timestamp + 365 days, curveRelativeTime: borrowCurve});
+
+        vm.prank(bot);
+        marketMakerManager.buyCreditLimit(size, params);
+
+        vm.expectRevert(abi.encodeWithSelector(MarketMakerManager.CurvesIntersect.selector));
+        vm.prank(bot);
+        marketMakerManager.sellCreditLimit(size, params2);
+    }
+
+    function test_MarketMakerManager_validateCurvesDoNotIntersect_whenCurvesIntersect_2() public {
+        YieldCurve memory borrowCurve = YieldCurveHelper.flatCurve();
+        YieldCurve memory loanCurve = YieldCurveHelper.normalCurve();
+
+        BuyCreditLimitParams memory params =
+            BuyCreditLimitParams({maxDueDate: block.timestamp + 365 days, curveRelativeTime: loanCurve});
+        SellCreditLimitParams memory params2 =
+            SellCreditLimitParams({maxDueDate: block.timestamp + 365 days, curveRelativeTime: borrowCurve});
+
+        vm.prank(bot);
+        marketMakerManager.sellCreditLimit(size, params2);
+
+        vm.expectRevert(abi.encodeWithSelector(MarketMakerManager.CurvesIntersect.selector));
+        vm.prank(bot);
+        marketMakerManager.buyCreditLimit(size, params);
+    }
+
+    // test for curves with non-null multplier
+    function test_MarketMakerManager_validateCurvesDoNotIntersect_non_null_multiplier() public {
+        YieldCurve memory borrowCurve = YieldCurveHelper.marketCurve();
+        YieldCurve memory loanCurve = YieldCurveHelper.marketCurve();
+
+        BuyCreditLimitParams memory params =
+            BuyCreditLimitParams({maxDueDate: block.timestamp + 365 days, curveRelativeTime: loanCurve});
+        SellCreditLimitParams memory params2 =
+            SellCreditLimitParams({maxDueDate: block.timestamp + 365 days, curveRelativeTime: borrowCurve});
+
+        vm.prank(bot);
+        vm.expectRevert(abi.encodeWithSelector(MarketMakerManager.OnlyNullMultipliersAllowed.selector));
+        marketMakerManager.buyCreditLimit(size, params);
+
+        vm.prank(bot);
+        vm.expectRevert(abi.encodeWithSelector(MarketMakerManager.OnlyNullMultipliersAllowed.selector));
+        marketMakerManager.sellCreditLimit(size, params2);
+    }
+
+    function test_MarketMakerManager_pause_owner() public {
+        vm.prank(mm);
+        marketMakerManager.pause();
+        assertEq(marketMakerManager.paused(), true);
+
+        vm.prank(mm);
+        marketMakerManager.unpause();
+        assertEq(marketMakerManager.paused(), false);
+    }
+
+    function test_MarketMakerManager_pause_notOwner() public {
+        vm.expectRevert(abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, address(this)));
+        marketMakerManager.pause();
+
+        vm.expectRevert(abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, address(this)));
+        marketMakerManager.unpause();
     }
 }

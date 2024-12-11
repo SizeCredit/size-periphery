@@ -13,7 +13,7 @@ import {VariablePoolBorrowRateParams} from "@src/libraries/YieldCurveLibrary.sol
 import {YieldCurve} from "@size/src/libraries/YieldCurveLibrary.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import {CurvesIntersectionLibrary} from "./CurvesIntersectionLibrary.sol";
+import {YieldCurvesValidationLibrary} from "src/market-maker/YieldCurvesValidationLibrary.sol";
 
 contract MarketMakerManager is Ownable2StepUpgradeable, PausableUpgradeable, UUPSUpgradeable {
     using SafeERC20 for IERC20Metadata;
@@ -23,7 +23,7 @@ contract MarketMakerManager is Ownable2StepUpgradeable, PausableUpgradeable, UUP
     event BotSet(address indexed oldBot, address indexed newBot);
 
     error OnlyBot();
-    error CurvesIntersect();
+    error InvalidCurves();
     error OnlyNullMultipliersAllowed();
 
     // @custom:oz-upgrades-unsafe-allow constructor
@@ -72,15 +72,15 @@ contract MarketMakerManager is Ownable2StepUpgradeable, PausableUpgradeable, UUP
     }
 
     function buyCreditLimit(ISize size, BuyCreditLimitParams memory params) external onlyBot whenNotPaused {
-        _validateCurvesDoNotIntersect(
-            params.curveRelativeTime,
-            ISizeView(address(size)).getUserView(address(this)).user.borrowOffer.curveRelativeTime
+        _validateCurvesIsBelow(
+            ISizeView(address(size)).getUserView(address(this)).user.borrowOffer.curveRelativeTime,
+            params.curveRelativeTime
         );
         size.buyCreditLimit(params);
     }
 
     function sellCreditLimit(ISize size, SellCreditLimitParams memory params) external onlyBot whenNotPaused {
-        _validateCurvesDoNotIntersect(
+        _validateCurvesIsBelow(
             params.curveRelativeTime,
             ISizeView(address(size)).getUserView(address(this)).user.loanOffer.curveRelativeTime
         );
@@ -95,12 +95,12 @@ contract MarketMakerManager is Ownable2StepUpgradeable, PausableUpgradeable, UUP
         }
     }
 
-    function _validateCurvesDoNotIntersect(YieldCurve memory a, YieldCurve memory b) private view {
+    function _validateCurvesIsBelow(YieldCurve memory a, YieldCurve memory b) private view {
         VariablePoolBorrowRateParams memory variablePoolBorrowRateParams;
         _validateNullMultipliers(a);
         _validateNullMultipliers(b);
-        if (CurvesIntersectionLibrary.curvesIntersect(a, b, variablePoolBorrowRateParams)) {
-            revert CurvesIntersect();
+        if (!YieldCurvesValidationLibrary.isBelow(a, b, variablePoolBorrowRateParams)) {
+            revert InvalidCurves();
         }
     }
 

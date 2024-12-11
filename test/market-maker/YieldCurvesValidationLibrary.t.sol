@@ -4,72 +4,77 @@ pragma solidity 0.8.23;
 import {console} from "forge-std/console.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {FixedPointMathLib} from "@solady/utils/FixedPointMathLib.sol";
-import {CurvesIntersectionLibrary} from "src/market-maker/CurvesIntersectionLibrary.sol";
+import {YieldCurvesValidationLibrary} from "src/market-maker/YieldCurvesValidationLibrary.sol";
 import {PiecewiseIntersectionLibrary} from "src/market-maker/PiecewiseIntersectionLibrary.sol";
 import {YieldCurveHelper} from "@size/test/helpers/libraries/YieldCurveHelper.sol";
 import {YieldCurve, VariablePoolBorrowRateParams} from "@size/src/libraries/YieldCurveLibrary.sol";
+import {CurvesIntersectionLibrary} from "src/market-maker/CurvesIntersectionLibrary.sol";
 import {PERCENT, YEAR} from "@size/src/libraries/Math.sol";
 import {Test} from "forge-std/Test.sol";
 
-contract CurvesIntersectionLibraryTest is Test {
-    function test_CurvesIntersectionLibrary_curvesIntersect_null() public view {
-        YieldCurve memory curve1;
-        YieldCurve memory curve2;
-        VariablePoolBorrowRateParams memory variablePoolBorrowRateParams;
-        bool intersects = CurvesIntersectionLibrary.curvesIntersect(curve1, curve2, variablePoolBorrowRateParams);
-        assertTrue(!intersects);
-    }
-
-    function test_CurvesIntersectionLibrary_curvesIntersect_normal_flat() public view {
+contract YieldCurvesValidationLibraryTest is Test {
+    function test_YieldCurvesValidationLibrary_isBelow_normal_flat() public view {
         YieldCurve memory curve1 = YieldCurveHelper.normalCurve();
         YieldCurve memory curve2 = YieldCurveHelper.flatCurve();
         VariablePoolBorrowRateParams memory variablePoolBorrowRateParams;
-        bool intersects = CurvesIntersectionLibrary.curvesIntersect(curve1, curve2, variablePoolBorrowRateParams);
-        assertTrue(intersects);
+        bool isBelow = YieldCurvesValidationLibrary.isBelow(curve1, curve2, variablePoolBorrowRateParams);
+        assertTrue(!isBelow);
     }
 
-    function test_CurvesIntersectionLibrary_curvesIntersect_normal_inverted() public view {
+    function test_YieldCurvesValidationLibrary_isBelow_normal_inverted() public view {
         YieldCurve memory curve1 = YieldCurveHelper.normalCurve();
         YieldCurve memory curve2 = YieldCurveHelper.invertedCurve();
         VariablePoolBorrowRateParams memory variablePoolBorrowRateParams;
-        bool intersects = CurvesIntersectionLibrary.curvesIntersect(curve1, curve2, variablePoolBorrowRateParams);
-        assertTrue(intersects);
+        bool isBelow = YieldCurvesValidationLibrary.isBelow(curve1, curve2, variablePoolBorrowRateParams);
+        assertTrue(!isBelow);
     }
 
-    function test_CurvesIntersectionLibrary_curvesIntersect_normal_steep() public view {
+    function test_YieldCurvesValidationLibrary_isBelow_normal_steep() public view {
         YieldCurve memory normal = YieldCurveHelper.normalCurve();
         YieldCurve memory steep = YieldCurveHelper.steepCurve();
+
+        // steep is completely above normal
+
         VariablePoolBorrowRateParams memory variablePoolBorrowRateParams;
-        bool intersects = CurvesIntersectionLibrary.curvesIntersect(normal, steep, variablePoolBorrowRateParams);
-        assertTrue(!intersects);
+        bool isBelow = YieldCurvesValidationLibrary.isBelow(normal, steep, variablePoolBorrowRateParams);
+        assertTrue(isBelow);
+
+        isBelow = YieldCurvesValidationLibrary.isBelow(steep, normal, variablePoolBorrowRateParams);
+        assertTrue(!isBelow);
     }
 
-    function test_CurvesIntersectionLibrary_curvesIntersect_flat_inverted() public view {
+    function test_YieldCurvesValidationLibrary_isBelow_flat_inverted() public view {
         YieldCurve memory flat = YieldCurveHelper.flatCurve();
         YieldCurve memory inverted = YieldCurveHelper.invertedCurve();
         VariablePoolBorrowRateParams memory variablePoolBorrowRateParams;
-        bool intersects = CurvesIntersectionLibrary.curvesIntersect(flat, inverted, variablePoolBorrowRateParams);
-        assertTrue(intersects);
+        bool isBelow = YieldCurvesValidationLibrary.isBelow(flat, inverted, variablePoolBorrowRateParams);
+        assertTrue(!isBelow);
     }
 
-    function test_CurvesIntersectionLibrary_curvesIntersect_humped_negative() public view {
+    function test_YieldCurvesValidationLibrary_isBelow_humped_negative() public view {
         YieldCurve memory humped = YieldCurveHelper.humpedCurve();
         YieldCurve memory negative = YieldCurveHelper.negativeCurve();
         VariablePoolBorrowRateParams memory variablePoolBorrowRateParams;
-        bool intersects = CurvesIntersectionLibrary.curvesIntersect(humped, negative, variablePoolBorrowRateParams);
-        assertTrue(!intersects);
+
+        // humped is completely below negative
+
+        bool isBelow = YieldCurvesValidationLibrary.isBelow(humped, negative, variablePoolBorrowRateParams);
+        assertTrue(isBelow);
+
+        isBelow = YieldCurvesValidationLibrary.isBelow(negative, humped, variablePoolBorrowRateParams);
+        assertTrue(!isBelow);
     }
 
-    function testFuzz_CurvesIntersectionLibrary_curvesIntersect_pointCurve_fails(uint256 x, int256 y) public view {
+    function testFuzz_YieldCurvesValidationLibrary_isBelow_pointCurve_fails(uint256 x, int256 y) public view {
         x = bound(x, uint256(0), uint256(YEAR * YEAR));
         y = bound(y, int256(0), int256(PERCENT * PERCENT));
         YieldCurve memory curve = YieldCurveHelper.pointCurve(x, y);
         VariablePoolBorrowRateParams memory variablePoolBorrowRateParams;
-        bool intersects = CurvesIntersectionLibrary.curvesIntersect(curve, curve, variablePoolBorrowRateParams);
-        assertTrue(intersects);
+        bool isBelow = YieldCurvesValidationLibrary.isBelow(curve, curve, variablePoolBorrowRateParams);
+        assertTrue(!isBelow);
     }
 
-    function testFuzz_CurvesIntersectionLibrary_curvesIntersect(
+    function testFuzz_YieldCurvesValidationLibrary_isBelow(
         uint256 x1,
         uint256 y1,
         uint256 x2,
@@ -94,7 +99,7 @@ contract CurvesIntersectionLibraryTest is Test {
         console.log("(X1, Y1)", X1, Y1);
         console.log("(X2, Y2)", X2, Y2);
 
-        // revert("This is biased since this function is used inside CurvesIntersectionLibrary");
+        // revert("This is biased since this function is used inside YieldCurvesValidationLibrary");
         bool pieceWiseLinearIntersection =
             PiecewiseIntersectionLibrary.pieceWiseLinearIntersection(x1, y1, x2, y2, X1, Y1, X2, Y2);
 
@@ -102,11 +107,12 @@ contract CurvesIntersectionLibraryTest is Test {
         YieldCurve memory curve2 = YieldCurveHelper.customCurve(X1, Y1, X2, Y2);
 
         VariablePoolBorrowRateParams memory variablePoolBorrowRateParams;
-        bool intersects = CurvesIntersectionLibrary.curvesIntersect(curve1, curve2, variablePoolBorrowRateParams);
-        assertTrue(pieceWiseLinearIntersection == expected ? intersects : !intersects);
+        bool isBelow = YieldCurvesValidationLibrary.isBelow(curve1, curve2, variablePoolBorrowRateParams);
+        console.log("isBelow", isBelow);
+        assertTrue(pieceWiseLinearIntersection == expected ? !isBelow : isBelow);
     }
 
-    function test_CurvesIntersectionLibrary_curvesIntersect_concrete_1() public view {
+    function test_YieldCurvesValidationLibrary_isBelow_concrete_1() public view {
         uint256 x1 = 1469;
         uint256 y1 = 4662;
         uint256 x2 = 2891;
@@ -115,10 +121,10 @@ contract CurvesIntersectionLibraryTest is Test {
         uint256 Y1 = 5725;
         uint256 X2 = 315359080;
         uint256 Y2 = 1053;
-        testFuzz_CurvesIntersectionLibrary_curvesIntersect(x1, y1, x2, y2, X1, Y1, X2, Y2, true);
+        testFuzz_YieldCurvesValidationLibrary_isBelow(x1, y1, x2, y2, X1, Y1, X2, Y2, true);
     }
 
-    function test_CurvesIntersectionLibrary_curvesIntersect_concrete_2() public view {
+    function test_YieldCurvesValidationLibrary_isBelow_concrete_2() public view {
         uint256 x1 = 1469;
         uint256 y1 = 4662;
         uint256 x2 = 2891;
@@ -127,10 +133,10 @@ contract CurvesIntersectionLibraryTest is Test {
         uint256 Y1 = 5725;
         uint256 X2 = 315359080;
         uint256 Y2 = 1053;
-        testFuzz_CurvesIntersectionLibrary_curvesIntersect(x1, y1, x2, y2, X1, Y1, X2, Y2, true);
+        testFuzz_YieldCurvesValidationLibrary_isBelow(x1, y1, x2, y2, X1, Y1, X2, Y2, true);
     }
 
-    function test_CurvesIntersectionLibrary_curvesIntersect_concrete_3() public view {
+    function test_YieldCurvesValidationLibrary_isBelow_concrete_3() public view {
         uint256 x1 = 315359999;
         uint256 y1 = 1178651033205;
         uint256 x2 = 315360000;
@@ -139,10 +145,10 @@ contract CurvesIntersectionLibraryTest is Test {
         uint256 Y1 = 3;
         uint256 X2 = 315360001;
         uint256 Y2 = 128551179;
-        testFuzz_CurvesIntersectionLibrary_curvesIntersect(x1, y1, x2, y2, X1, Y1, X2, Y2, true);
+        testFuzz_YieldCurvesValidationLibrary_isBelow(x1, y1, x2, y2, X1, Y1, X2, Y2, true);
     }
 
-    function test_CurvesIntersectionLibrary_curvesIntersect_concrete_4() public view {
+    function test_YieldCurvesValidationLibrary_isBelow_concrete_4() public view {
         uint256 x1 = 315359999;
         uint256 y1 = 1178651033205;
         uint256 x2 = 315360000;
@@ -151,10 +157,10 @@ contract CurvesIntersectionLibraryTest is Test {
         uint256 Y1 = 3;
         uint256 X2 = 315360001;
         uint256 Y2 = 128551179;
-        testFuzz_CurvesIntersectionLibrary_curvesIntersect(x1, y1, x2, y2, X1, Y1, X2, Y2, true);
+        testFuzz_YieldCurvesValidationLibrary_isBelow(x1, y1, x2, y2, X1, Y1, X2, Y2, true);
     }
 
-    function test_CurvesIntersectionLibrary_curvesIntersect_concrete_5() public view {
+    function test_YieldCurvesValidationLibrary_isBelow_concrete_5() public view {
         uint256 x1 = 315359999;
         uint256 y1 = 1178651033205;
         uint256 x2 = 315360000;
@@ -163,10 +169,10 @@ contract CurvesIntersectionLibraryTest is Test {
         uint256 Y1 = 3;
         uint256 X2 = 315360001;
         uint256 Y2 = 128551179;
-        testFuzz_CurvesIntersectionLibrary_curvesIntersect(x1, y1, x2, y2, X1, Y1, X2, Y2, true);
+        testFuzz_YieldCurvesValidationLibrary_isBelow(x1, y1, x2, y2, X1, Y1, X2, Y2, true);
     }
 
-    function testFuzz_CurvesIntersectionLibrary_curvesIntersect_inverted(
+    function testFuzz_YieldCurvesValidationLibrary_isBelow_inverted(
         uint256 p1x,
         uint256 p1y,
         uint256 p2x,
@@ -208,11 +214,11 @@ contract CurvesIntersectionLibraryTest is Test {
         YieldCurve memory curve1 = YieldCurveHelper.customCurve(p1x, p1y, p4x, p4y);
         YieldCurve memory curve2 = YieldCurveHelper.customCurve(p3x, p3y, p2x, p2y);
         VariablePoolBorrowRateParams memory variablePoolBorrowRateParams;
-        bool intersects = CurvesIntersectionLibrary.curvesIntersect(curve1, curve2, variablePoolBorrowRateParams);
-        assertTrue(intersects);
+        bool isBelow = YieldCurvesValidationLibrary.isBelow(curve1, curve2, variablePoolBorrowRateParams);
+        assertTrue(!isBelow);
     }
 
-    function testFuzz_CurvesIntersectionLibrary_curvesIntersect_not(
+    function testFuzz_YieldCurvesValidationLibrary_isBelow_not(
         uint256 p1x,
         uint256 p1y,
         uint256 p2x,
@@ -252,11 +258,14 @@ contract CurvesIntersectionLibraryTest is Test {
         YieldCurve memory curve1 = YieldCurveHelper.customCurve(p1x, p1y, p2x, p2y);
         YieldCurve memory curve2 = YieldCurveHelper.customCurve(p3x, p3y, p4x, p4y);
         VariablePoolBorrowRateParams memory variablePoolBorrowRateParams;
-        bool intersects = CurvesIntersectionLibrary.curvesIntersect(curve1, curve2, variablePoolBorrowRateParams);
-        assertTrue(!intersects);
+        bool isBelow = YieldCurvesValidationLibrary.isBelow(curve1, curve2, variablePoolBorrowRateParams);
+        assertTrue(!isBelow);
+
+        isBelow = YieldCurvesValidationLibrary.isBelow(curve2, curve1, variablePoolBorrowRateParams);
+        assertTrue(isBelow);
     }
 
-    function testFuzz_CurvesIntersectionLibrary_curvesIntersect_point_true(uint256 p1x, uint256 p1y, uint256 p4x)
+    function testFuzz_YieldCurvesValidationLibrary_isBelow_point_true(uint256 p1x, uint256 p1y, uint256 p4x)
         public
         view
     {
@@ -283,14 +292,14 @@ contract CurvesIntersectionLibraryTest is Test {
         YieldCurve memory curve1 = YieldCurveHelper.customCurve(p1x, p1y, p4x, p4y);
         YieldCurve memory curve2 = YieldCurveHelper.pointCurve(p5x, SafeCast.toInt256(p5y));
         VariablePoolBorrowRateParams memory variablePoolBorrowRateParams;
-        bool intersects = CurvesIntersectionLibrary.curvesIntersect(curve1, curve2, variablePoolBorrowRateParams);
-        assertTrue(intersects);
+        bool isBelow = YieldCurvesValidationLibrary.isBelow(curve1, curve2, variablePoolBorrowRateParams);
+        assertTrue(!isBelow);
 
-        intersects = CurvesIntersectionLibrary.curvesIntersect(curve2, curve1, variablePoolBorrowRateParams);
-        assertTrue(intersects);
+        isBelow = YieldCurvesValidationLibrary.isBelow(curve2, curve1, variablePoolBorrowRateParams);
+        assertTrue(!isBelow);
     }
 
-    function testFuzz_CurvesIntersectionLibrary_curvesIntersect_point_false(uint256 p1x, uint256 p1y, uint256 p4x)
+    function testFuzz_YieldCurvesValidationLibrary_isBelow_point_false(uint256 p1x, uint256 p1y, uint256 p4x)
         public
         view
     {
@@ -317,14 +326,14 @@ contract CurvesIntersectionLibraryTest is Test {
         YieldCurve memory curve1 = YieldCurveHelper.customCurve(p1x, p1y, p4x, p4y);
         YieldCurve memory curve2 = YieldCurveHelper.pointCurve(p5x, SafeCast.toInt256(p5y));
         VariablePoolBorrowRateParams memory variablePoolBorrowRateParams;
-        bool intersects = CurvesIntersectionLibrary.curvesIntersect(curve1, curve2, variablePoolBorrowRateParams);
-        assertTrue(!intersects);
+        bool isBelow = YieldCurvesValidationLibrary.isBelow(curve1, curve2, variablePoolBorrowRateParams);
+        assertTrue(isBelow);
 
-        intersects = CurvesIntersectionLibrary.curvesIntersect(curve2, curve1, variablePoolBorrowRateParams);
-        assertTrue(!intersects);
+        isBelow = YieldCurvesValidationLibrary.isBelow(curve2, curve1, variablePoolBorrowRateParams);
+        assertTrue(isBelow);
     }
 
-    function testFuzz_CurvesIntersectionLibrary_curvesIntersect_same_initial_point(
+    function testFuzz_YieldCurvesValidationLibrary_isBelow_same_initial_point(
         uint256 p1x,
         uint256 p1y,
         uint256 p2x,
@@ -358,11 +367,11 @@ contract CurvesIntersectionLibraryTest is Test {
         YieldCurve memory curve1 = YieldCurveHelper.customCurve(p1x, p1y, p2x, p2y);
         YieldCurve memory curve2 = YieldCurveHelper.customCurve(p1x, p1y, p4x, p4y);
         VariablePoolBorrowRateParams memory variablePoolBorrowRateParams;
-        bool intersects = CurvesIntersectionLibrary.curvesIntersect(curve1, curve2, variablePoolBorrowRateParams);
-        assertTrue(intersects);
+        bool isBelow = YieldCurvesValidationLibrary.isBelow(curve1, curve2, variablePoolBorrowRateParams);
+        assertTrue(!isBelow);
     }
 
-    function testFuzz_CurvesIntersectionLibrary_curvesIntersect_same_final_point(
+    function testFuzz_YieldCurvesValidationLibrary_isBelow_same_final_point(
         uint256 p1x,
         uint256 p1y,
         uint256 p2x,
@@ -394,11 +403,11 @@ contract CurvesIntersectionLibraryTest is Test {
         YieldCurve memory curve1 = YieldCurveHelper.customCurve(p1x, p1y, p2x, p2y);
         YieldCurve memory curve2 = YieldCurveHelper.customCurve(p3x, p3y, p2x, p2y);
         VariablePoolBorrowRateParams memory variablePoolBorrowRateParams;
-        bool intersects = CurvesIntersectionLibrary.curvesIntersect(curve1, curve2, variablePoolBorrowRateParams);
-        assertTrue(intersects);
+        bool isBelow = YieldCurvesValidationLibrary.isBelow(curve1, curve2, variablePoolBorrowRateParams);
+        assertTrue(!isBelow);
     }
 
-    function testFuzzFFI_CurvesIntersectionLibrary_curvesIntersect_ignore_false_negatives(
+    function testFuzzFFI_YieldCurvesValidationLibrary_isBelow_ignore_false_negatives(
         uint256 p1x,
         uint256 p2x,
         uint256 p1y,
@@ -441,14 +450,14 @@ contract CurvesIntersectionLibraryTest is Test {
         YieldCurve memory curve2 = YieldCurveHelper.customCurve(p3x, p3y, p2x, p2y);
         VariablePoolBorrowRateParams memory variablePoolBorrowRateParams;
 
-        bool solidityResult = CurvesIntersectionLibrary.curvesIntersect(curve1, curve2, variablePoolBorrowRateParams);
+        bool solidityResult = YieldCurvesValidationLibrary.isBelow(curve1, curve2, variablePoolBorrowRateParams);
 
-        if (solidityResult) {
-            assertEq(solidityResult, pythonResult, "Solidity != Python");
+        if (!solidityResult) {
+            assertEq(solidityResult, !pythonResult, "Solidity != Python");
         }
     }
 
-    function testFuzzFFI_CurvesIntersectionLibrary_curvesIntersect_all(
+    function testFuzzFFI_YieldCurvesValidationLibrary_isBelow_all(
         uint256 p1x,
         uint256 p2x,
         uint256 p1y,
@@ -496,8 +505,43 @@ contract CurvesIntersectionLibraryTest is Test {
         YieldCurve memory curve2 = YieldCurveHelper.customCurve(p3x, p3y, p2x, p2y);
         VariablePoolBorrowRateParams memory variablePoolBorrowRateParams;
 
-        bool solidityResult = CurvesIntersectionLibrary.curvesIntersect(curve1, curve2, variablePoolBorrowRateParams);
+        bool solidityResult = YieldCurvesValidationLibrary.isBelow(curve1, curve2, variablePoolBorrowRateParams);
 
-        assertEq(solidityResult, pythonResult, "Solidity != Python");
+        assertEq(solidityResult, !pythonResult, "Solidity != Python");
+    }
+
+    function testFuzz_YieldCurvesValidationLibrary_CurvesIntersectionLibrary_differential(
+        uint256 x1,
+        uint256 x2,
+        uint256 y1,
+        uint256 y2,
+        uint256 X1,
+        uint256 X2,
+        uint256 Y1,
+        uint256 Y2
+    ) public view {
+        x1 = bound(x1, 1, 1 * YEAR);
+        x2 = bound(x2, x1 + 1, 1 * YEAR + 1);
+
+        X1 = bound(X1, 1, 1 * YEAR);
+        X2 = bound(X2, X1 + 1, 1 * YEAR + 1);
+
+        y1 = bound(y1, 1, 1 * PERCENT);
+        y2 = bound(y2, 1, 1 * PERCENT);
+
+        Y1 = bound(Y1, 1, 1 * PERCENT);
+        Y2 = bound(Y2, 1, 1 * PERCENT);
+
+        console.log("x1x2 = %s,%s", x1, x2);
+        console.log("X1X2 = %s,%s", X1, X2);
+        console.log("y1y2 = %s,%s", y1, y2);
+        console.log("Y1Y2 = %s,%s", Y1, Y2);
+
+        YieldCurve memory curve1 = YieldCurveHelper.customCurve(x1, y1, x2, y2);
+        YieldCurve memory curve2 = YieldCurveHelper.customCurve(X1, Y1, X2, Y2);
+        VariablePoolBorrowRateParams memory variablePoolBorrowRateParams;
+        bool isBelow = YieldCurvesValidationLibrary.isBelow(curve1, curve2, variablePoolBorrowRateParams);
+        bool intersects = CurvesIntersectionLibrary.curvesIntersect(curve1, curve2, variablePoolBorrowRateParams);
+        assertTrue(intersects ? !isBelow : true);
     }
 }

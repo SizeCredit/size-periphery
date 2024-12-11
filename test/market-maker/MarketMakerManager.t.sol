@@ -170,7 +170,7 @@ contract MarketMakerManagerTest is BaseTest {
         marketMakerManager.buyCreditLimit(size, params);
     }
 
-    function test_MarketMakerManager_validateCurvesDoNotIntersect_whenCurvesIntersect_1() public {
+    function test_MarketMakerManager_validateCurvesIsBelow_whenCurvesIntersect_1() public {
         YieldCurve memory borrowCurve = YieldCurveHelper.flatCurve();
         YieldCurve memory loanCurve = YieldCurveHelper.normalCurve();
 
@@ -182,12 +182,12 @@ contract MarketMakerManagerTest is BaseTest {
         vm.prank(bot);
         marketMakerManager.buyCreditLimit(size, params);
 
-        vm.expectRevert(abi.encodeWithSelector(MarketMakerManager.CurvesIntersect.selector));
+        vm.expectRevert(abi.encodeWithSelector(MarketMakerManager.InvalidCurves.selector));
         vm.prank(bot);
         marketMakerManager.sellCreditLimit(size, params2);
     }
 
-    function test_MarketMakerManager_validateCurvesDoNotIntersect_whenCurvesIntersect_2() public {
+    function test_MarketMakerManager_validateCurvesIsBelow_whenCurvesIntersect_2() public {
         YieldCurve memory borrowCurve = YieldCurveHelper.flatCurve();
         YieldCurve memory loanCurve = YieldCurveHelper.normalCurve();
 
@@ -199,7 +199,24 @@ contract MarketMakerManagerTest is BaseTest {
         vm.prank(bot);
         marketMakerManager.sellCreditLimit(size, params2);
 
-        vm.expectRevert(abi.encodeWithSelector(MarketMakerManager.CurvesIntersect.selector));
+        vm.expectRevert(abi.encodeWithSelector(MarketMakerManager.InvalidCurves.selector));
+        vm.prank(bot);
+        marketMakerManager.buyCreditLimit(size, params);
+    }
+
+    function test_MarketMakerManager_validateCurvesIsBelow_whenCurvesIsNotBelow() public {
+        YieldCurve memory borrowCurve = YieldCurveHelper.negativeCurve();
+        YieldCurve memory loanCurve = YieldCurveHelper.humpedCurve();
+
+        BuyCreditLimitParams memory params =
+            BuyCreditLimitParams({maxDueDate: block.timestamp + 365 days, curveRelativeTime: loanCurve});
+        SellCreditLimitParams memory params2 =
+            SellCreditLimitParams({maxDueDate: block.timestamp + 365 days, curveRelativeTime: borrowCurve});
+
+        vm.prank(bot);
+        marketMakerManager.sellCreditLimit(size, params2);
+
+        vm.expectRevert(abi.encodeWithSelector(MarketMakerManager.InvalidCurves.selector));
         vm.prank(bot);
         marketMakerManager.buyCreditLimit(size, params);
     }

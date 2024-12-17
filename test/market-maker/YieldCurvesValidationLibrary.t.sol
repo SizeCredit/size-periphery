@@ -4,11 +4,11 @@ pragma solidity 0.8.23;
 import {console} from "forge-std/console.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {FixedPointMathLib} from "@solady/utils/FixedPointMathLib.sol";
-import {YieldCurvesValidationLibrary} from "src/market-maker/YieldCurvesValidationLibrary.sol";
-import {PiecewiseIntersectionLibrary} from "src/market-maker/PiecewiseIntersectionLibrary.sol";
+import {YieldCurvesValidationLibrary} from "src/libraries/YieldCurvesValidationLibrary.sol";
+import {PiecewiseIntersectionLibrary} from "src/libraries/PiecewiseIntersectionLibrary.sol";
 import {YieldCurveHelper} from "@size/test/helpers/libraries/YieldCurveHelper.sol";
 import {YieldCurve, VariablePoolBorrowRateParams} from "@size/src/libraries/YieldCurveLibrary.sol";
-import {CurvesIntersectionLibrary} from "src/market-maker/CurvesIntersectionLibrary.sol";
+import {CurvesIntersectionLibrary} from "src/libraries/CurvesIntersectionLibrary.sol";
 import {PERCENT, YEAR} from "@size/src/libraries/Math.sol";
 import {Test} from "forge-std/Test.sol";
 

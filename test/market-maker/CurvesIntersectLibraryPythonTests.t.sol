@@ -2,8 +2,8 @@
 pragma solidity 0.8.23;
 
 import {console2 as console} from "forge-std/console2.sol";
-import {CurvesIntersectionLibrary} from "src/market-maker/CurvesIntersectionLibrary.sol";
-import {PiecewiseIntersectionLibrary} from "src/market-maker/PiecewiseIntersectionLibrary.sol";
+import {CurvesIntersectionLibrary} from "src/libraries/CurvesIntersectionLibrary.sol";
+import {PiecewiseIntersectionLibrary} from "src/libraries/PiecewiseIntersectionLibrary.sol";
 import {YieldCurveHelper} from "@size/test/helpers/libraries/YieldCurveHelper.sol";
 import {YieldCurve, VariablePoolBorrowRateParams} from "@size/src/libraries/YieldCurveLibrary.sol";
 import {AssertsHelper} from "@size/test/helpers/AssertsHelper.sol";

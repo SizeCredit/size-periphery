@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.23;
 
-import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import {ISize} from "@size/src/interfaces/ISize.sol";
@@ -14,51 +14,59 @@ import {YieldCurve} from "@size/src/libraries/YieldCurveLibrary.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {YieldCurvesValidationLibrary} from "src/libraries/YieldCurvesValidationLibrary.sol";
+import {MarketMakerManagerFactory} from "src/MarketMakerManagerFactory.sol";
 
-contract MarketMakerManager is Ownable2StepUpgradeable, PausableUpgradeable, UUPSUpgradeable {
+contract MarketMakerManager is Initializable, Ownable2StepUpgradeable {
     using SafeERC20 for IERC20Metadata;
 
-    address public bot;
+    /*//////////////////////////////////////////////////////////////
+                            STORAGE
+    //////////////////////////////////////////////////////////////*/
 
-    event BotSet(address indexed oldBot, address indexed newBot);
+    MarketMakerManagerFactory public factory;
+
+    /*//////////////////////////////////////////////////////////////
+                            EVENTS
+    //////////////////////////////////////////////////////////////*/
+
+    event FactorySet(address indexed oldFactory, address indexed newFactory);
+
+    /*//////////////////////////////////////////////////////////////
+                            ERRORS
+    //////////////////////////////////////////////////////////////*/
 
     error OnlyBot();
     error InvalidCurves();
     error OnlyNullMultipliersAllowed();
+
+    /*//////////////////////////////////////////////////////////////
+                            FUNCTIONS
+    //////////////////////////////////////////////////////////////*/
 
     // @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
     }
 
-    function initialize(address _owner, address _bot) public initializer {
+    function initialize(MarketMakerManagerFactory _factory, address _owner) public initializer {
         __Ownable2Step_init();
         __Ownable_init(_owner);
-        __Pausable_init();
-        __UUPSUpgradeable_init();
 
-        _setBot(_bot);
+        _setFactory(_factory);
     }
 
-    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
-
     modifier onlyBot() {
-        if (msg.sender != bot) {
+        if (msg.sender != factory.bot()) {
             revert OnlyBot();
         }
         _;
     }
 
-    function setBot(address _bot) external onlyOwner {
-        _setBot(_bot);
-    }
-
-    function pause() external onlyOwner {
-        _pause();
-    }
-
-    function unpause() external onlyOwner {
-        _unpause();
+    modifier whenNotPaused() {
+        if (factory.paused()) {
+            revert PausableUpgradeable.EnforcedPause();
+        }
+        _;
     }
 
     function deposit(ISize size, IERC20Metadata token, uint256 amount) external onlyOwner {
@@ -104,8 +112,8 @@ contract MarketMakerManager is Ownable2StepUpgradeable, PausableUpgradeable, UUP
         }
     }
 
-    function _setBot(address _bot) private {
-        emit BotSet(bot, _bot);
-        bot = _bot;
+    function _setFactory(MarketMakerManagerFactory _factory) private {
+        emit FactorySet(address(factory), address(_factory));
+        factory = _factory;
     }
 }

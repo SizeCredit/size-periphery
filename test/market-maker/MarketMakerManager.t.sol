@@ -1,61 +1,92 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.23;
 
+import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {BaseTest} from "@size/test/BaseTest.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import {MarketMakerManager} from "src/MarketMakerManager.sol";
+import {MarketMakerManagerV2} from "test/mocks/MarketMakerManagerV2.sol";
 import {
     DepositParams, WithdrawParams, BuyCreditLimitParams, SellCreditLimitParams
 } from "@size/src/interfaces/ISize.sol";
 import {YieldCurveHelper} from "@size/test/helpers/libraries/YieldCurveHelper.sol";
 import {YieldCurve} from "@size/src/libraries/YieldCurveLibrary.sol";
+import {MarketMakerManagerFactory} from "src/MarketMakerManagerFactory.sol";
+import {MarketMakerManagerFactoryV2} from "test/mocks/MarketMakerManagerFactoryV2.sol";
 
 contract MarketMakerManagerTest is BaseTest {
+    address public governance;
     address public bot;
     address public mm;
+    MarketMakerManagerFactory public factory;
     MarketMakerManager public marketMakerManager;
 
     function setUp() public override {
         super.setUp();
 
+        governance = makeAddr("governance");
         mm = makeAddr("mm");
         bot = makeAddr("bot");
 
-        marketMakerManager = MarketMakerManager(
-            payable(
+        factory = MarketMakerManagerFactory(
+            address(
                 new ERC1967Proxy(
-                    address(new MarketMakerManager()), abi.encodeCall(MarketMakerManager.initialize, (mm, bot))
+                    address(new MarketMakerManagerFactory()),
+                    abi.encodeCall(MarketMakerManagerFactory.initialize, (governance, bot))
                 )
             )
         );
+        marketMakerManager = factory.createMarketMakerManager(mm);
     }
 
     function test_MarketMakerManager_initialize() public view {
         assertEq(marketMakerManager.owner(), mm);
-        assertEq(marketMakerManager.bot(), bot);
+        assertEq(factory.bot(), bot);
     }
 
-    function test_MarketMakerManager_upgrade_onlyOwner() public {
-        address newImplementation = address(new MarketMakerManager());
+    function test_MarketMakerManager_upgradeBeacon_onlyOwner() public {
+        vm.expectRevert();
+        MarketMakerManagerV2(address(marketMakerManager)).version();
+
+        address newImplementation = address(new MarketMakerManagerV2());
         vm.expectRevert(abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, bot));
         vm.prank(bot);
-        marketMakerManager.upgradeToAndCall(
-            payable(newImplementation), abi.encodeCall(MarketMakerManager.initialize, (bot, bot))
-        );
+        factory.upgradeBeacon(newImplementation);
+
+        vm.prank(governance);
+        factory.upgradeBeacon(newImplementation);
+
+        assertEq(MarketMakerManagerV2(address(marketMakerManager)).version(), 2);
+    }
+
+    function test_MarketMakerManagerFactory_upgrade_onlyOwner() public {
+        vm.expectRevert();
+        MarketMakerManagerFactoryV2(address(factory)).version();
+
+        address newImplementation = address(new MarketMakerManagerFactoryV2());
+        vm.expectRevert(abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, bot));
+        vm.prank(bot);
+        UUPSUpgradeable(address(factory)).upgradeToAndCall(newImplementation, "");
+
+        vm.prank(governance);
+        UUPSUpgradeable(address(factory)).upgradeToAndCall(newImplementation, "");
+
+        assertEq(MarketMakerManagerFactoryV2(address(factory)).version(), 2);
     }
 
     function test_MarketMakerManager_setBot() public {
         address newBot = makeAddr("newBot");
-        vm.prank(mm);
-        marketMakerManager.setBot(newBot);
-        assertEq(marketMakerManager.bot(), newBot);
+        vm.prank(governance);
+        factory.setBot(newBot);
+        assertEq(factory.bot(), newBot);
     }
 
     function test_MarketMakerManager_setBot_onlyOwner() public {
         address newBot = makeAddr("newBot");
         vm.expectRevert(abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, address(this)));
-        marketMakerManager.setBot(newBot);
+        factory.setBot(newBot);
     }
 
     function test_MarketMakerManager_deposit() public {
@@ -240,20 +271,55 @@ contract MarketMakerManagerTest is BaseTest {
     }
 
     function test_MarketMakerManager_pause_owner() public {
-        vm.prank(mm);
-        marketMakerManager.pause();
-        assertEq(marketMakerManager.paused(), true);
+        vm.prank(governance);
+        factory.pause();
+        assertEq(factory.paused(), true);
 
-        vm.prank(mm);
-        marketMakerManager.unpause();
-        assertEq(marketMakerManager.paused(), false);
+        vm.prank(governance);
+        factory.unpause();
+        assertEq(factory.paused(), false);
     }
 
     function test_MarketMakerManager_pause_notOwner() public {
         vm.expectRevert(abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, address(this)));
-        marketMakerManager.pause();
+        factory.pause();
 
         vm.expectRevert(abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, address(this)));
-        marketMakerManager.unpause();
+        factory.unpause();
+    }
+
+    function test_MarketMakerManager_multiple_instances() public {
+        address mm2 = makeAddr("mm2");
+        MarketMakerManager marketMakerManager2 = factory.createMarketMakerManager(mm2);
+        assertEq(marketMakerManager2.owner(), mm2);
+        assertEq(address(marketMakerManager2.factory()), address(factory));
+
+        YieldCurve memory curve = YieldCurveHelper.normalCurve();
+        YieldCurve memory curve2 = YieldCurveHelper.flatCurve();
+
+        vm.prank(bot);
+        marketMakerManager.buyCreditLimit(
+            size, BuyCreditLimitParams({maxDueDate: block.timestamp + 365 days, curveRelativeTime: curve})
+        );
+
+        vm.prank(bot);
+        marketMakerManager2.sellCreditLimit(
+            size, SellCreditLimitParams({maxDueDate: block.timestamp + 365 days, curveRelativeTime: curve})
+        );
+
+        vm.prank(governance);
+        factory.pause();
+
+        vm.expectRevert(abi.encodeWithSelector(PausableUpgradeable.EnforcedPause.selector));
+        vm.prank(bot);
+        marketMakerManager.buyCreditLimit(
+            size, BuyCreditLimitParams({maxDueDate: block.timestamp + 365 days, curveRelativeTime: curve2})
+        );
+
+        vm.expectRevert(abi.encodeWithSelector(PausableUpgradeable.EnforcedPause.selector));
+        vm.prank(bot);
+        marketMakerManager2.sellCreditLimit(
+            size, SellCreditLimitParams({maxDueDate: block.timestamp + 365 days, curveRelativeTime: curve2})
+        );
     }
 }

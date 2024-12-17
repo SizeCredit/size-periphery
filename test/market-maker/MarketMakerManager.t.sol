@@ -4,7 +4,7 @@ pragma solidity 0.8.23;
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {BaseTest} from "@size/test/BaseTest.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import {MarketMakerManager} from "src/market-maker/MarketMakerManager.sol";
+import {MarketMakerManager} from "src/MarketMakerManager.sol";
 import {
     DepositParams, WithdrawParams, BuyCreditLimitParams, SellCreditLimitParams
 } from "@size/src/interfaces/ISize.sol";
@@ -31,7 +31,7 @@ contract MarketMakerManagerTest is BaseTest {
         );
     }
 
-    function test_MarketMakerManager_initialize() public {
+    function test_MarketMakerManager_initialize() public view {
         assertEq(marketMakerManager.owner(), mm);
         assertEq(marketMakerManager.bot(), bot);
     }
@@ -90,7 +90,6 @@ contract MarketMakerManagerTest is BaseTest {
 
         uint256 amount2 = 30e6;
         uint256 balanceBefore = usdc.balanceOf(mm);
-        uint256 balanceBeforeSize = size.getUserView(address(marketMakerManager)).borrowATokenBalance;
 
         vm.prank(mm);
         marketMakerManager.withdraw(size, usdc, amount2);

@@ -13,7 +13,7 @@ import {VariablePoolBorrowRateParams} from "@src/libraries/YieldCurveLibrary.sol
 import {YieldCurve} from "@size/src/libraries/YieldCurveLibrary.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import {YieldCurvesValidationLibrary} from "src/market-maker/YieldCurvesValidationLibrary.sol";
+import {YieldCurvesValidationLibrary} from "src/libraries/YieldCurvesValidationLibrary.sol";
 
 contract MarketMakerManager is Ownable2StepUpgradeable, PausableUpgradeable, UUPSUpgradeable {
     using SafeERC20 for IERC20Metadata;

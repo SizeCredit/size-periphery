@@ -30,7 +30,7 @@ contract DeployFlashLoanLiquidator is Script {
         address uniswapRouter = 0x4752ba5DBc23f44D87826276BF6Fd6b1C372aD24;
         address uniswapV3Router = 0x2626664c2603336E57B271c5C0b26F421741e481;
         // address uniswapV3Router = 0x94cC0AaC535CCDB3C01d6787D6413C739ae12bc4; // base sepolia
-        
+
         // address collateralToken = 0x4200000000000000000000000000000000000006;
         // address borrowToken = 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913;
 

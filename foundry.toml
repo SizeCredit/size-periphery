@@ -4,6 +4,7 @@ out = "out"
 libs = ["lib"]
 no_match_test = 'FFI'
 fs_permissions = [{ access = "write", path = "./deployments" }]
+ignored_warnings_from = ["lib/aave-v3-core"]
 
 [profile.ffi]
 src = "src"
@@ -11,6 +12,7 @@ out = "out"
 libs = ["lib"]
 match_test = 'FFI'
 ffi = true
+ignored_warnings_from = ["lib/aave-v3-core"]
 
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options
 

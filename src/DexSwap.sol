@@ -37,14 +37,10 @@ abstract contract DexSwap {
     IUniswapV2Router02 public immutable uniswapRouter;
     IUniswapV3Router public immutable uniswapV3Router;
 
-    constructor(
-        address _oneInchAggregator,
-        address _unoswapRouter,
-        address _uniswapRouter,
-        address _uniswapV3Router    
-    ) {
+    constructor(address _oneInchAggregator, address _unoswapRouter, address _uniswapRouter, address _uniswapV3Router) {
         if (
-            _oneInchAggregator == address(0) || _unoswapRouter == address(0) || _uniswapRouter == address(0) || _uniswapV3Router == address(0)
+            _oneInchAggregator == address(0) || _unoswapRouter == address(0) || _uniswapRouter == address(0)
+                || _uniswapV3Router == address(0)
         ) {
             revert Errors.NULL_ADDRESS();
         }
@@ -55,11 +51,10 @@ abstract contract DexSwap {
         uniswapV3Router = IUniswapV3Router(_uniswapV3Router);
     }
 
-    function _swapCollateral(
-        address collateralToken,
-        address borrowToken,
-        SwapParams memory swapParams
-    ) internal returns (uint256) {
+    function _swapCollateral(address collateralToken, address borrowToken, SwapParams memory swapParams)
+        internal
+        returns (uint256)
+    {
         if (swapParams.method == SwapMethod.OneInch) {
             return _swapCollateral1Inch(collateralToken, borrowToken, swapParams.data, swapParams.minimumReturnAmount);
         } else if (swapParams.method == SwapMethod.Unoswap) {
@@ -67,15 +62,13 @@ abstract contract DexSwap {
             return _swapCollateralUnoswap(collateralToken, borrowToken, pool, swapParams.minimumReturnAmount);
         } else if (swapParams.method == SwapMethod.Uniswap) {
             address[] memory path = abi.decode(swapParams.data, (address[]));
-            return _swapCollateralUniswap(collateralToken, borrowToken, path, swapParams.deadline, swapParams.minimumReturnAmount);
-        } else if (swapParams.method == SwapMethod.UniswapV3) { 
+            return _swapCollateralUniswap(
+                collateralToken, borrowToken, path, swapParams.deadline, swapParams.minimumReturnAmount
+            );
+        } else if (swapParams.method == SwapMethod.UniswapV3) {
             (uint24 fee, uint160 sqrtPriceLimitX96) = abi.decode(swapParams.data, (uint24, uint160));
             return _swapCollateralUniswapV3(
-                collateralToken,
-                borrowToken,
-                fee,
-                sqrtPriceLimitX96,
-                swapParams.minimumReturnAmount
+                collateralToken, borrowToken, fee, sqrtPriceLimitX96, swapParams.minimumReturnAmount
             );
         } else {
             revert PeripheryErrors.INVALID_SWAP_METHOD();
@@ -97,7 +90,7 @@ abstract contract DexSwap {
 
     function _swapCollateralUniswap(
         address collateralToken,
-        address borrowToken,
+        address, /* borrowToken */
         address[] memory tokenPaths,
         uint256 deadline,
         uint256 minimumReturnAmount
@@ -111,7 +104,7 @@ abstract contract DexSwap {
 
     function _swapCollateralUnoswap(
         address collateralToken,
-        address borrowToken,
+        address, /* borrowToken */
         address pool,
         uint256 minimumReturnAmount
     ) internal returns (uint256) {
@@ -138,7 +131,7 @@ abstract contract DexSwap {
             tokenOut: borrowToken,
             fee: fee,
             recipient: address(this),
-            amountIn: amountIn, 
+            amountIn: amountIn,
             amountOutMinimum: minimumReturnAmount,
             sqrtPriceLimitX96: sqrtPriceLimitX96
         });

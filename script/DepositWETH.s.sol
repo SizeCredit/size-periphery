@@ -8,7 +8,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {UserView} from "@size/src/SizeViewData.sol";
 
 interface IWETH {
-    function deposit(uint amt) external payable;
+    function deposit(uint256 amt) external payable;
 }
 
 contract DepositWETHScript is Script {
@@ -23,13 +23,12 @@ contract DepositWETHScript is Script {
 
         Size size = Size(payable(sizeContractAddress));
         IERC20 weth = IERC20(wethAddress);
-        uint256 amount = 0.03e18;  // 0.5 WETH
+        uint256 amount = 0.03e18; // 0.5 WETH
 
         console.log("Lender Address:", lender);
         console.log("Borrower Address:", borrower);
         console.log("Size Contract Address:", sizeContractAddress);
         console.log("WETH Address:", wethAddress);
-
 
         // Convert ETH to WETH
         IWETH weth_deposit = IWETH(wethAddress);
@@ -43,7 +42,6 @@ contract DepositWETHScript is Script {
         console.log("WETH Balance of Borrower after approve:", weth.balanceOf(borrower));
         console.log("WETH Allowance after approve:", weth.allowance(borrower, sizeContractAddress));
 
-        
         size.deposit(params);
         console.log("");
         console.log("WETH Balance of Borrower after deposit:", weth.balanceOf(borrower));

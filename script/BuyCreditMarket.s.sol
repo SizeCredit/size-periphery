@@ -40,7 +40,7 @@ contract BuyCreditMarketScript is Script, Logger {
         });
 
         /* ------------------ Get next debt and credit position ids ----------------- */
-        
+
         DataView memory data = size.data();
         uint256 nextDebtPositionId = data.nextDebtPositionId;
         uint256 nextCreditPositionId = data.nextCreditPositionId;
@@ -59,7 +59,7 @@ contract BuyCreditMarketScript is Script, Logger {
         console.log("For Sale:", creditPosition.forSale);
         console.log("Credit Amount:", creditPosition.credit);
         console.log("Debt Position ID:", creditPosition.debtPositionId);
-        
+
         DebtPosition memory debtPosition = size.getDebtPosition(nextDebtPositionId);
         console.log("");
         console.log("--- Debt Position ID:", nextDebtPositionId);

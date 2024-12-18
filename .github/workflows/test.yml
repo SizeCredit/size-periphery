@@ -59,3 +59,33 @@ jobs:
         run: |
           forge fmt --check
         id: fmt
+
+  abi:
+    strategy:
+      fail-fast: true
+
+    name: ABI
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
+      - name: Setup Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: nightly
+
+      - name: ABI
+        run: |
+          forge build --build-info
+
+      - name: Archive ABI
+        uses: actions/upload-artifact@v4
+        with:
+          name: abi
+          path: |
+            out/FlashLoanLiquidator.sol/FlashLoanLiquidator.json
+            out/PeripheryErrors.sol/PeripheryErrors.json
+            out/MarketMakerManagerFactory.sol/MarketMakerManagerFactory.json
+            out/MarketMakerManager.sol/MarketMakerManager.json

@@ -85,7 +85,7 @@ jobs:
         with:
           name: abi
           path: |
-            out/FlashLoanLiquidator.sol/FlashLoanLiquidator.json
+            out/FlashLoanLiquidation.sol/FlashLoanLiquidator.json
             out/PeripheryErrors.sol/PeripheryErrors.json
             out/MarketMakerManagerFactory.sol/MarketMakerManagerFactory.json
             out/MarketMakerManager.sol/MarketMakerManager.json

@@ -14,7 +14,7 @@ contract MarketMakerManagerFactory is Ownable2StepUpgradeable, UUPSUpgradeable, 
     //////////////////////////////////////////////////////////////*/
 
     UpgradeableBeacon public upgradeableBeacon;
-    BeaconProxy public beaconProxy;
+    address private ___UNUSED_DO_NOT_REMOVE;
     address public bot;
 
     /*//////////////////////////////////////////////////////////////

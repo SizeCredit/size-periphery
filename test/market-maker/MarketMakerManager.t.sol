@@ -105,12 +105,28 @@ contract MarketMakerManagerTest is BaseTest {
         assertEq(balanceAfter, balanceBefore + amount);
     }
 
+    function test_MarketMakerManager_depositDirect() public {
+        uint256 amount = 100e6;
+        usdc.mint(mm, amount);
+        vm.prank(mm);
+
+        uint256 balanceBefore = size.getUserView(address(marketMakerManager)).borrowATokenBalance;
+
+        vm.prank(mm);
+        usdc.transfer(address(marketMakerManager), amount);
+        vm.prank(bot);
+        marketMakerManager.depositDirect(size, usdc, amount);
+
+        uint256 balanceAfter = size.getUserView(address(marketMakerManager)).borrowATokenBalance;
+        assertEq(balanceAfter, balanceBefore + amount);
+    }
+
     function test_MarketMakerManager_deposit_onlyOwner() public {
         vm.expectRevert(abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, address(this)));
         marketMakerManager.deposit(size, usdc, 100e6);
     }
 
-    function test_MarketMakerManager_withdraw() public {
+    function test_MarketMakerManager_deposit_withdraw() public {
         uint256 amount = 100e6;
         usdc.mint(mm, amount);
 
@@ -118,6 +134,27 @@ contract MarketMakerManagerTest is BaseTest {
         usdc.approve(address(marketMakerManager), amount);
         vm.prank(mm);
         marketMakerManager.deposit(size, usdc, amount);
+
+        uint256 amount2 = 30e6;
+        uint256 balanceBefore = usdc.balanceOf(mm);
+
+        vm.prank(mm);
+        marketMakerManager.withdraw(size, usdc, amount2);
+
+        uint256 balanceAfter = usdc.balanceOf(mm);
+        uint256 balanceAfterSize = size.getUserView(address(marketMakerManager)).borrowATokenBalance;
+        assertEq(balanceAfter, balanceBefore + amount2);
+        assertEq(balanceAfterSize, amount - amount2, balanceAfterSize);
+    }
+
+    function test_MarketMakerManager_depositDirect_withdraw() public {
+        uint256 amount = 100e6;
+        usdc.mint(mm, amount);
+
+        vm.prank(mm);
+        usdc.transfer(address(marketMakerManager), amount);
+        vm.prank(bot);
+        marketMakerManager.depositDirect(size, usdc, amount);
 
         uint256 amount2 = 30e6;
         uint256 balanceBefore = usdc.balanceOf(mm);
@@ -144,9 +181,9 @@ contract MarketMakerManagerTest is BaseTest {
         );
     }
 
-    function test_MarketMakerManager_buyCreditLimit_onlyBot() public {
+    function test_MarketMakerManager_buyCreditLimit_onlyBotWhenNotPausedOrOwner() public {
         YieldCurve memory curve = YieldCurveHelper.normalCurve();
-        vm.expectRevert(abi.encodeWithSelector(MarketMakerManager.OnlyBot.selector));
+        vm.expectRevert(abi.encodeWithSelector(MarketMakerManager.OnlyBotWhenNotPausedOrOwner.selector));
         marketMakerManager.buyCreditLimit(
             size, BuyCreditLimitParams({maxDueDate: block.timestamp + 365 days, curveRelativeTime: curve})
         );
@@ -160,9 +197,9 @@ contract MarketMakerManagerTest is BaseTest {
         );
     }
 
-    function test_MarketMakerManager_sellCreditLimit_onlyBot() public {
+    function test_MarketMakerManager_sellCreditLimit_onlyBotWhenNotPausedOrOwner() public {
         YieldCurve memory curve = YieldCurveHelper.normalCurve();
-        vm.expectRevert(abi.encodeWithSelector(MarketMakerManager.OnlyBot.selector));
+        vm.expectRevert(abi.encodeWithSelector(MarketMakerManager.OnlyBotWhenNotPausedOrOwner.selector));
         marketMakerManager.sellCreditLimit(
             size, SellCreditLimitParams({maxDueDate: block.timestamp + 365 days, curveRelativeTime: curve})
         );
@@ -288,6 +325,38 @@ contract MarketMakerManagerTest is BaseTest {
         factory.unpause();
     }
 
+    function test_MarketMakerManager_paused_owner_can_still_perform_all_actions() public {
+        vm.prank(governance);
+        factory.pause();
+
+        YieldCurve memory curve = YieldCurveHelper.normalCurve();
+
+        usdc.mint(mm, 100e6);
+        vm.prank(mm);
+        usdc.transfer(address(marketMakerManager), 100e6);
+
+        vm.expectRevert(abi.encodeWithSelector(MarketMakerManager.OnlyBotWhenNotPausedOrOwner.selector));
+        vm.prank(bot);
+        marketMakerManager.depositDirect(size, usdc, 100e6);
+
+        vm.expectRevert(abi.encodeWithSelector(MarketMakerManager.OnlyBotWhenNotPausedOrOwner.selector));
+        vm.prank(bot);
+        marketMakerManager.buyCreditLimit(
+            size, BuyCreditLimitParams({maxDueDate: block.timestamp + 365 days, curveRelativeTime: curve})
+        );
+
+        vm.prank(mm);
+        marketMakerManager.depositDirect(size, usdc, 100e6);
+
+        vm.prank(mm);
+        marketMakerManager.withdraw(size, usdc, 100e6);
+
+        vm.prank(mm);
+        marketMakerManager.buyCreditLimit(
+            size, BuyCreditLimitParams({maxDueDate: block.timestamp + 365 days, curveRelativeTime: curve})
+        );
+    }
+
     function test_MarketMakerManager_multiple_instances() public {
         address mm2 = makeAddr("mm2");
         MarketMakerManager marketMakerManager2 = factory.createMarketMakerManager(mm2);
@@ -310,13 +379,13 @@ contract MarketMakerManagerTest is BaseTest {
         vm.prank(governance);
         factory.pause();
 
-        vm.expectRevert(abi.encodeWithSelector(PausableUpgradeable.EnforcedPause.selector));
+        vm.expectRevert(abi.encodeWithSelector(MarketMakerManager.OnlyBotWhenNotPausedOrOwner.selector));
         vm.prank(bot);
         marketMakerManager.buyCreditLimit(
             size, BuyCreditLimitParams({maxDueDate: block.timestamp + 365 days, curveRelativeTime: curve2})
         );
 
-        vm.expectRevert(abi.encodeWithSelector(PausableUpgradeable.EnforcedPause.selector));
+        vm.expectRevert(abi.encodeWithSelector(MarketMakerManager.OnlyBotWhenNotPausedOrOwner.selector));
         vm.prank(bot);
         marketMakerManager2.sellCreditLimit(
             size, SellCreditLimitParams({maxDueDate: block.timestamp + 365 days, curveRelativeTime: curve2})

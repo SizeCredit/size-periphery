@@ -35,12 +35,12 @@ contract MarketMakerManager is Initializable, Ownable2StepUpgradeable {
                             ERRORS
     //////////////////////////////////////////////////////////////*/
 
-    error OnlyBot();
+    error OnlyBotWhenNotPausedOrOwner();
     error InvalidCurves();
     error OnlyNullMultipliersAllowed();
 
     /*//////////////////////////////////////////////////////////////
-                            FUNCTIONS
+                            CONSTRUCTOR/INITIALIZER
     //////////////////////////////////////////////////////////////*/
 
     // @custom:oz-upgrades-unsafe-allow constructor
@@ -55,19 +55,21 @@ contract MarketMakerManager is Initializable, Ownable2StepUpgradeable {
         _setFactory(_factory);
     }
 
-    modifier onlyBot() {
-        if (msg.sender != factory.bot()) {
-            revert OnlyBot();
+    /*//////////////////////////////////////////////////////////////
+                            MODIFIERS
+    //////////////////////////////////////////////////////////////*/
+
+    modifier onlyBotWhenNotPausedOrOwner() {
+        if ((msg.sender == factory.bot() && !factory.paused()) || msg.sender == owner()) {
+            _;
+        } else {
+            revert OnlyBotWhenNotPausedOrOwner();
         }
-        _;
     }
 
-    modifier whenNotPaused() {
-        if (factory.paused()) {
-            revert PausableUpgradeable.EnforcedPause();
-        }
-        _;
-    }
+    /*//////////////////////////////////////////////////////////////
+                            OWNER FUNCTIONS
+    //////////////////////////////////////////////////////////////*/
 
     function deposit(ISize size, IERC20Metadata token, uint256 amount) external onlyOwner {
         token.safeTransferFrom(msg.sender, address(this), amount);
@@ -79,7 +81,16 @@ contract MarketMakerManager is Initializable, Ownable2StepUpgradeable {
         size.withdraw(WithdrawParams({token: address(token), amount: amount, to: msg.sender}));
     }
 
-    function buyCreditLimit(ISize size, BuyCreditLimitParams memory params) external onlyBot whenNotPaused {
+    /*//////////////////////////////////////////////////////////////
+                            BOT (NOT PAUSED)/OWNER FUNCTIONS
+    //////////////////////////////////////////////////////////////*/
+
+    function depositDirect(ISize size, IERC20Metadata token, uint256 amount) external onlyBotWhenNotPausedOrOwner {
+        token.forceApprove(address(size), amount);
+        size.deposit(DepositParams({token: address(token), amount: amount, to: address(this)}));
+    }
+
+    function buyCreditLimit(ISize size, BuyCreditLimitParams memory params) external onlyBotWhenNotPausedOrOwner {
         _validateCurvesIsBelow(
             ISizeView(address(size)).getUserView(address(this)).user.borrowOffer.curveRelativeTime,
             params.curveRelativeTime
@@ -87,13 +98,17 @@ contract MarketMakerManager is Initializable, Ownable2StepUpgradeable {
         size.buyCreditLimit(params);
     }
 
-    function sellCreditLimit(ISize size, SellCreditLimitParams memory params) external onlyBot whenNotPaused {
+    function sellCreditLimit(ISize size, SellCreditLimitParams memory params) external onlyBotWhenNotPausedOrOwner {
         _validateCurvesIsBelow(
             params.curveRelativeTime,
             ISizeView(address(size)).getUserView(address(this)).user.loanOffer.curveRelativeTime
         );
         size.sellCreditLimit(params);
     }
+
+    /*//////////////////////////////////////////////////////////////
+                            PRIVATE FUNCTIONS
+    //////////////////////////////////////////////////////////////*/
 
     function _validateNullMultipliers(YieldCurve memory curve) private pure {
         for (uint256 i = 0; i < curve.marketRateMultipliers.length; i++) {

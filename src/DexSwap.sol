@@ -15,7 +15,8 @@ enum SwapMethod {
     OneInch,
     Unoswap,
     Uniswap,
-    UniswapV3
+    UniswapV3,
+    GenericRoute
 }
 
 struct SwapParams {
@@ -55,7 +56,9 @@ abstract contract DexSwap {
         internal
         returns (uint256)
     {
-        if (swapParams.method == SwapMethod.OneInch) {
+        if (swapParams.method == SwapMethod.GenericRoute) {
+            return _swapCollateralGenericRoute(collateralToken, swapParams.data);
+        } else if (swapParams.method == SwapMethod.OneInch) {
             return _swapCollateral1Inch(collateralToken, borrowToken, swapParams.data, swapParams.minimumReturnAmount);
         } else if (swapParams.method == SwapMethod.Unoswap) {
             address pool = abi.decode(swapParams.data, (address));
@@ -138,5 +141,42 @@ abstract contract DexSwap {
 
         uint256 amountOut = uniswapV3Router.exactInputSingle(params);
         return amountOut;
+    }
+
+    function _swapCollateralGenericRoute(
+        address collateralToken,
+        bytes memory routeData
+    ) internal returns (uint256) {
+        // Decode the first 32 bytes as the target router address
+        address router;
+        assembly {
+            router := mload(add(routeData, 32))
+        }
+        
+        // The remaining bytes are the call data
+        bytes memory callData;
+        assembly {
+            // Skip first 32 bytes (router address)
+            let dataStart := add(routeData, 64)
+            let dataLength := mload(add(routeData, 32))
+            callData := mload(dataStart)
+        }
+
+        // Approve router to spend collateral token
+        IERC20(collateralToken).forceApprove(router, type(uint256).max);
+
+        // Execute swap via low-level call
+        (bool success, bytes memory result) = router.call(callData);
+        if (!success) {
+            revert PeripheryErrors.GENERIC_SWAP_ROUTE_FAILED();
+        }
+
+        // Decode returned amount (assumes uint256 return value)
+        uint256 returnAmount;
+        assembly {
+            returnAmount := mload(add(result, 32))
+        }
+
+        return returnAmount;
     }
 }

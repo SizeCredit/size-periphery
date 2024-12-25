@@ -9,4 +9,5 @@ library PeripheryErrors {
     error NOT_AAVE_POOL();
     error NOT_INITIATOR();
     error INSUFFICIENT_BALANCE();
+    error GENERIC_SWAP_ROUTE_FAILED();
 }

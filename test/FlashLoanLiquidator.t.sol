@@ -111,16 +111,21 @@ contract FlashLoanLiquidationTest is BaseTest {
         vm.prank(liquidator);
         flashLoanLiquidator = new FlashLoanLiquidator(
             address(mockAavePool),
-            address(size),
             address(mock1InchAggregator),
             address(1), // placeholder for the unoswap router
-            address(1)  // placeholder for the uniswapv2 aggregator
+            address(1), // placeholder for the uniswapv2 aggregator
+            address(1) // placeholder for the uniswapv3 router
         );
+
+        // Add debug logs to track balances
+        console.log("Initial WETH balance of mock1inch:", weth.balanceOf(address(mock1InchAggregator)));
+        console.log("Initial USDC balance of mock1inch:", usdc.balanceOf(address(mock1InchAggregator)));
 
         // Set the FlashLoanLiquidator contract as the keeper
         _setKeeperRole(address(flashLoanLiquidator));
 
-        // Setup borrowers and loans
+        _setPrice(1e18);
+
         _deposit(alice, weth, 100e18);
         _deposit(alice, usdc, 100e6);
         _deposit(bob, weth, 100e18);

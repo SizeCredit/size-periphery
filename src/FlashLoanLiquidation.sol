@@ -189,8 +189,6 @@ contract FlashLoanLiquidator is Ownable, FlashLoanReceiverBase, DexSwap {
         address sizeMarket,
         address collateralToken,
         address borrowToken,
-        bool useReplacement,
-        ReplacementParams memory replacementParams,
         uint256 debtPositionId,
         uint256 minimumCollateralProfit,
         SwapParams memory swapParams,
@@ -214,7 +212,56 @@ contract FlashLoanLiquidator is Ownable, FlashLoanReceiverBase, DexSwap {
             recipient: depositProfits ? recipient : msg.sender,
             depositProfits: depositProfits,
             swapParams: swapParams,
-            useReplacement: msg.sender == owner() ? useReplacement : false,
+            useReplacement: false,
+            replacementParams: ReplacementParams({
+                minAPR: 0,
+                deadline: swapParams.deadline,
+                replacementBorrower: address(0)
+            }),
+            debtAmount: debtAmount
+        });
+
+        bytes memory params = abi.encode(opParams);
+
+        address[] memory assets = new address[](1);
+        assets[0] = borrowToken;
+        uint256[] memory amounts = new uint256[](1);
+        amounts[0] = debtAmount - supplementAmount;
+        uint256[] memory modes = new uint256[](1);
+        modes[0] = 0;
+
+        POOL.flashLoan(address(this), assets, amounts, modes, address(this), params, 0);
+    }
+
+    function liquidatePositionWithFlashLoanReplacement(
+        address sizeMarket,
+        address collateralToken,
+        address borrowToken,
+        uint256 debtPositionId,
+        uint256 minimumCollateralProfit,
+        SwapParams memory swapParams,
+        uint256 supplementAmount,
+        address recipient,
+        ReplacementParams memory replacementParams
+    ) external onlyOwner {
+        if (supplementAmount > 0) {
+            IERC20(borrowToken).transferFrom(msg.sender, address(this), supplementAmount);
+        }
+
+        ISize size = ISize(sizeMarket);
+        uint256 debtAmount = size.getDebtPosition(debtPositionId).futureValue;
+
+        bool depositProfits = recipient != address(0);
+        OperationParams memory opParams = OperationParams({
+            sizeMarket: sizeMarket,
+            collateralToken: collateralToken,
+            borrowToken: borrowToken,
+            debtPositionId: debtPositionId,
+            minimumCollateralProfit: minimumCollateralProfit,
+            recipient: depositProfits ? recipient : msg.sender,
+            depositProfits: depositProfits,
+            swapParams: swapParams,
+            useReplacement: true,
             replacementParams: replacementParams,
             debtAmount: debtAmount
         });

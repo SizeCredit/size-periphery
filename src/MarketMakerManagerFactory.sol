@@ -27,7 +27,7 @@ contract MarketMakerManagerFactory is Ownable2StepUpgradeable, UUPSUpgradeable, 
 
     event MarketMakerManagerCreated(address marketMakerManager, address marketMaker);
     event BotSet(address indexed oldBot, address indexed newBot);
-    event EmergencyWithdrawerSet(address indexed emergencyWithdrawer, bool indexed isEmergencyWithdrawer);
+    event EmergencyWithdrawerSet(address indexed emergencyWithdrawer, bool indexed set);
 
     /*//////////////////////////////////////////////////////////////
                             CONSTRUCTOR/INITIALIZER
@@ -69,13 +69,13 @@ contract MarketMakerManagerFactory is Ownable2StepUpgradeable, UUPSUpgradeable, 
         _unpause();
     }
 
-    function setEmergencyWithdrawer(address emergencyWithdrawer, bool isEmergencyWithdrawer) external onlyOwner {
-        if (isEmergencyWithdrawer) {
+    function setEmergencyWithdrawer(address emergencyWithdrawer, bool set) external onlyOwner {
+        if (set) {
             emergencyWithdrawers.add(emergencyWithdrawer);
         } else {
             emergencyWithdrawers.remove(emergencyWithdrawer);
         }
-        emit EmergencyWithdrawerSet(emergencyWithdrawer, isEmergencyWithdrawer);
+        emit EmergencyWithdrawerSet(emergencyWithdrawer, set);
     }
 
     /*//////////////////////////////////////////////////////////////

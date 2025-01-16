@@ -213,11 +213,7 @@ contract FlashLoanLiquidator is Ownable, FlashLoanReceiverBase, DexSwap {
             depositProfits: depositProfits,
             swapParams: swapParams,
             useReplacement: false,
-            replacementParams: ReplacementParams({
-                minAPR: 0,
-                deadline: swapParams.deadline,
-                replacementBorrower: address(0)
-            }),
+            replacementParams: ReplacementParams({minAPR: 0, deadline: swapParams.deadline, replacementBorrower: address(0)}),
             debtAmount: debtAmount
         });
 

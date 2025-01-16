@@ -2,7 +2,7 @@
 pragma solidity 0.8.23;
 
 import {SwapMethod} from "src/DexSwap.sol";
-import {FlashLoanLiquidator, ReplacementParams, SwapParams} from "src/FlashLoanLiquidation.sol";
+import {FlashLoanLiquidator, ReplacementParams, SwapParams} from "src/FlashLoanLiquidator.sol";
 import {Mock1InchAggregator} from "test/mocks/Mock1InchAggregator.sol";
 import {MockAavePool} from "@test/mocks/MockAavePool.sol";
 
@@ -13,12 +13,12 @@ import {YieldCurveHelper} from "@size/test/helpers/libraries/YieldCurveHelper.so
 
 import {console} from "forge-std/console.sol";
 
-contract FlashLoanLiquidationTest is BaseTest {
+contract FlashLoanLiquidatorTest is BaseTest {
     MockAavePool public mockAavePool;
     Mock1InchAggregator public mock1InchAggregator;
     FlashLoanLiquidator public flashLoanLiquidator;
 
-    function test_FlashLoanLiquidation_liquidator_liquidate_and_swap_1inch_withdraw() public {
+    function test_FlashLoanLiquidator_liquidator_liquidate_and_swap_1inch_withdraw() public {
         // Initialize mock contracts
         mockAavePool = new MockAavePool();
         mock1InchAggregator = new Mock1InchAggregator(address(priceFeed));
@@ -96,7 +96,7 @@ contract FlashLoanLiquidationTest is BaseTest {
         assertGt(afterLiquidatorUSDC, beforeLiquidatorUSDC, "Liquidator should have more USDC after liquidation");
     }
 
-    function test_FlashLoanLiquidation_liquidator_liquidate_with_replacement() public {
+    function test_FlashLoanLiquidator_liquidator_liquidate_with_replacement() public {
         // Initialize mock contracts
         mockAavePool = new MockAavePool();
         mock1InchAggregator = new Mock1InchAggregator(address(priceFeed));
@@ -172,7 +172,7 @@ contract FlashLoanLiquidationTest is BaseTest {
         assertGt(usdc.balanceOf(liquidator), 0, "Liquidator should have received some USDC as profit");
     }
 
-    function test_FlashLoanLiquidation_liquidator_liquidate_and_deposit_profits() public {
+    function test_FlashLoanLiquidator_liquidator_liquidate_and_deposit_profits() public {
         // Initialize mock contracts
         mockAavePool = new MockAavePool();
         mock1InchAggregator = new Mock1InchAggregator(address(priceFeed));
@@ -255,7 +255,7 @@ contract FlashLoanLiquidationTest is BaseTest {
         assertGt(afterLiquidatorUSDC, beforeLiquidatorUSDC, "Liquidator should have more USDC after liquidation");
     }
 
-    function test_FlashLoanLiquidation_liquidator_liquidate_unprofitable_with_supplement() public {
+    function test_FlashLoanLiquidator_liquidator_liquidate_unprofitable_with_supplement() public {
         // Initialize mock contracts
         mockAavePool = new MockAavePool();
         mock1InchAggregator = new Mock1InchAggregator(address(priceFeed));

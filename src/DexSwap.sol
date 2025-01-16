@@ -143,16 +143,13 @@ abstract contract DexSwap {
         return amountOut;
     }
 
-    function _swapCollateralGenericRoute(
-        address collateralToken,
-        bytes memory routeData
-    ) internal returns (uint256) {
+    function _swapCollateralGenericRoute(address collateralToken, bytes memory routeData) internal returns (uint256) {
         // Decode the first 32 bytes as the target router address
         address router;
         assembly {
             router := mload(add(routeData, 32))
         }
-        
+
         // The remaining bytes are the call data
         bytes memory callData;
         assembly {

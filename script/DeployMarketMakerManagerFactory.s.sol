@@ -44,4 +44,3 @@ contract DeployMarketMakerManagerFactory is Script {
         vm.writeJson(finalObject, path);
     }
 }
-

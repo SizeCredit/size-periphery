@@ -38,6 +38,7 @@ contract MarketMakerManager is Initializable, Ownable2StepUpgradeable {
     error OnlyBotWhenNotPausedOrOwner();
     error InvalidCurves();
     error OnlyNullMultipliersAllowed();
+    error OnlyEmergencyWithdrawerOrOwner();
 
     /*//////////////////////////////////////////////////////////////
                             CONSTRUCTOR/INITIALIZER
@@ -65,6 +66,13 @@ contract MarketMakerManager is Initializable, Ownable2StepUpgradeable {
         } else {
             revert OnlyBotWhenNotPausedOrOwner();
         }
+    }
+
+    modifier onlyEmergencyWithdrawerOrOwner() {
+        if (!factory.isEmergencyWithdrawer(msg.sender) && msg.sender != owner()) {
+            revert OnlyEmergencyWithdrawerOrOwner();
+        }
+        _;
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -104,6 +112,15 @@ contract MarketMakerManager is Initializable, Ownable2StepUpgradeable {
             ISizeView(address(size)).getUserView(address(this)).user.loanOffer.curveRelativeTime
         );
         size.sellCreditLimit(params);
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                            EMERGENCY WITHDRAWER/OWNER FUNCTIONS
+    //////////////////////////////////////////////////////////////*/
+
+    function emergencyWithdraw(ISize size, IERC20Metadata token) external onlyEmergencyWithdrawerOrOwner {
+        size.withdraw(WithdrawParams({token: address(token), amount: type(uint256).max, to: owner()}));
+        token.safeTransfer(owner(), token.balanceOf(address(this)));
     }
 
     /*//////////////////////////////////////////////////////////////

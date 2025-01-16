@@ -391,4 +391,61 @@ contract MarketMakerManagerTest is BaseTest {
             size, SellCreditLimitParams({maxDueDate: block.timestamp + 365 days, curveRelativeTime: curve2})
         );
     }
+
+    function test_MarketMakerManager_emergencyWithdraw_withdrawer() public {
+        usdc.mint(mm, 100e6);
+        vm.prank(mm);
+        usdc.transfer(address(marketMakerManager), 100e6);
+
+        vm.prank(bot);
+        marketMakerManager.depositDirect(size, usdc, 90e6);
+
+        address withdrawer = makeAddr("withdrawer");
+        vm.prank(governance);
+        factory.setEmergencyWithdrawer(withdrawer, true);
+
+        uint256 balanceBefore = usdc.balanceOf(mm);
+
+        vm.prank(withdrawer);
+        marketMakerManager.emergencyWithdraw(size, usdc);
+
+        uint256 balanceAfter = usdc.balanceOf(mm);
+        assertEq(balanceAfter, balanceBefore + 100e6);
+    }
+
+    function test_MarketMakerManager_emergencyWithdraw_owner() public {
+        usdc.mint(mm, 100e6);
+        vm.prank(mm);
+        usdc.transfer(address(marketMakerManager), 100e6);
+
+        vm.prank(bot);
+        marketMakerManager.depositDirect(size, usdc, 90e6);
+
+        uint256 balanceBefore = usdc.balanceOf(mm);
+
+        vm.prank(mm);
+        marketMakerManager.emergencyWithdraw(size, usdc);
+
+        uint256 balanceAfter = usdc.balanceOf(mm);
+        assertEq(balanceAfter, balanceBefore + 100e6);
+    }
+
+    function test_MarketMakerManager_emergencyWithdraw_onlyEmergencyWithdrawerOrOwner() public {
+        address notEmergencyWithdrawer = makeAddr("notEmergencyWithdrawer");
+        address emergencyWithdrawer = makeAddr("emergencyWithdrawer");
+
+        vm.expectRevert(abi.encodeWithSelector(MarketMakerManager.OnlyEmergencyWithdrawerOrOwner.selector));
+        vm.prank(notEmergencyWithdrawer);
+        marketMakerManager.emergencyWithdraw(size, usdc);
+
+        vm.prank(governance);
+        factory.setEmergencyWithdrawer(emergencyWithdrawer, true);
+
+        assertTrue(factory.isEmergencyWithdrawer(emergencyWithdrawer));
+        assertEq(factory.getEmergencyWithdrawers()[0], emergencyWithdrawer);
+
+        vm.prank(governance);
+        factory.setEmergencyWithdrawer(emergencyWithdrawer, false);
+        assertFalse(factory.isEmergencyWithdrawer(emergencyWithdrawer));
+    }
 }

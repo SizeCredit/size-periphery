@@ -1,7 +1,8 @@
 {
   "deployments": {
     "MarketMakerManagerFactory-proxy": "0x3381aedd39b4fa423af3ecb599f7d9788ff3ff83",
-    "MarketMakerManagerFactory-implementation": "0x187f6ed4A23a722557B05aa378498dDB843feff6"
+    "MarketMakerManagerFactory-implementation": "0x32335C4ea83099dD052ea116B70bf1DE6D844EA1",
+    "MarketMakerManager-implementation": "0x187f6ed4A23a722557B05aa378498dDB843feff6"
   },
   "bot": "0xDe5C38699a7057a33524F96e62Bb1987C2568816",
   "governance": "0x462B545e8BBb6f9E5860928748Bfe9eCC712c3a7"

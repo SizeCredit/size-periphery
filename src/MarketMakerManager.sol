@@ -9,6 +9,7 @@ import {ISizeView} from "@size/src/interfaces/ISizeView.sol";
 import {
     DepositParams, WithdrawParams, BuyCreditLimitParams, SellCreditLimitParams
 } from "@size/src/interfaces/ISize.sol";
+import {ISizeFactory} from "@size/src/v1.5/interfaces/ISizeFactory.sol";
 import {VariablePoolBorrowRateParams} from "@src/libraries/YieldCurveLibrary.sol";
 import {YieldCurve} from "@size/src/libraries/YieldCurveLibrary.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -118,9 +119,24 @@ contract MarketMakerManager is Initializable, Ownable2StepUpgradeable {
                             EMERGENCY WITHDRAWER/OWNER FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    function emergencyWithdraw(ISize size, IERC20Metadata token) external onlyEmergencyWithdrawerOrOwner {
-        size.withdraw(WithdrawParams({token: address(token), amount: type(uint256).max, to: owner()}));
-        token.safeTransfer(owner(), token.balanceOf(address(this)));
+    function emergencyWithdraw() external onlyEmergencyWithdrawerOrOwner {
+        ISizeFactory sizeFactory = ISizeFactory(factory.sizeFactory());
+        ISize[] memory markets = sizeFactory.getMarkets();
+        for (uint256 i = 0; i < markets.length; i++) {
+            IERC20Metadata token = markets[i].data().underlyingBorrowToken;
+            uint256 borrowATokenBalance = markets[i].getUserView(address(this)).borrowATokenBalance;
+            if (borrowATokenBalance > 0) {
+                try markets[i].withdraw(
+                    WithdrawParams({token: address(token), amount: borrowATokenBalance, to: owner()})
+                ) {} catch {
+                    continue;
+                }
+            }
+            uint256 balance = token.balanceOf(address(this));
+            if (balance > 0) {
+                token.safeTransfer(owner(), balance);
+            }
+        }
     }
 
     /*//////////////////////////////////////////////////////////////

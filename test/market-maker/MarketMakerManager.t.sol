@@ -11,10 +11,13 @@ import {MarketMakerManagerV2} from "test/mocks/MarketMakerManagerV2.sol";
 import {
     DepositParams, WithdrawParams, BuyCreditLimitParams, SellCreditLimitParams
 } from "@size/src/interfaces/ISize.sol";
+import {UpdateConfigParams} from "@size/src/libraries/actions/UpdateConfig.sol";
 import {YieldCurveHelper} from "@size/test/helpers/libraries/YieldCurveHelper.sol";
 import {YieldCurve} from "@size/src/libraries/YieldCurveLibrary.sol";
 import {MarketMakerManagerFactory} from "src/MarketMakerManagerFactory.sol";
 import {MarketMakerManagerFactoryV2} from "test/mocks/MarketMakerManagerFactoryV2.sol";
+import {ISizeFactory} from "@size/src/v1.5/interfaces/ISizeFactory.sol";
+import {ISize} from "@size/src/interfaces/ISize.sol";
 
 contract MarketMakerManagerTest is BaseTest {
     address public governance;
@@ -39,6 +42,9 @@ contract MarketMakerManagerTest is BaseTest {
             )
         );
         marketMakerManager = factory.createMarketMakerManager(mm);
+
+        vm.prank(governance);
+        factory.setSizeFactory(ISizeFactory(sizeFactory));
     }
 
     function test_MarketMakerManager_initialize() public view {
@@ -407,7 +413,7 @@ contract MarketMakerManagerTest is BaseTest {
         uint256 balanceBefore = usdc.balanceOf(mm);
 
         vm.prank(withdrawer);
-        marketMakerManager.emergencyWithdraw(size, usdc);
+        marketMakerManager.emergencyWithdraw();
 
         uint256 balanceAfter = usdc.balanceOf(mm);
         assertEq(balanceAfter, balanceBefore + 100e6);
@@ -424,7 +430,7 @@ contract MarketMakerManagerTest is BaseTest {
         uint256 balanceBefore = usdc.balanceOf(mm);
 
         vm.prank(mm);
-        marketMakerManager.emergencyWithdraw(size, usdc);
+        marketMakerManager.emergencyWithdraw();
 
         uint256 balanceAfter = usdc.balanceOf(mm);
         assertEq(balanceAfter, balanceBefore + 100e6);
@@ -436,7 +442,7 @@ contract MarketMakerManagerTest is BaseTest {
 
         vm.expectRevert(abi.encodeWithSelector(MarketMakerManager.OnlyEmergencyWithdrawerOrOwner.selector));
         vm.prank(notEmergencyWithdrawer);
-        marketMakerManager.emergencyWithdraw(size, usdc);
+        marketMakerManager.emergencyWithdraw();
 
         vm.prank(governance);
         factory.setEmergencyWithdrawer(emergencyWithdrawer, true);
@@ -447,5 +453,22 @@ contract MarketMakerManagerTest is BaseTest {
         vm.prank(governance);
         factory.setEmergencyWithdrawer(emergencyWithdrawer, false);
         assertFalse(factory.isEmergencyWithdrawer(emergencyWithdrawer));
+    }
+
+    function test_MarketMakerManager_emergencyWithdraw_one_market_paused_does_not_stop_process() public {
+        ISize market1 = ISize(size);
+        sizeFactory.createMarket(f, r, o, d);
+
+        usdc.mint(mm, 100e6);
+        vm.prank(mm);
+        usdc.transfer(address(marketMakerManager), 100e6);
+
+        vm.prank(bot);
+        marketMakerManager.depositDirect(size, usdc, 90e6);
+
+        market1.pause();
+
+        vm.prank(mm);
+        marketMakerManager.emergencyWithdraw();
     }
 }

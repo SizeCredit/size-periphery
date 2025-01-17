@@ -8,6 +8,7 @@ import {UpgradeableBeacon} from "@openzeppelin/contracts/proxy/beacon/Upgradeabl
 import {BeaconProxy} from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import {MarketMakerManager} from "src/MarketMakerManager.sol";
+import {ISizeFactory} from "@size/src/v1.5/interfaces/ISizeFactory.sol";
 
 contract MarketMakerManagerFactory is Ownable2StepUpgradeable, UUPSUpgradeable, PausableUpgradeable {
     using EnumerableSet for EnumerableSet.AddressSet;
@@ -19,6 +20,7 @@ contract MarketMakerManagerFactory is Ownable2StepUpgradeable, UUPSUpgradeable, 
     UpgradeableBeacon public upgradeableBeacon;
     address private ___UNUSED_DO_NOT_REMOVE;
     address public bot;
+    ISizeFactory public sizeFactory;
     EnumerableSet.AddressSet private emergencyWithdrawers;
 
     /*//////////////////////////////////////////////////////////////
@@ -27,6 +29,7 @@ contract MarketMakerManagerFactory is Ownable2StepUpgradeable, UUPSUpgradeable, 
 
     event MarketMakerManagerCreated(address marketMakerManager, address marketMaker);
     event BotSet(address indexed oldBot, address indexed newBot);
+    event SizeFactorySet(address indexed oldSizeFactory, address indexed newSizeFactory);
     event EmergencyWithdrawerSet(address indexed emergencyWithdrawer, bool indexed set);
 
     /*//////////////////////////////////////////////////////////////
@@ -59,6 +62,10 @@ contract MarketMakerManagerFactory is Ownable2StepUpgradeable, UUPSUpgradeable, 
 
     function setBot(address _bot) external onlyOwner {
         _setBot(_bot);
+    }
+
+    function setSizeFactory(ISizeFactory _sizeFactory) external onlyOwner {
+        _setSizeFactory(_sizeFactory);
     }
 
     function pause() external onlyOwner {
@@ -107,5 +114,10 @@ contract MarketMakerManagerFactory is Ownable2StepUpgradeable, UUPSUpgradeable, 
     function _setBot(address _bot) private {
         emit BotSet(bot, _bot);
         bot = _bot;
+    }
+
+    function _setSizeFactory(ISizeFactory _sizeFactory) private {
+        emit SizeFactorySet(address(sizeFactory), address(_sizeFactory));
+        sizeFactory = _sizeFactory;
     }
 }

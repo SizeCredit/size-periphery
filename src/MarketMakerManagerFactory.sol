@@ -6,9 +6,13 @@ import {Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/acces
 import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import {UpgradeableBeacon} from "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
 import {BeaconProxy} from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
+import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import {MarketMakerManager} from "src/MarketMakerManager.sol";
+import {ISizeFactory} from "@size/src/v1.5/interfaces/ISizeFactory.sol";
 
 contract MarketMakerManagerFactory is Ownable2StepUpgradeable, UUPSUpgradeable, PausableUpgradeable {
+    using EnumerableSet for EnumerableSet.AddressSet;
+
     /*//////////////////////////////////////////////////////////////
                             STORAGE
     //////////////////////////////////////////////////////////////*/
@@ -16,6 +20,8 @@ contract MarketMakerManagerFactory is Ownable2StepUpgradeable, UUPSUpgradeable, 
     UpgradeableBeacon public upgradeableBeacon;
     address private ___UNUSED_DO_NOT_REMOVE;
     address public bot;
+    ISizeFactory public sizeFactory;
+    EnumerableSet.AddressSet private emergencyWithdrawers;
 
     /*//////////////////////////////////////////////////////////////
                             EVENTS
@@ -23,9 +29,11 @@ contract MarketMakerManagerFactory is Ownable2StepUpgradeable, UUPSUpgradeable, 
 
     event MarketMakerManagerCreated(address marketMakerManager, address marketMaker);
     event BotSet(address indexed oldBot, address indexed newBot);
+    event SizeFactorySet(address indexed oldSizeFactory, address indexed newSizeFactory);
+    event EmergencyWithdrawerSet(address indexed emergencyWithdrawer, bool indexed set);
 
     /*//////////////////////////////////////////////////////////////
-                            FUNCTIONS
+                            CONSTRUCTOR/INITIALIZER
     //////////////////////////////////////////////////////////////*/
 
     // @custom:oz-upgrades-unsafe-allow constructor
@@ -42,6 +50,10 @@ contract MarketMakerManagerFactory is Ownable2StepUpgradeable, UUPSUpgradeable, 
         upgradeableBeacon = new UpgradeableBeacon(address(new MarketMakerManager()), address(this));
     }
 
+    /*//////////////////////////////////////////////////////////////
+                            OWNER FUNCTIONS
+    //////////////////////////////////////////////////////////////*/
+
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 
     function upgradeBeacon(address newImplementation) external onlyOwner {
@@ -52,6 +64,10 @@ contract MarketMakerManagerFactory is Ownable2StepUpgradeable, UUPSUpgradeable, 
         _setBot(_bot);
     }
 
+    function setSizeFactory(ISizeFactory _sizeFactory) external onlyOwner {
+        _setSizeFactory(_sizeFactory);
+    }
+
     function pause() external onlyOwner {
         _pause();
     }
@@ -59,6 +75,19 @@ contract MarketMakerManagerFactory is Ownable2StepUpgradeable, UUPSUpgradeable, 
     function unpause() external onlyOwner {
         _unpause();
     }
+
+    function setEmergencyWithdrawer(address emergencyWithdrawer, bool set) external onlyOwner {
+        if (set) {
+            emergencyWithdrawers.add(emergencyWithdrawer);
+        } else {
+            emergencyWithdrawers.remove(emergencyWithdrawer);
+        }
+        emit EmergencyWithdrawerSet(emergencyWithdrawer, set);
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                            PUBLIC FUNCTIONS
+    //////////////////////////////////////////////////////////////*/
 
     function createMarketMakerManager(address _marketMaker) external returns (MarketMakerManager) {
         BeaconProxy proxy = new BeaconProxy(
@@ -70,8 +99,25 @@ contract MarketMakerManagerFactory is Ownable2StepUpgradeable, UUPSUpgradeable, 
         return MarketMakerManager(address(proxy));
     }
 
-    function _setBot(address _bot) internal {
+    function getEmergencyWithdrawers() external view returns (address[] memory) {
+        return emergencyWithdrawers.values();
+    }
+
+    function isEmergencyWithdrawer(address emergencyWithdrawer) external view returns (bool) {
+        return emergencyWithdrawers.contains(emergencyWithdrawer);
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                            PRIVATE FUNCTIONS
+    //////////////////////////////////////////////////////////////*/
+
+    function _setBot(address _bot) private {
         emit BotSet(bot, _bot);
         bot = _bot;
+    }
+
+    function _setSizeFactory(ISizeFactory _sizeFactory) private {
+        emit SizeFactorySet(address(sizeFactory), address(_sizeFactory));
+        sizeFactory = _sizeFactory;
     }
 }

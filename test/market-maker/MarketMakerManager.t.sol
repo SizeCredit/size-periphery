@@ -2,6 +2,7 @@
 pragma solidity 0.8.23;
 
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {BaseTest} from "@size/test/BaseTest.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
@@ -11,10 +12,13 @@ import {MarketMakerManagerV2} from "test/mocks/MarketMakerManagerV2.sol";
 import {
     DepositParams, WithdrawParams, BuyCreditLimitParams, SellCreditLimitParams
 } from "@size/src/interfaces/ISize.sol";
+import {UpdateConfigParams} from "@size/src/libraries/actions/UpdateConfig.sol";
 import {YieldCurveHelper} from "@size/test/helpers/libraries/YieldCurveHelper.sol";
 import {YieldCurve} from "@size/src/libraries/YieldCurveLibrary.sol";
 import {MarketMakerManagerFactory} from "src/MarketMakerManagerFactory.sol";
 import {MarketMakerManagerFactoryV2} from "test/mocks/MarketMakerManagerFactoryV2.sol";
+import {ISizeFactory} from "@size/src/v1.5/interfaces/ISizeFactory.sol";
+import {ISize} from "@size/src/interfaces/ISize.sol";
 
 contract MarketMakerManagerTest is BaseTest {
     address public governance;
@@ -39,6 +43,9 @@ contract MarketMakerManagerTest is BaseTest {
             )
         );
         marketMakerManager = factory.createMarketMakerManager(mm);
+
+        vm.prank(governance);
+        factory.setSizeFactory(ISizeFactory(sizeFactory));
     }
 
     function test_MarketMakerManager_initialize() public view {
@@ -390,5 +397,95 @@ contract MarketMakerManagerTest is BaseTest {
         marketMakerManager2.sellCreditLimit(
             size, SellCreditLimitParams({maxDueDate: block.timestamp + 365 days, curveRelativeTime: curve2})
         );
+    }
+
+    function test_MarketMakerManager_emergencyWithdraw_withdrawer() public {
+        usdc.mint(mm, 100e6);
+        vm.prank(mm);
+        usdc.transfer(address(marketMakerManager), 100e6);
+
+        vm.prank(bot);
+        marketMakerManager.depositDirect(size, usdc, 90e6);
+
+        address withdrawer = makeAddr("withdrawer");
+        vm.prank(governance);
+        factory.setEmergencyWithdrawer(withdrawer, true);
+
+        uint256 balanceBefore = usdc.balanceOf(mm);
+
+        vm.prank(withdrawer);
+        marketMakerManager.emergencyWithdraw();
+
+        uint256 balanceAfter = usdc.balanceOf(mm);
+        assertEq(balanceAfter, balanceBefore + 100e6);
+    }
+
+    function test_MarketMakerManager_emergencyWithdraw_owner() public {
+        usdc.mint(mm, 100e6);
+        vm.prank(mm);
+        usdc.transfer(address(marketMakerManager), 100e6);
+
+        vm.prank(bot);
+        marketMakerManager.depositDirect(size, usdc, 90e6);
+
+        uint256 balanceBefore = usdc.balanceOf(mm);
+
+        vm.prank(mm);
+        marketMakerManager.emergencyWithdraw();
+
+        uint256 balanceAfter = usdc.balanceOf(mm);
+        assertEq(balanceAfter, balanceBefore + 100e6);
+    }
+
+    function test_MarketMakerManager_emergencyWithdraw_onlyEmergencyWithdrawerOrOwner() public {
+        address notEmergencyWithdrawer = makeAddr("notEmergencyWithdrawer");
+        address emergencyWithdrawer = makeAddr("emergencyWithdrawer");
+
+        vm.expectRevert(abi.encodeWithSelector(MarketMakerManager.OnlyEmergencyWithdrawerOrOwner.selector));
+        vm.prank(notEmergencyWithdrawer);
+        marketMakerManager.emergencyWithdraw();
+
+        vm.prank(governance);
+        factory.setEmergencyWithdrawer(emergencyWithdrawer, true);
+
+        assertTrue(factory.isEmergencyWithdrawer(emergencyWithdrawer));
+        assertEq(factory.getEmergencyWithdrawers()[0], emergencyWithdrawer);
+
+        vm.prank(governance);
+        factory.setEmergencyWithdrawer(emergencyWithdrawer, false);
+        assertFalse(factory.isEmergencyWithdrawer(emergencyWithdrawer));
+    }
+
+    function test_MarketMakerManager_emergencyWithdraw_one_market_paused_does_not_stop_process() public {
+        ISize market1 = ISize(size);
+        sizeFactory.createMarket(f, r, o, d);
+
+        usdc.mint(mm, 100e6);
+        vm.prank(mm);
+        usdc.transfer(address(marketMakerManager), 100e6);
+
+        vm.prank(bot);
+        marketMakerManager.depositDirect(size, usdc, 90e6);
+
+        market1.pause();
+
+        vm.prank(mm);
+        marketMakerManager.emergencyWithdraw();
+    }
+
+    function test_MarketMakerManager_emergencyWithdraw_single_token() public {
+        d.borrowATokenV1_5 = address(sizeFactory.createBorrowATokenV1_5(variablePool, IERC20Metadata(address(weth))));
+        d.underlyingBorrowToken = address(weth);
+        sizeFactory.createMarket(f, r, o, d);
+
+        usdc.mint(mm, 100e6);
+        vm.prank(mm);
+        usdc.transfer(address(marketMakerManager), 100e6);
+
+        vm.prank(bot);
+        marketMakerManager.depositDirect(size, usdc, 90e6);
+
+        vm.prank(mm);
+        marketMakerManager.emergencyWithdrawToken(address(usdc));
     }
 }

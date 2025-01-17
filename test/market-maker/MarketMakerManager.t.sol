@@ -2,6 +2,7 @@
 pragma solidity 0.8.23;
 
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {BaseTest} from "@size/test/BaseTest.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
@@ -470,5 +471,21 @@ contract MarketMakerManagerTest is BaseTest {
 
         vm.prank(mm);
         marketMakerManager.emergencyWithdraw();
+    }
+
+    function test_MarketMakerManager_emergencyWithdraw_single_token() public {
+        d.borrowATokenV1_5 = address(sizeFactory.createBorrowATokenV1_5(variablePool, IERC20Metadata(address(weth))));
+        d.underlyingBorrowToken = address(weth);
+        sizeFactory.createMarket(f, r, o, d);
+
+        usdc.mint(mm, 100e6);
+        vm.prank(mm);
+        usdc.transfer(address(marketMakerManager), 100e6);
+
+        vm.prank(bot);
+        marketMakerManager.depositDirect(size, usdc, 90e6);
+
+        vm.prank(mm);
+        marketMakerManager.emergencyWithdrawToken(address(usdc));
     }
 }

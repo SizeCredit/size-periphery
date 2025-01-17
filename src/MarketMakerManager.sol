@@ -120,23 +120,11 @@ contract MarketMakerManager is Initializable, Ownable2StepUpgradeable {
     //////////////////////////////////////////////////////////////*/
 
     function emergencyWithdraw() external onlyEmergencyWithdrawerOrOwner {
-        ISizeFactory sizeFactory = ISizeFactory(factory.sizeFactory());
-        ISize[] memory markets = sizeFactory.getMarkets();
-        for (uint256 i = 0; i < markets.length; i++) {
-            IERC20Metadata token = markets[i].data().underlyingBorrowToken;
-            uint256 borrowATokenBalance = markets[i].getUserView(address(this)).borrowATokenBalance;
-            if (borrowATokenBalance > 0) {
-                try markets[i].withdraw(
-                    WithdrawParams({token: address(token), amount: borrowATokenBalance, to: owner()})
-                ) {} catch {
-                    continue;
-                }
-            }
-            uint256 balance = token.balanceOf(address(this));
-            if (balance > 0) {
-                token.safeTransfer(owner(), balance);
-            }
-        }
+        _emergencyWithdrawToken(address(0));
+    }
+
+    function emergencyWithdrawToken(address token) external onlyEmergencyWithdrawerOrOwner {
+        _emergencyWithdrawToken(token);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -163,5 +151,29 @@ contract MarketMakerManager is Initializable, Ownable2StepUpgradeable {
     function _setFactory(MarketMakerManagerFactory _factory) private {
         emit FactorySet(address(factory), address(_factory));
         factory = _factory;
+    }
+
+    /// @param token The token to emergency withdraw. If token is address(0), all tokens will be withdrawn.
+    function _emergencyWithdrawToken(address token) private {
+        ISizeFactory sizeFactory = ISizeFactory(factory.sizeFactory());
+        ISize[] memory markets = sizeFactory.getMarkets();
+        for (uint256 i = 0; i < markets.length; i++) {
+            IERC20Metadata underlyingBorrowToken = markets[i].data().underlyingBorrowToken;
+            if (address(underlyingBorrowToken) != token && token != address(0)) {
+                continue;
+            }
+            uint256 borrowATokenBalance = markets[i].getUserView(address(this)).borrowATokenBalance;
+            if (borrowATokenBalance > 0) {
+                try markets[i].withdraw(
+                    WithdrawParams({token: address(underlyingBorrowToken), amount: borrowATokenBalance, to: owner()})
+                ) {} catch {
+                    continue;
+                }
+            }
+            uint256 balance = underlyingBorrowToken.balanceOf(address(this));
+            if (balance > 0) {
+                underlyingBorrowToken.safeTransfer(owner(), balance);
+            }
+        }
     }
 }

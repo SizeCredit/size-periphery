@@ -17,10 +17,14 @@ ignored_warnings_from = ["lib/aave-v3-core"]
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options
 
 [rpc_endpoints]
-  sepolia = "https://sepolia.infura.io/v3/${API_KEY_INFURA}"
+  sepolia = "https://eth-sepolia.g.alchemy.com/v2/${API_KEY_ALCHEMY}"
+  mainnet = "https://eth-mainnet.g.alchemy.com/v2/${API_KEY_ALCHEMY}"
+  base_sepolia = "https://base-sepolia.g.alchemy.com/v2/${API_KEY_ALCHEMY}"
   base = "https://base-mainnet.g.alchemy.com/v2/${API_KEY_ALCHEMY}"
   anvil = "http://127.0.0.1:8545"
 
 [etherscan]
   sepolia = { key = "${API_KEY_ETHERSCAN}" }
+  mainnet = { key = "${API_KEY_ETHERSCAN}" }
+  base_sepolia = { key = "${API_KEY_ETHERSCAN}" }
   base = { key = "${API_KEY_ETHERSCAN}" }

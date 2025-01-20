@@ -1,10 +1,9 @@
 {
-  "MarketMakerManagerFactory": "0x34608ff33e44973C77b702F87a2478eEB1c4be24",
-  "bot": "0xDe5C38699a7057a33524F96e62Bb1987C2568816",
   "deployments": {
-    "MarketMakerManagerFactory": "0x34608ff33e44973C77b702F87a2478eEB1c4be24",
-    "bot": "0xDe5C38699a7057a33524F96e62Bb1987C2568816",
-    "governance": "0x462B545e8BBb6f9E5860928748Bfe9eCC712c3a7"
+    "MarketMakerManagerFactory-proxy": "0x34608ff33e44973C77b702F87a2478eEB1c4be24",
+    "MarketMakerManagerFactory-implementation": "0xDd3a78854C7648b4471332E816Cdc61CB73565cf",
+    "MarketMakerManager-implementation": "0x36bA0E7d9184c5bf0b72cF010e7fFD65853d4CdA"
   },
+  "bot": "0xDe5C38699a7057a33524F96e62Bb1987C2568816",
   "governance": "0x462B545e8BBb6f9E5860928748Bfe9eCC712c3a7"
 }

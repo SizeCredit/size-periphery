@@ -473,7 +473,7 @@ contract MarketMakerManagerTest is BaseTest {
         marketMakerManager.emergencyWithdraw();
     }
 
-    function test_MarketMakerManager_emergencyWithdraw_single_token() public {
+    function test_MarketMakerManager_emergencyWithdraw_single_token_borrow_token() public {
         d.borrowATokenV1_5 = address(sizeFactory.createBorrowATokenV1_5(variablePool, IERC20Metadata(address(weth))));
         d.underlyingBorrowToken = address(weth);
         sizeFactory.createMarket(f, r, o, d);
@@ -486,6 +486,30 @@ contract MarketMakerManagerTest is BaseTest {
         marketMakerManager.depositDirect(size, usdc, 90e6);
 
         vm.prank(mm);
-        marketMakerManager.emergencyWithdrawToken(address(usdc));
+        marketMakerManager.emergencyWithdraw(IERC20Metadata(address(usdc)));
+    }
+
+    function test_MarketMakerManager_emergencyWithdraw_single_token_collateral_token() public {
+        deal(mm, 100 ether);
+        vm.prank(mm);
+        weth.deposit{value: 100 ether}();
+
+        vm.prank(mm);
+        weth.transfer(address(marketMakerManager), 100 ether);
+
+        vm.prank(bot);
+        marketMakerManager.depositDirect(size, weth, 90 ether);
+
+        vm.prank(mm);
+        marketMakerManager.emergencyWithdraw(IERC20Metadata(address(weth)));
+    }
+
+    function test_MarketMakerManager_recoverTokens() public {
+        usdc.mint(address(marketMakerManager), 123e6);
+
+        vm.prank(mm);
+        marketMakerManager.recoverTokens(usdc);
+
+        assertEq(usdc.balanceOf(mm), 123e6);
     }
 }

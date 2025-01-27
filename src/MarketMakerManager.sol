@@ -4,7 +4,10 @@ pragma solidity 0.8.23;
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
+import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import {PAUSER_ROLE} from "@size/src/Size.sol";
 import {ISize} from "@size/src/interfaces/ISize.sol";
+import {ISizeAdmin} from "@size/src/interfaces/ISizeAdmin.sol";
 import {ISizeView} from "@size/src/interfaces/ISizeView.sol";
 import {DataView, UserView} from "@size/src/SizeViewData.sol";
 import {
@@ -14,6 +17,7 @@ import {ISizeFactory} from "@size/src/v1.5/interfaces/ISizeFactory.sol";
 import {VariablePoolBorrowRateParams} from "@src/libraries/YieldCurveLibrary.sol";
 import {YieldCurve} from "@size/src/libraries/YieldCurveLibrary.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {YieldCurvesValidationLibrary} from "src/libraries/YieldCurvesValidationLibrary.sol";
 import {MarketMakerManagerFactory} from "src/MarketMakerManagerFactory.sol";
@@ -32,6 +36,7 @@ contract MarketMakerManager is Initializable, Ownable2StepUpgradeable {
     //////////////////////////////////////////////////////////////*/
 
     event FactorySet(address indexed oldFactory, address indexed newFactory);
+    event CallFailed(address indexed target, bytes data);
 
     /*//////////////////////////////////////////////////////////////
                             ERRORS
@@ -199,51 +204,109 @@ contract MarketMakerManager is Initializable, Ownable2StepUpgradeable {
         ISizeFactory sizeFactory = ISizeFactory(factory.sizeFactory());
         ISize[] memory markets = sizeFactory.getMarkets();
         for (uint256 i = 0; i < markets.length; i++) {
-            DataView memory data = markets[i].data();
-            UserView memory userView = ISizeView(address(markets[i])).getUserView(address(this));
+            ISize size = markets[i];
+            DataView memory data = size.data();
+            UserView memory userView = ISizeView(address(size)).getUserView(address(this));
             IERC20Metadata underlyingBorrowToken = data.underlyingBorrowToken;
             IERC20Metadata underlyingCollateralToken = data.underlyingCollateralToken;
 
+            bool wasPausedAndHasPauserRole = _tryUnpause(size);
+
             if (token == IERC20Metadata(address(0))) {
-                _tryWithdrawBorrowToken(markets[i], data, userView);
-                _tryWithdrawCollateralToken(markets[i], data, userView);
+                _tryWithdrawBorrowToken(size, data, userView);
+                _tryWithdrawCollateralToken(size, data, userView);
             } else {
                 if (underlyingBorrowToken == token) {
-                    _tryWithdrawBorrowToken(markets[i], data, userView);
+                    _tryWithdrawBorrowToken(size, data, userView);
                 } else if (underlyingCollateralToken == token) {
-                    _tryWithdrawCollateralToken(markets[i], data, userView);
+                    _tryWithdrawCollateralToken(size, data, userView);
                 }
+            }
+
+            if (wasPausedAndHasPauserRole) {
+                _tryPause(size);
             }
         }
     }
 
-    function _tryWithdrawBorrowToken(ISize size, DataView memory data, UserView memory userView) private {
-        uint256 borrowATokenBalance = userView.borrowATokenBalance;
-        if (borrowATokenBalance > 0) {
-            try size.withdraw(
-                WithdrawParams({token: address(data.underlyingBorrowToken), amount: borrowATokenBalance, to: owner()})
-            ) {} catch {}
-        }
-        uint256 balance = data.underlyingBorrowToken.balanceOf(address(this));
-        if (balance > 0) {
-            data.underlyingBorrowToken.safeTransfer(owner(), balance);
+    /// @notice Try to unpause a Size market
+    /// @param size The Size market to unpause
+    /// @return wasPausedAndHasPauserRole True if the market was paused and the caller has the PAUSER_ROLE
+    function _tryUnpause(ISize size) private returns (bool wasPausedAndHasPauserRole) {
+        wasPausedAndHasPauserRole = PausableUpgradeable(address(size)).paused()
+            && AccessControlUpgradeable(address(size)).hasRole(PAUSER_ROLE, address(this));
+        if (wasPausedAndHasPauserRole) {
+            _tryCall(address(size), abi.encodeCall(ISizeAdmin.unpause, ()));
         }
     }
 
+    /// @notice Try to pause a Size market
+    /// @param size The Size market to pause
+    /// @dev Assumes the caller has the PAUSER_ROLE
+    /// @dev Should only be called if the market was unpaused first
+    function _tryPause(ISize size) private {
+        _tryCall(address(size), abi.encodeCall(ISizeAdmin.pause, ()));
+    }
+
+    /// @notice Try to withdraw a borrow token from a Size market
+    /// @param size The Size market to withdraw from
+    /// @param data The data of the market
+    /// @param userView The user view of the market
+    function _tryWithdrawBorrowToken(ISize size, DataView memory data, UserView memory userView) private {
+        uint256 borrowATokenBalance = userView.borrowATokenBalance;
+        if (borrowATokenBalance > 0) {
+            _tryCall(
+                address(size),
+                abi.encodeCall(
+                    ISize.withdraw,
+                    WithdrawParams({
+                        token: address(data.underlyingBorrowToken),
+                        amount: borrowATokenBalance,
+                        to: owner()
+                    })
+                )
+            );
+        }
+        uint256 balance = data.underlyingBorrowToken.balanceOf(address(this));
+        if (balance > 0) {
+            _tryCall(address(data.underlyingBorrowToken), abi.encodeCall(IERC20.transfer, (owner(), balance)));
+        }
+    }
+
+    /// @notice Try to withdraw a collateral token from a Size market
+    /// @param size The Size market to withdraw from
+    /// @param data The data of the market
+    /// @param userView The user view of the market
     function _tryWithdrawCollateralToken(ISize size, DataView memory data, UserView memory userView) private {
         uint256 collateralTokenBalance = userView.collateralTokenBalance;
         if (collateralTokenBalance > 0) {
-            try size.withdraw(
-                WithdrawParams({
-                    token: address(data.underlyingCollateralToken),
-                    amount: collateralTokenBalance,
-                    to: owner()
-                })
-            ) {} catch {}
+            _tryCall(
+                address(size),
+                abi.encodeCall(
+                    ISize.withdraw,
+                    WithdrawParams({
+                        token: address(data.underlyingCollateralToken),
+                        amount: collateralTokenBalance,
+                        to: owner()
+                    })
+                )
+            );
         }
         uint256 balance = data.underlyingCollateralToken.balanceOf(address(this));
         if (balance > 0) {
-            data.underlyingCollateralToken.safeTransfer(owner(), balance);
+            _tryCall(address(data.underlyingCollateralToken), abi.encodeCall(IERC20.transfer, (owner(), balance)));
+        }
+    }
+
+    /// @notice Try to call a function on a target
+    /// @param target The target to call
+    /// @param data The data to call
+    /// @dev This function does not revert, it only emits an event if it fails
+    function _tryCall(address target, bytes memory data) private {
+        // slither-disable-next-line unused-return
+        (bool success,) = target.call(data);
+        if (!success) {
+            emit CallFailed(target, data);
         }
     }
 }

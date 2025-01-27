@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.23;
 
+import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
@@ -19,6 +20,7 @@ import {MarketMakerManagerFactory} from "src/MarketMakerManagerFactory.sol";
 import {MarketMakerManagerFactoryV2} from "test/mocks/MarketMakerManagerFactoryV2.sol";
 import {ISizeFactory} from "@size/src/v1.5/interfaces/ISizeFactory.sol";
 import {ISize} from "@size/src/interfaces/ISize.sol";
+import {PAUSER_ROLE} from "@size/src/Size.sol";
 
 contract MarketMakerManagerTest is BaseTest {
     address public governance;
@@ -448,6 +450,12 @@ contract MarketMakerManagerTest is BaseTest {
         vm.prank(governance);
         factory.setEmergencyWithdrawer(emergencyWithdrawer, true);
 
+        vm.prank(emergencyWithdrawer);
+        marketMakerManager.emergencyWithdraw();
+
+        vm.prank(mm);
+        marketMakerManager.emergencyWithdraw();
+
         assertTrue(factory.isEmergencyWithdrawer(emergencyWithdrawer));
         assertEq(factory.getEmergencyWithdrawers()[0], emergencyWithdrawer);
 
@@ -511,5 +519,20 @@ contract MarketMakerManagerTest is BaseTest {
         marketMakerManager.recoverTokens(usdc);
 
         assertEq(usdc.balanceOf(mm), 123e6);
+    }
+
+    function test_MarketMakerManager_emergencyWithdraw_all_tokens_when_paused() public {
+        usdc.mint(mm, 100e6);
+        vm.prank(mm);
+        usdc.transfer(address(marketMakerManager), 100e6);
+
+        vm.prank(bot);
+        marketMakerManager.depositDirect(size, usdc, 90e6);
+
+        size.pause();
+        AccessControlUpgradeable(address(size)).grantRole(PAUSER_ROLE, address(marketMakerManager));
+
+        vm.prank(mm);
+        marketMakerManager.emergencyWithdraw();
     }
 }

@@ -30,13 +30,18 @@ contract Leverage is GrantAndRevokeAuthorizations, FlashLoanSimpleReceiverBase, 
 
     bytes4[] private actions;
 
-    struct Vars {
-        ISize size;
-        address onBehalfOf;
+    struct SellCreditMarketWindParams {
         address[] lenders;
+        uint256 leverage;
         uint256 tenor;
         uint256 deadline;
         uint256 maxAPR;
+    }
+
+    struct Vars {
+        ISize size;
+        address onBehalfOf;
+        SellCreditMarketWindParams sellCreditMarketWindParams;
         SwapParams swapParams;
         InitializeRiskConfigParams riskConfig;
         DataView dataView;
@@ -57,27 +62,27 @@ contract Leverage is GrantAndRevokeAuthorizations, FlashLoanSimpleReceiverBase, 
 
     function wind(
         ISize size,
-        address[] memory lenders,
-        uint256 leverage,
-        uint256 tenor,
-        uint256 deadline,
-        uint256 maxAPR,
+        SellCreditMarketWindParams memory sellCreditMarketWindParams,
         SwapParams memory swapParams
-    ) external grantAndRevokeAuthorizations(size, actions) {
+    ) external {
+        _grantAuthorizations(size, actions);
+
         InitializeRiskConfigParams memory riskConfig = size.riskConfig();
 
-        if (leverage > _maxLeveragePercent(riskConfig)) {
-            revert PeripheryErrors.LEVERAGE_GREATER_THAN_MAX(leverage, _maxLeveragePercent(riskConfig));
+        if (sellCreditMarketWindParams.leverage > _maxLeveragePercent(riskConfig)) {
+            revert PeripheryErrors.LEVERAGE_GREATER_THAN_MAX(
+                sellCreditMarketWindParams.leverage, _maxLeveragePercent(riskConfig)
+            );
         }
-        if (leverage < PERCENT) {
-            revert PeripheryErrors.LEVERAGE_LESS_THAN_MIN(leverage, PERCENT);
+        if (sellCreditMarketWindParams.leverage < PERCENT) {
+            revert PeripheryErrors.LEVERAGE_LESS_THAN_MIN(sellCreditMarketWindParams.leverage, PERCENT);
         }
 
         DataView memory dataView = size.data();
         UserView memory userView = size.getUserView(msg.sender);
 
         uint256 collateralAmountToFlashLoan =
-            Math.mulDivDown(userView.collateralTokenBalance, leverage - PERCENT, PERCENT);
+            Math.mulDivDown(userView.collateralTokenBalance, sellCreditMarketWindParams.leverage - PERCENT, PERCENT);
 
         bool shouldSetUserConfiguration =
             userView.user.openingLimitBorrowCR != 0 && userView.user.openingLimitBorrowCR != riskConfig.crOpening;
@@ -85,24 +90,28 @@ contract Leverage is GrantAndRevokeAuthorizations, FlashLoanSimpleReceiverBase, 
             _setUserConfiguration(size, userView, msg.sender, riskConfig.crOpening);
         }
 
-        Vars memory vars = Vars({
-            size: size,
-            onBehalfOf: msg.sender,
-            lenders: lenders,
-            tenor: tenor,
-            deadline: deadline,
-            maxAPR: maxAPR,
-            swapParams: swapParams,
-            riskConfig: riskConfig,
-            dataView: dataView
-        });
         POOL.flashLoanSimple(
-            address(this), address(dataView.underlyingCollateralToken), collateralAmountToFlashLoan, abi.encode(vars), 0
+            address(this),
+            address(dataView.underlyingCollateralToken),
+            collateralAmountToFlashLoan,
+            abi.encode(
+                Vars({
+                    size: size,
+                    onBehalfOf: msg.sender,
+                    sellCreditMarketWindParams: sellCreditMarketWindParams,
+                    swapParams: swapParams,
+                    riskConfig: riskConfig,
+                    dataView: dataView
+                })
+            ),
+            0
         );
 
         if (shouldSetUserConfiguration) {
             _setUserConfiguration(size, userView, msg.sender, userView.user.openingLimitBorrowCR);
         }
+
+        _revokeAuthorizations(size);
     }
 
     function unwind() external {}
@@ -127,12 +136,12 @@ contract Leverage is GrantAndRevokeAuthorizations, FlashLoanSimpleReceiverBase, 
             vars.size,
             vars.onBehalfOf,
             address(this),
-            vars.lenders,
+            vars.sellCreditMarketWindParams.lenders,
             amount,
             vars.riskConfig,
-            vars.tenor,
-            vars.deadline,
-            vars.maxAPR
+            vars.sellCreditMarketWindParams.tenor,
+            vars.sellCreditMarketWindParams.deadline,
+            vars.sellCreditMarketWindParams.maxAPR
         );
 
         _withdrawOnBehalfOf(

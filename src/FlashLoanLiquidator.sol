@@ -311,7 +311,7 @@ contract FlashLoanLiquidator is Ownable, FlashLoanReceiverBase, DexSwap {
             );
         }
 
-        _swapCollateral(opParams.collateralToken, opParams.borrowToken, opParams.swapParams);
+        _swap(opParams.collateralToken, opParams.borrowToken, opParams.swapParams);
 
         _settleFlashLoan(assets, amounts, premiums, opParams.recipient, opParams.depositProfits, opParams.sizeMarket);
 
@@ -320,5 +320,9 @@ contract FlashLoanLiquidator is Ownable, FlashLoanReceiverBase, DexSwap {
 
     function recover(address token, address to, uint256 amount) external onlyOwner {
         IERC20(token).safeTransfer(to, amount);
+    }
+
+    function version() external pure returns (uint256) {
+        return 4;
     }
 }

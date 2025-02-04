@@ -52,86 +52,75 @@ abstract contract DexSwap {
         uniswapV3Router = IUniswapV3Router(_uniswapV3Router);
     }
 
-    function _swapCollateral(address collateralToken, address borrowToken, SwapParams memory swapParams)
-        internal
-        returns (uint256)
-    {
+    function _swap(address tokenIn, address tokenOut, SwapParams memory swapParams) internal returns (uint256) {
         if (swapParams.method == SwapMethod.GenericRoute) {
-            return _swapCollateralGenericRoute(collateralToken, swapParams.data);
+            return _swapGenericRoute(tokenIn, tokenOut, swapParams.data);
         } else if (swapParams.method == SwapMethod.OneInch) {
-            return _swapCollateral1Inch(collateralToken, borrowToken, swapParams.data, swapParams.minimumReturnAmount);
+            return _swap1Inch(tokenIn, tokenOut, swapParams.data, swapParams.minimumReturnAmount);
         } else if (swapParams.method == SwapMethod.Unoswap) {
             address pool = abi.decode(swapParams.data, (address));
-            return _swapCollateralUnoswap(collateralToken, borrowToken, pool, swapParams.minimumReturnAmount);
+            return _swapUnoswap(tokenIn, tokenOut, pool, swapParams.minimumReturnAmount);
         } else if (swapParams.method == SwapMethod.Uniswap) {
             address[] memory path = abi.decode(swapParams.data, (address[]));
-            return _swapCollateralUniswap(
-                collateralToken, borrowToken, path, swapParams.deadline, swapParams.minimumReturnAmount
-            );
+            return _swapUniswap(tokenIn, tokenOut, path, swapParams.deadline, swapParams.minimumReturnAmount);
         } else if (swapParams.method == SwapMethod.UniswapV3) {
             (uint24 fee, uint160 sqrtPriceLimitX96) = abi.decode(swapParams.data, (uint24, uint160));
-            return _swapCollateralUniswapV3(
-                collateralToken, borrowToken, fee, sqrtPriceLimitX96, swapParams.minimumReturnAmount
-            );
+            return _swapUniswapV3(tokenIn, tokenOut, fee, sqrtPriceLimitX96, swapParams.minimumReturnAmount);
         } else {
             revert PeripheryErrors.INVALID_SWAP_METHOD();
         }
     }
 
-    function _swapCollateral1Inch(
-        address collateralToken,
-        address borrowToken,
-        bytes memory data,
-        uint256 minimumReturnAmount
-    ) internal returns (uint256) {
-        IERC20(collateralToken).forceApprove(address(oneInchAggregator), type(uint256).max);
+    function _swap1Inch(address tokenIn, address tokenOut, bytes memory data, uint256 minimumReturnAmount)
+        internal
+        returns (uint256)
+    {
+        IERC20(tokenIn).forceApprove(address(oneInchAggregator), type(uint256).max);
         uint256 swappedAmount = oneInchAggregator.swap(
-            collateralToken, borrowToken, IERC20(collateralToken).balanceOf(address(this)), minimumReturnAmount, data
+            tokenIn, tokenOut, IERC20(tokenIn).balanceOf(address(this)), minimumReturnAmount, data
         );
         return swappedAmount;
     }
 
-    function _swapCollateralUniswap(
-        address collateralToken,
-        address, /* borrowToken */
+    function _swapUniswap(
+        address tokenIn,
+        address, /* tokenOut */
         address[] memory tokenPaths,
         uint256 deadline,
         uint256 minimumReturnAmount
     ) internal returns (uint256) {
-        IERC20(collateralToken).forceApprove(address(uniswapRouter), type(uint256).max);
+        IERC20(tokenIn).forceApprove(address(uniswapRouter), type(uint256).max);
         uint256[] memory amounts = uniswapRouter.swapExactTokensForTokens(
-            IERC20(collateralToken).balanceOf(address(this)), minimumReturnAmount, tokenPaths, address(this), deadline
+            IERC20(tokenIn).balanceOf(address(this)), minimumReturnAmount, tokenPaths, address(this), deadline
         );
         return amounts[amounts.length - 1];
     }
 
-    function _swapCollateralUnoswap(
-        address collateralToken,
-        address, /* borrowToken */
-        address pool,
-        uint256 minimumReturnAmount
-    ) internal returns (uint256) {
-        IERC20(collateralToken).forceApprove(address(unoswapRouter), type(uint256).max);
+    function _swapUnoswap(address tokenIn, address, /*tokenOut*/ address pool, uint256 minimumReturnAmount)
+        internal
+        returns (uint256)
+    {
+        IERC20(tokenIn).forceApprove(address(unoswapRouter), type(uint256).max);
         uint256 returnAmount = unoswapRouter.unoswapTo(
-            address(this), collateralToken, IERC20(collateralToken).balanceOf(address(this)), minimumReturnAmount, pool
+            address(this), tokenIn, IERC20(tokenIn).balanceOf(address(this)), minimumReturnAmount, pool
         );
 
         return returnAmount;
     }
 
-    function _swapCollateralUniswapV3(
-        address collateralToken,
-        address borrowToken,
+    function _swapUniswapV3(
+        address tokenIn,
+        address tokenOut,
         uint24 fee,
         uint160 sqrtPriceLimitX96,
         uint256 minimumReturnAmount
     ) internal returns (uint256) {
-        uint256 amountIn = IERC20(collateralToken).balanceOf(address(this));
-        IERC20(collateralToken).forceApprove(address(uniswapV3Router), amountIn);
+        uint256 amountIn = IERC20(tokenIn).balanceOf(address(this));
+        IERC20(tokenIn).forceApprove(address(uniswapV3Router), amountIn);
 
         IUniswapV3Router.ExactInputSingleParams memory params = IUniswapV3Router.ExactInputSingleParams({
-            tokenIn: collateralToken,
-            tokenOut: borrowToken,
+            tokenIn: tokenIn,
+            tokenOut: tokenOut,
             fee: fee,
             recipient: address(this),
             amountIn: amountIn,
@@ -143,7 +132,10 @@ abstract contract DexSwap {
         return amountOut;
     }
 
-    function _swapCollateralGenericRoute(address collateralToken, bytes memory routeData) internal returns (uint256) {
+    function _swapGenericRoute(address tokenIn, address, /* tokenOut */ bytes memory routeData)
+        internal
+        returns (uint256)
+    {
         // Decode the first 32 bytes as the target router address
         address router;
         assembly {
@@ -160,7 +152,7 @@ abstract contract DexSwap {
         }
 
         // Approve router to spend collateral token
-        IERC20(collateralToken).forceApprove(router, type(uint256).max);
+        IERC20(tokenIn).forceApprove(router, type(uint256).max);
 
         // Execute swap via low-level call
         (bool success, bytes memory result) = router.call(callData);

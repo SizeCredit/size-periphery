@@ -10,4 +10,6 @@ library PeripheryErrors {
     error NOT_INITIATOR();
     error INSUFFICIENT_BALANCE();
     error GENERIC_SWAP_ROUTE_FAILED();
+    error INVALID_TOKEN_IN();
+    error TOKEN_MISMATCH();
 }

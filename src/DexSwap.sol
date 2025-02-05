@@ -26,6 +26,13 @@ struct SwapParams {
     uint256 minimumReturnAmount; // Minimum return amount from the swap
 }
 
+struct GenericSwapStep {
+    address router;         // The router contract to call
+    address tokenIn;        // Input token for this step
+    address tokenOut;       // Output token for this step
+    bytes callData;         // The encoded call data for this step
+}
+
 /// @title DexSwap
 /// @custom:security-contact security@size.credit
 /// @author Size (https://size.credit/)
@@ -144,36 +151,47 @@ abstract contract DexSwap {
     }
 
     function _swapCollateralGenericRoute(address collateralToken, bytes memory routeData) internal returns (uint256) {
-        // Decode the first 32 bytes as the target router address
-        address router;
-        assembly {
-            router := mload(add(routeData, 32))
+        // Decode the array of swap steps from routeData
+        GenericSwapStep[] memory steps = abi.decode(routeData, (GenericSwapStep[]));
+        
+        uint256 finalAmount;
+        
+        for (uint256 i = 0; i < steps.length; i++) {
+            GenericSwapStep memory step = steps[i];
+            
+            // Verify first step uses collateral token
+            if (i == 0 && step.tokenIn != collateralToken) {
+                revert PeripheryErrors.INVALID_TOKEN_IN();
+            }
+            
+            // Approve router to spend input tokens
+            IERC20(step.tokenIn).forceApprove(step.router, type(uint256).max);
+            
+            // Execute swap via low-level call
+            (bool success, bytes memory result) = step.router.call(step.callData);
+            if (!success) {
+                // If the call fails, extract revert reason if available
+                assembly {
+                    let ptr := mload(0x40)
+                    let size := returndatasize()
+                    returndatacopy(ptr, 0, size)
+                    revert(ptr, size)
+                }
+            }
+
+            // For the final step, decode the return amount
+            if (i == steps.length - 1) {
+                assembly {
+                    finalAmount := mload(add(result, 32))
+                }
+            }
+            
+            // Verify token out matches next step's token in
+            if (i < steps.length - 1 && steps[i + 1].tokenIn != step.tokenOut) {
+                revert PeripheryErrors.TOKEN_MISMATCH();
+            }
         }
 
-        // The remaining bytes are the call data
-        bytes memory callData;
-        assembly {
-            // Skip first 32 bytes (router address)
-            let dataStart := add(routeData, 64)
-            let dataLength := mload(add(routeData, 32))
-            callData := mload(dataStart)
-        }
-
-        // Approve router to spend collateral token
-        IERC20(collateralToken).forceApprove(router, type(uint256).max);
-
-        // Execute swap via low-level call
-        (bool success, bytes memory result) = router.call(callData);
-        if (!success) {
-            revert PeripheryErrors.GENERIC_SWAP_ROUTE_FAILED();
-        }
-
-        // Decode returned amount (assumes uint256 return value)
-        uint256 returnAmount;
-        assembly {
-            returnAmount := mload(add(result, 32))
-        }
-
-        return returnAmount;
+        return finalAmount;
     }
 }

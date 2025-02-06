@@ -222,7 +222,7 @@ contract FlashLoanLiquidator is Ownable, FlashLoanReceiverBase, DexSwap {
         address[] memory assets = new address[](1);
         assets[0] = borrowToken;
         uint256[] memory amounts = new uint256[](1);
-        amounts[0] = debtAmount - supplementAmount;
+        amounts[0] = debtAmount;
         uint256[] memory modes = new uint256[](1);
         modes[0] = 0;
 
@@ -267,7 +267,7 @@ contract FlashLoanLiquidator is Ownable, FlashLoanReceiverBase, DexSwap {
         address[] memory assets = new address[](1);
         assets[0] = borrowToken;
         uint256[] memory amounts = new uint256[](1);
-        amounts[0] = debtAmount - supplementAmount;
+        amounts[0] = debtAmount;
         uint256[] memory modes = new uint256[](1);
         modes[0] = 0;
 

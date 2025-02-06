@@ -196,6 +196,7 @@ contract FlashLoanLiquidator is Ownable, FlashLoanReceiverBase, DexSwap {
         address recipient
     ) external {
         if (supplementAmount > 0) {
+            IERC20(borrowToken).forceApprove(msg.sender, supplementAmount);
             IERC20(borrowToken).transferFrom(msg.sender, address(this), supplementAmount);
         }
 
@@ -241,6 +242,7 @@ contract FlashLoanLiquidator is Ownable, FlashLoanReceiverBase, DexSwap {
         ReplacementParams memory replacementParams
     ) external onlyOwner {
         if (supplementAmount > 0) {
+            IERC20(borrowToken).forceApprove(msg.sender, supplementAmount);
             IERC20(borrowToken).transferFrom(msg.sender, address(this), supplementAmount);
         }
 

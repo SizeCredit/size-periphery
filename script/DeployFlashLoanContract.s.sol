@@ -29,12 +29,11 @@ contract DeployFlashLoanLiquidator is Script {
         address aggregator1inch = 0x425141165d3DE9FEC831896C016617a52363b687;
         address unoswapRouter = 0x425141165d3DE9FEC831896C016617a52363b687;
         // https://docs.uniswap.org/contracts/v3/reference/deployments/
-        address uniswapRouter = 0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45;
-        address uniswapV3Router = 0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45;
+        address uniswapRouter = 0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45; // ethereum mainnet
+        address uniswapV3Router = 0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45; // ethereum mainnet
+        // address uniswapV3Router = 0x2626664c2603336E57B271c5C0b26F421741e481; // base mainnet
+        // address uniswapRouter = 0x2626664c2603336E57B271c5C0b26F421741e481; // base mainnet
         // address uniswapV3Router = 0x94cC0AaC535CCDB3C01d6787D6413C739ae12bc4; // base sepolia
-
-        // address collateralToken = 0x4200000000000000000000000000000000000006;
-        // address borrowToken = 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913;
 
         FlashLoanLiquidator flashLoanLiquidator =
             new FlashLoanLiquidator(addressProvider, aggregator1inch, unoswapRouter, uniswapRouter, uniswapV3Router);

@@ -27,10 +27,11 @@ struct SwapParams {
 }
 
 struct GenericSwapStep {
-    address router;         // The router contract to call
-    address tokenIn;        // Input token for this step
-    address tokenOut;       // Output token for this step
-    bytes callData;         // The encoded call data for this step
+    address router;      // Router contract to call
+    bytes callData;      // Encoded call data for the swap
+    address tokenIn;     // Input token for this step
+    uint256 amountIn;   // Amount to approve (if 0, uses entire balance)
+    bool retrieveTokens; // Whether to retrieve tokens after swap (for protocols that don't auto-forward)
 }
 
 /// @title DexSwap
@@ -150,48 +151,57 @@ abstract contract DexSwap {
         return amountOut;
     }
 
-    function _swapCollateralGenericRoute(address collateralToken, bytes memory routeData) internal returns (uint256) {
-        // Decode the array of swap steps from routeData
+    function _swapCollateralGenericRoute(
+        address collateralToken,
+        bytes memory routeData
+    ) internal returns (uint256) {
+        // Decode array of swap steps from routeData
         GenericSwapStep[] memory steps = abi.decode(routeData, (GenericSwapStep[]));
         
-        uint256 finalAmount;
+        uint256 currentBalance;
+        address currentToken = collateralToken;
         
+        // Execute each swap step in sequence
         for (uint256 i = 0; i < steps.length; i++) {
             GenericSwapStep memory step = steps[i];
             
-            // Verify first step uses collateral token
-            if (i == 0 && step.tokenIn != collateralToken) {
+            // Verify input token matches expected
+            if (step.tokenIn != currentToken) {
                 revert PeripheryErrors.INVALID_TOKEN_IN();
             }
+
+            // Calculate amount to approve
+            currentBalance = IERC20(currentToken).balanceOf(address(this));
+            uint256 amountToApprove = step.amountIn == 0 ? currentBalance : step.amountIn;
             
-            // Approve router to spend input tokens
-            IERC20(step.tokenIn).forceApprove(step.router, type(uint256).max);
-            
-            // Execute swap via low-level call
+            // Approve router
+            IERC20(currentToken).forceApprove(step.router, amountToApprove);
+
+            // Execute swap
             (bool success, bytes memory result) = step.router.call(step.callData);
             if (!success) {
-                // If the call fails, extract revert reason if available
-                assembly {
-                    let ptr := mload(0x40)
-                    let size := returndatasize()
-                    returndatacopy(ptr, 0, size)
-                    revert(ptr, size)
-                }
+                revert PeripheryErrors.GENERIC_SWAP_ROUTE_FAILED();
             }
 
-            // For the final step, decode the return amount
-            if (i == steps.length - 1) {
-                assembly {
-                    finalAmount := mload(add(result, 32))
+            // If this step requires token retrieval (e.g., for protocols that don't auto-forward)
+            if (step.retrieveTokens) {
+                // The result should contain the output token address
+                address outputToken = abi.decode(result, (address));
+                currentToken = outputToken;
+            } else {
+                // For the final step, decode the returned amount
+                if (i == steps.length - 1) {
+                    return abi.decode(result, (uint256));
                 }
-            }
-            
-            // Verify token out matches next step's token in
-            if (i < steps.length - 1 && steps[i + 1].tokenIn != step.tokenOut) {
-                revert PeripheryErrors.TOKEN_MISMATCH();
+                
+                // For intermediate steps, we need to determine the next token
+                if (i < steps.length - 1) {
+                    currentToken = steps[i + 1].tokenIn;
+                }
             }
         }
 
-        return finalAmount;
+        // Return final balance if we get here
+        return IERC20(currentToken).balanceOf(address(this));
     }
 }

@@ -7,8 +7,8 @@ import {FixedPointMathLib} from "@solady/utils/FixedPointMathLib.sol";
 import {CurvesIntersectionLibrary} from "src/libraries/CurvesIntersectionLibrary.sol";
 import {PiecewiseIntersectionLibrary} from "src/libraries/PiecewiseIntersectionLibrary.sol";
 import {YieldCurveHelper} from "@size/test/helpers/libraries/YieldCurveHelper.sol";
-import {YieldCurve, VariablePoolBorrowRateParams} from "@size/src/libraries/YieldCurveLibrary.sol";
-import {PERCENT, YEAR} from "@size/src/libraries/Math.sol";
+import {YieldCurve, VariablePoolBorrowRateParams} from "@size/src/market/libraries/YieldCurveLibrary.sol";
+import {PERCENT, YEAR} from "@size/src/market/libraries/Math.sol";
 import {Test} from "forge-std/Test.sol";
 
 contract CurvesIntersectionLibraryTest is Test {

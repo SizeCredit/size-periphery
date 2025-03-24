@@ -11,16 +11,19 @@ import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/Pau
 import {MarketMakerManager} from "src/market-maker/MarketMakerManager.sol";
 import {MarketMakerManagerV2} from "test/mocks/MarketMakerManagerV2.sol";
 import {
-    DepositParams, WithdrawParams, BuyCreditLimitParams, SellCreditLimitParams
-} from "@size/src/interfaces/ISize.sol";
-import {UpdateConfigParams} from "@size/src/libraries/actions/UpdateConfig.sol";
+    DepositParams,
+    WithdrawParams,
+    BuyCreditLimitParams,
+    SellCreditLimitParams
+} from "@size/src/market/interfaces/ISize.sol";
+import {UpdateConfigParams} from "@size/src/market/libraries/actions/UpdateConfig.sol";
 import {YieldCurveHelper} from "@size/test/helpers/libraries/YieldCurveHelper.sol";
-import {YieldCurve} from "@size/src/libraries/YieldCurveLibrary.sol";
+import {YieldCurve} from "@size/src/market/libraries/YieldCurveLibrary.sol";
 import {MarketMakerManagerFactory} from "src/market-maker/MarketMakerManagerFactory.sol";
 import {MarketMakerManagerFactoryV2} from "test/mocks/MarketMakerManagerFactoryV2.sol";
-import {ISizeFactory} from "@size/src/v1.5/interfaces/ISizeFactory.sol";
-import {ISize} from "@size/src/interfaces/ISize.sol";
-import {PAUSER_ROLE} from "@size/src/Size.sol";
+import {ISizeFactory} from "@size/src/factory/interfaces/ISizeFactory.sol";
+import {ISize} from "@size/src/market/interfaces/ISize.sol";
+import {PAUSER_ROLE} from "@size/src/market/Size.sol";
 
 contract MarketMakerManagerTest is BaseTest {
     address public governance;

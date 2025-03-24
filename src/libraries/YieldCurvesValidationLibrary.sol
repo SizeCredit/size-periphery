@@ -1,8 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.23;
 
-import {YieldCurve, YieldCurveLibrary, VariablePoolBorrowRateParams} from "@size/src/libraries/YieldCurveLibrary.sol";
-import {Math} from "@size/src/libraries/Math.sol";
+import {
+    YieldCurve,
+    YieldCurveLibrary,
+    VariablePoolBorrowRateParams
+} from "@size/src/market/libraries/YieldCurveLibrary.sol";
+import {Math} from "@size/src/market/libraries/Math.sol";
 
 library YieldCurvesValidationLibrary {
     /// @dev Returns true if curve1 < curve2 for all overlapping segments

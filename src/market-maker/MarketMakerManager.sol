@@ -5,17 +5,20 @@ import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Ini
 import {Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
-import {PAUSER_ROLE} from "@size/src/Size.sol";
-import {ISize} from "@size/src/interfaces/ISize.sol";
-import {ISizeAdmin} from "@size/src/interfaces/ISizeAdmin.sol";
-import {ISizeView} from "@size/src/interfaces/ISizeView.sol";
-import {DataView, UserView} from "@size/src/SizeViewData.sol";
+import {PAUSER_ROLE} from "@size/src/market/Size.sol";
+import {ISize} from "@size/src/market/interfaces/ISize.sol";
+import {ISizeAdmin} from "@size/src/market/interfaces/ISizeAdmin.sol";
+import {ISizeView} from "@size/src/market/interfaces/ISizeView.sol";
+import {DataView, UserView} from "@size/src/market/SizeViewData.sol";
 import {
-    DepositParams, WithdrawParams, BuyCreditLimitParams, SellCreditLimitParams
-} from "@size/src/interfaces/ISize.sol";
-import {ISizeFactory} from "@size/src/v1.5/interfaces/ISizeFactory.sol";
-import {VariablePoolBorrowRateParams} from "@src/libraries/YieldCurveLibrary.sol";
-import {YieldCurve} from "@size/src/libraries/YieldCurveLibrary.sol";
+    DepositParams,
+    WithdrawParams,
+    BuyCreditLimitParams,
+    SellCreditLimitParams
+} from "@size/src/market/interfaces/ISize.sol";
+import {ISizeFactory} from "@size/src/factory/interfaces/ISizeFactory.sol";
+import {VariablePoolBorrowRateParams} from "@size/src/market/libraries/YieldCurveLibrary.sol";
+import {YieldCurve} from "@size/src/market/libraries/YieldCurveLibrary.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";

@@ -6,7 +6,7 @@
 pragma solidity ^0.8.0;
 
 import "forge-std/Script.sol";
-import "../src/FlashLoanLiquidator.sol";
+import "src/liquidator/FlashLoanLiquidator.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 
 contract DeployFlashLoanLiquidator is Script {

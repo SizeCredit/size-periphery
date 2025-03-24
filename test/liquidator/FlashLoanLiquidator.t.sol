@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.23;
 
-import {SwapMethod} from "src/DexSwap.sol";
-import {FlashLoanLiquidator, ReplacementParams, SwapParams} from "src/FlashLoanLiquidator.sol";
+import {SwapMethod} from "src/liquidator/DexSwap.sol";
+import {FlashLoanLiquidator, ReplacementParams, SwapParams} from "src/liquidator/FlashLoanLiquidator.sol";
 import {Mock1InchAggregator} from "test/mocks/Mock1InchAggregator.sol";
 import {MockAavePool} from "@test/mocks/MockAavePool.sol";
 

@@ -16,7 +16,7 @@ import {LiquidateParams} from "@size/src/libraries/actions/Liquidate.sol";
 import {LiquidateWithReplacementParams} from "@size/src/libraries/actions/LiquidateWithReplacement.sol";
 import {DepositParams} from "@size/src/libraries/actions/Deposit.sol";
 import {WithdrawParams} from "@size/src/libraries/actions/Withdraw.sol";
-import {DexSwap, SwapParams} from "src/DexSwap.sol";
+import {DexSwap, SwapParams} from "src/liquidator/DexSwap.sol";
 
 import {PeripheryErrors} from "src/libraries/PeripheryErrors.sol";
 

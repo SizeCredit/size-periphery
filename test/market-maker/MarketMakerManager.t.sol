@@ -8,7 +8,7 @@ import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.s
 import {BaseTest} from "@size/test/BaseTest.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
-import {MarketMakerManager} from "src/MarketMakerManager.sol";
+import {MarketMakerManager} from "src/market-maker/MarketMakerManager.sol";
 import {MarketMakerManagerV2} from "test/mocks/MarketMakerManagerV2.sol";
 import {
     DepositParams, WithdrawParams, BuyCreditLimitParams, SellCreditLimitParams
@@ -16,7 +16,7 @@ import {
 import {UpdateConfigParams} from "@size/src/libraries/actions/UpdateConfig.sol";
 import {YieldCurveHelper} from "@size/test/helpers/libraries/YieldCurveHelper.sol";
 import {YieldCurve} from "@size/src/libraries/YieldCurveLibrary.sol";
-import {MarketMakerManagerFactory} from "src/MarketMakerManagerFactory.sol";
+import {MarketMakerManagerFactory} from "src/market-maker/MarketMakerManagerFactory.sol";
 import {MarketMakerManagerFactoryV2} from "test/mocks/MarketMakerManagerFactoryV2.sol";
 import {ISizeFactory} from "@size/src/v1.5/interfaces/ISizeFactory.sol";
 import {ISize} from "@size/src/interfaces/ISize.sol";

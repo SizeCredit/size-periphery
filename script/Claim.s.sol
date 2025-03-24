@@ -12,11 +12,12 @@ contract ClaimScript is Script {
 
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         address sizeContractAddress = vm.envAddress("SIZE_CONTRACT_ADDRESS");
+        uint256 creditPositionId = vm.envUint("CREDIT_POSITION_ID");
 
         Size size = Size(payable(sizeContractAddress));
 
         ClaimParams memory params = ClaimParams({
-            creditPositionId: 57896044618658097711785492504343953926634992332820282019728792003956564819967
+            creditPositionId: creditPositionId
         });
 
         vm.startBroadcast(deployerPrivateKey);

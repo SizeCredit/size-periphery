@@ -26,7 +26,7 @@ jobs:
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
         with:
-          version: nightly-c3069a50ba18cccfc4e7d5de9b9b388811d9cc7b
+          version: stable
 
       - name: Run Forge build
         run: |
@@ -53,7 +53,7 @@ jobs:
       - name: Setup Foundry
         uses: foundry-rs/foundry-toolchain@v1
         with:
-          version: nightly-c3069a50ba18cccfc4e7d5de9b9b388811d9cc7b
+          version: stable
 
       - name: Format
         run: |
@@ -74,7 +74,7 @@ jobs:
       - name: Setup Foundry
         uses: foundry-rs/foundry-toolchain@v1
         with:
-          version: nightly-c3069a50ba18cccfc4e7d5de9b9b388811d9cc7b
+          version: stable
 
       - name: ABI
         run: |
@@ -85,7 +85,5 @@ jobs:
         with:
           name: abi
           path: |
-            out/FlashLoanLiquidation.sol/FlashLoanLiquidator.json
+            out/FlashLoanLiquidator.sol/FlashLoanLiquidator.json
             out/PeripheryErrors.sol/PeripheryErrors.json
-            out/MarketMakerManagerFactory.sol/MarketMakerManagerFactory.json
-            out/MarketMakerManager.sol/MarketMakerManager.json

@@ -16,9 +16,7 @@ contract ClaimScript is Script {
 
         Size size = Size(payable(sizeContractAddress));
 
-        ClaimParams memory params = ClaimParams({
-            creditPositionId: creditPositionId
-        });
+        ClaimParams memory params = ClaimParams({creditPositionId: creditPositionId});
 
         vm.startBroadcast(deployerPrivateKey);
         size.claim(params);

@@ -16,6 +16,7 @@ contract CopyLimitOrdersForCollectionTest is BaseTest {
 
     function setUp() public override {
         super.setUp();
+        vm.warp(block.timestamp + 123 days);
         copyLimitOrdersForCollection = new CopyLimitOrdersForCollection();
         sizeFactory.createMarket(f, r, o, d);
     }
@@ -44,6 +45,30 @@ contract CopyLimitOrdersForCollectionTest is BaseTest {
         vm.prank(alice);
         vm.expectRevert();
         copyLimitOrdersForCollection.addToCollection(market);
+    }
+
+    function test_CopyLimitOrdersForCollection_removeFromCollection_owner() public {
+        ISize market = sizeFactory.getMarket(1);
+        copyLimitOrdersForCollection.addToCollection(market);
+
+        (ISize[] memory markets, uint256[] memory addedAt) = copyLimitOrdersForCollection.getCollection();
+        assertEq(markets.length, 1);
+        assertEq(address(markets[0]), address(market));
+        assertEq(addedAt[0], block.timestamp);
+
+        vm.prank(copyLimitOrdersForCollection.owner());
+        copyLimitOrdersForCollection.removeFromCollection(market);
+
+        (markets, addedAt) = copyLimitOrdersForCollection.getCollection();
+        assertEq(markets.length, 0);
+        assertEq(addedAt.length, 0);
+    }
+
+    function test_CopyLimitOrdersForCollection_removeFromCollection_notOwner() public {
+        ISize market = sizeFactory.getMarket(1);
+        vm.prank(alice);
+        vm.expectRevert();
+        copyLimitOrdersForCollection.removeFromCollection(market);
     }
 
     function test_CopyLimitOrdersForCollection_setCopyLimitOrdersParams() public {

@@ -20,6 +20,7 @@ contract CopyLimitOrdersForCollection is Ownable2Step, Multicall {
     EnumerableMap.AddressToUintMap private collection;
 
     event AddedToCollection(ISize market, uint256 addedAt);
+    event RemovedFromCollection(ISize market);
     event CopyLimitOrdersParamsSet(
         address indexed user, CopyLimitOrdersParams previousParams, CopyLimitOrdersParams newParams
     );
@@ -33,6 +34,11 @@ contract CopyLimitOrdersForCollection is Ownable2Step, Multicall {
     function addToCollection(ISize market) external onlyOwner {
         collection.set(address(market), block.timestamp);
         emit AddedToCollection(market, block.timestamp);
+    }
+
+    function removeFromCollection(ISize market) external onlyOwner {
+        collection.remove(address(market));
+        emit RemovedFromCollection(market);
     }
 
     /*//////////////////////////////////////////////////////////////

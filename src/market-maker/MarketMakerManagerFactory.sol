@@ -8,7 +8,7 @@ import {UpgradeableBeacon} from "@openzeppelin/contracts/proxy/beacon/Upgradeabl
 import {BeaconProxy} from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import {MarketMakerManager} from "src/market-maker/MarketMakerManager.sol";
-import {ISizeFactory} from "@size/src/v1.5/interfaces/ISizeFactory.sol";
+import {ISizeFactory} from "@size/src/factory/interfaces/ISizeFactory.sol";
 
 contract MarketMakerManagerFactory is Ownable2StepUpgradeable, UUPSUpgradeable, PausableUpgradeable {
     using EnumerableSet for EnumerableSet.AddressSet;

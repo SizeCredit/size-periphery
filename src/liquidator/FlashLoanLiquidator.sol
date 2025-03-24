@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.23;
 
-import {ISize} from "@size/src/interfaces/ISize.sol";
+import {ISize} from "@size/src/market/interfaces/ISize.sol";
 
 import {FlashLoanReceiverBase} from "@aave/flashloan/base/FlashLoanReceiverBase.sol";
 import {IPool} from "@aave/interfaces/IPool.sol";
@@ -11,11 +11,11 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {Errors} from "@size/src/libraries/Errors.sol";
-import {LiquidateParams} from "@size/src/libraries/actions/Liquidate.sol";
-import {LiquidateWithReplacementParams} from "@size/src/libraries/actions/LiquidateWithReplacement.sol";
-import {DepositParams} from "@size/src/libraries/actions/Deposit.sol";
-import {WithdrawParams} from "@size/src/libraries/actions/Withdraw.sol";
+import {Errors} from "@size/src/market/libraries/Errors.sol";
+import {LiquidateParams} from "@size/src/market/libraries/actions/Liquidate.sol";
+import {LiquidateWithReplacementParams} from "@size/src/market/libraries/actions/LiquidateWithReplacement.sol";
+import {DepositParams} from "@size/src/market/libraries/actions/Deposit.sol";
+import {WithdrawParams} from "@size/src/market/libraries/actions/Withdraw.sol";
 import {DexSwap, SwapParams} from "src/liquidator/DexSwap.sol";
 
 import {PeripheryErrors} from "src/libraries/PeripheryErrors.sol";

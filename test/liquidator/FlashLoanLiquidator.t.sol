@@ -8,7 +8,7 @@ import {MockAavePool} from "@test/mocks/MockAavePool.sol";
 
 import {BaseTest, Vars} from "@size/test/BaseTest.sol";
 
-import {DebtPosition} from "@size/src/libraries/LoanLibrary.sol";
+import {DebtPosition} from "@size/src/market/libraries/LoanLibrary.sol";
 import {YieldCurveHelper} from "@size/test/helpers/libraries/YieldCurveHelper.sol";
 
 import {console} from "forge-std/console.sol";

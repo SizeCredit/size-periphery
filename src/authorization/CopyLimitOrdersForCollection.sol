@@ -3,7 +3,6 @@ pragma solidity 0.8.23;
 
 import {ISize} from "@size/src/market/interfaces/ISize.sol";
 import {
-    CopyLimitOrder,
     CopyLimitOrdersParams,
     CopyLimitOrdersOnBehalfOfParams
 } from "@size/src/market/libraries/actions/CopyLimitOrders.sol";
@@ -17,7 +16,7 @@ contract CopyLimitOrdersForCollection is Ownable2Step, Multicall {
 
     uint256 public constant TIMELOCK_DELAY = 1 days;
 
-    mapping(address user => CopyLimitOrdersParams params) public userToCopyLimitOrdersParams;
+    mapping(address user => CopyLimitOrdersParams params) public userCopyLimitOrdersParams;
     EnumerableMap.AddressToUintMap private collection;
 
     event AddedToCollection(ISize market, uint256 addedAt);
@@ -41,8 +40,8 @@ contract CopyLimitOrdersForCollection is Ownable2Step, Multicall {
     //////////////////////////////////////////////////////////////*/
 
     function setCopyLimitOrdersParams(CopyLimitOrdersParams calldata params) external {
-        emit CopyLimitOrdersParamsSet(msg.sender, userToCopyLimitOrdersParams[msg.sender], params);
-        userToCopyLimitOrdersParams[msg.sender] = params;
+        emit CopyLimitOrdersParamsSet(msg.sender, userCopyLimitOrdersParams[msg.sender], params);
+        userCopyLimitOrdersParams[msg.sender] = params;
     }
 
     function copyLimitOrdersOnBehalfOf(ISize market, address onBehalfOf) public {
@@ -50,10 +49,7 @@ contract CopyLimitOrdersForCollection is Ownable2Step, Multicall {
 
         if (exists && addedAt + TIMELOCK_DELAY < block.timestamp) {
             market.copyLimitOrdersOnBehalfOf(
-                CopyLimitOrdersOnBehalfOfParams({
-                    params: userToCopyLimitOrdersParams[onBehalfOf],
-                    onBehalfOf: onBehalfOf
-                })
+                CopyLimitOrdersOnBehalfOfParams({params: userCopyLimitOrdersParams[onBehalfOf], onBehalfOf: onBehalfOf})
             );
         }
     }

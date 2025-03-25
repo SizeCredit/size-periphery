@@ -32,7 +32,10 @@ contract AutoRollover is Ownable2Step, FlashLoanReceiverBase {
         uint256 deadline;
     }
 
-    constructor(address _owner, IPoolAddressesProvider _addressProvider) Ownable(_owner) FlashLoanReceiverBase(_addressProvider) {}
+    constructor(address _owner, IPoolAddressesProvider _addressProvider)
+        Ownable(_owner)
+        FlashLoanReceiverBase(_addressProvider)
+    {}
 
     function rollover(
         ISize market,
@@ -50,17 +53,15 @@ contract AutoRollover is Ownable2Step, FlashLoanReceiverBase {
             revert PeripheryErrors.AUTO_REPAY_TOO_EARLY(debtPosition.dueDate, block.timestamp);
         }
 
-        OperationParams memory operationParams =
-            OperationParams({
-                market: market,
-                debtPositionId: debtPositionId,
-                onBehalfOf: onBehalfOf,
-                lender: lender,
-                tenor: tenor,
-                maxAPR: maxAPR,
-                deadline: deadline
-            })
-        ;
+        OperationParams memory operationParams = OperationParams({
+            market: market,
+            debtPositionId: debtPositionId,
+            onBehalfOf: onBehalfOf,
+            lender: lender,
+            tenor: tenor,
+            maxAPR: maxAPR,
+            deadline: deadline
+        });
 
         bytes memory params = abi.encode(operationParams);
 
@@ -74,14 +75,13 @@ contract AutoRollover is Ownable2Step, FlashLoanReceiverBase {
         POOL.flashLoan(address(this), assets, amounts, modes, address(this), params, 0);
     }
 
-  function executeOperation(
-    address[] calldata assets,
-    uint256[] calldata amounts,
-    uint256[] calldata premiums,
-    address initiator,
-    bytes calldata params
-  ) external override returns (bool)
-    {
+    function executeOperation(
+        address[] calldata assets,
+        uint256[] calldata amounts,
+        uint256[] calldata premiums,
+        address initiator,
+        bytes calldata params
+    ) external override returns (bool) {
         if (msg.sender != address(POOL)) {
             revert PeripheryErrors.NOT_AAVE_POOL();
         }

@@ -33,7 +33,11 @@ contract AutoRolloverTest is BaseTest {
     function _test_AutoRollover_rollover(uint256 tenor, uint256 warp) private {
         _deposit(alice, usdc, 300e6);
         _deposit(bob, weth, 100e18);
-        _buyCreditLimit(alice, block.timestamp + 5 * tenor, YieldCurveHelper.customCurve(tenor, uint256(0.03e18), 2 * tenor, uint256(0.05e18)));
+        _buyCreditLimit(
+            alice,
+            block.timestamp + 5 * tenor,
+            YieldCurveHelper.customCurve(tenor, uint256(0.03e18), 2 * tenor, uint256(0.05e18))
+        );
         uint256 dueDate = block.timestamp + tenor;
 
         uint256 amount = 100e6;
@@ -59,23 +63,19 @@ contract AutoRolloverTest is BaseTest {
 
         bool shouldRevert = dueDate > block.timestamp + autoRollover.EARLY_REPAYMENT_BUFFER();
 
-        if(shouldRevert) {
+        if (shouldRevert) {
             vm.expectRevert(
-                abi.encodeWithSelector(
-                    PeripheryErrors.AUTO_REPAY_TOO_EARLY.selector, dueDate, block.timestamp
-                )
+                abi.encodeWithSelector(PeripheryErrors.AUTO_REPAY_TOO_EARLY.selector, dueDate, block.timestamp)
             );
         }
         vm.prank(james);
         autoRollover.rollover(size, debtPositionId, bob, alice, rollover, type(uint256).max, block.timestamp);
 
-        if(!shouldRevert) {
+        if (!shouldRevert) {
+            Vars memory _after = _state();
 
-        Vars memory _after = _state();
-
-        assertGt(_after.bob.debtBalance, _before.bob.debtBalance);
-        assertEq(_after.bob.borrowATokenBalance, 0);
-
+            assertGt(_after.bob.debtBalance, _before.bob.debtBalance);
+            assertEq(_after.bob.borrowATokenBalance, 0);
         }
     }
 

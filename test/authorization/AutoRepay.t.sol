@@ -8,6 +8,7 @@ import {Authorization, Action} from "@size/src/factory/libraries/Authorization.s
 import {YieldCurveHelper} from "@test/helpers/libraries/YieldCurveHelper.sol";
 import {RESERVED_ID} from "@size/src/market/libraries/LoanLibrary.sol";
 import {PeripheryErrors} from "src/libraries/PeripheryErrors.sol";
+import {LoanStatus} from "@size/src/market/libraries/LoanLibrary.sol";
 
 contract AutoRepayTest is BaseTest {
     AutoRepay public autoRepay;
@@ -75,6 +76,7 @@ contract AutoRepayTest is BaseTest {
         _setAuthorization(bob, address(autoRepay), Authorization.getActionsBitmap(Action.DEPOSIT));
 
         vm.warp(block.timestamp + 365 days - 30 minutes);
+        assertEq(size.getLoanStatus(debtPositionId), LoanStatus.ACTIVE);
 
         vm.prank(james);
         autoRepay.depositOnBehalfOfAndRepay(size, debtPositionId, bob);
@@ -105,6 +107,7 @@ contract AutoRepayTest is BaseTest {
         _setAuthorization(bob, address(autoRepay), Authorization.getActionsBitmap(Action.DEPOSIT));
 
         vm.warp(block.timestamp + 365 days + 1 hours);
+        assertEq(size.getLoanStatus(debtPositionId), LoanStatus.OVERDUE);
 
         vm.prank(james);
         autoRepay.depositOnBehalfOfAndRepay(size, debtPositionId, bob);

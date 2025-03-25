@@ -10,4 +10,5 @@ library PeripheryErrors {
     error NOT_INITIATOR();
     error INSUFFICIENT_BALANCE();
     error GENERIC_SWAP_ROUTE_FAILED();
+    error AUTO_REPAY_TOO_EARLY(uint256 dueDate, uint256 timestamp);
 }

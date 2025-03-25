@@ -25,7 +25,7 @@ contract CopyLimitOrdersForCollection is Ownable2Step, Multicall {
         address indexed user, CopyLimitOrdersParams previousParams, CopyLimitOrdersParams newParams
     );
 
-    constructor() Ownable(msg.sender) {}
+    constructor(address _owner) Ownable(_owner) {}
 
     /*//////////////////////////////////////////////////////////////
                             OWNER FUNCTIONS

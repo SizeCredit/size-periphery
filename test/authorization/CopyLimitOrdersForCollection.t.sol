@@ -17,7 +17,7 @@ contract CopyLimitOrdersForCollectionTest is BaseTest {
     function setUp() public override {
         super.setUp();
         vm.warp(block.timestamp + 123 days);
-        copyLimitOrdersForCollection = new CopyLimitOrdersForCollection();
+        copyLimitOrdersForCollection = new CopyLimitOrdersForCollection(address(this));
         sizeFactory.createMarket(f, r, o, d);
     }
 

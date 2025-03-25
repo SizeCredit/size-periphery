@@ -10,12 +10,14 @@ import {
     SellCreditMarketParams,
     SellCreditMarketOnBehalfOfParams
 } from "@size/src/market/libraries/actions/SellCreditMarket.sol";
-import {FlashLoanSimpleReceiverBase} from "@aave/flashloan/base/FlashLoanSimpleReceiverBase.sol";
+import {FlashLoanReceiverBase} from "@aave/flashloan/base/FlashLoanReceiverBase.sol";
 import {IPoolAddressesProvider} from "@aave/interfaces/IPoolAddressesProvider.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import {Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
-contract AutoRollover is FlashLoanSimpleReceiverBase {
+contract AutoRollover is Ownable2Step, FlashLoanReceiverBase {
     using SafeERC20 for IERC20Metadata;
 
     uint256 public constant EARLY_REPAYMENT_BUFFER = 1 hours;
@@ -30,7 +32,7 @@ contract AutoRollover is FlashLoanSimpleReceiverBase {
         uint256 deadline;
     }
 
-    constructor(IPoolAddressesProvider _addressProvider) FlashLoanSimpleReceiverBase(_addressProvider) {}
+    constructor(address _owner, IPoolAddressesProvider _addressProvider) Ownable(_owner) FlashLoanReceiverBase(_addressProvider) {}
 
     function rollover(
         ISize market,
@@ -40,7 +42,7 @@ contract AutoRollover is FlashLoanSimpleReceiverBase {
         uint256 tenor,
         uint256 maxAPR,
         uint256 deadline
-    ) external {
+    ) external onlyOwner {
         DebtPosition memory debtPosition = market.getDebtPosition(debtPositionId);
         DataView memory data = market.data();
 
@@ -48,7 +50,7 @@ contract AutoRollover is FlashLoanSimpleReceiverBase {
             revert PeripheryErrors.AUTO_REPAY_TOO_EARLY(debtPosition.dueDate, block.timestamp);
         }
 
-        bytes memory operationParams = abi.encode(
+        OperationParams memory operationParams =
             OperationParams({
                 market: market,
                 debtPositionId: debtPositionId,
@@ -58,7 +60,7 @@ contract AutoRollover is FlashLoanSimpleReceiverBase {
                 maxAPR: maxAPR,
                 deadline: deadline
             })
-        );
+        ;
 
         bytes memory params = abi.encode(operationParams);
 
@@ -72,10 +74,13 @@ contract AutoRollover is FlashLoanSimpleReceiverBase {
         POOL.flashLoan(address(this), assets, amounts, modes, address(this), params, 0);
     }
 
-    function executeOperation(address asset, uint256 amount, uint256 premium, address initiator, bytes calldata params)
-        external
-        override
-        returns (bool)
+  function executeOperation(
+    address[] calldata assets,
+    uint256[] calldata amounts,
+    uint256[] calldata premiums,
+    address initiator,
+    bytes calldata params
+  ) external override returns (bool)
     {
         if (msg.sender != address(POOL)) {
             revert PeripheryErrors.NOT_AAVE_POOL();
@@ -86,7 +91,7 @@ contract AutoRollover is FlashLoanSimpleReceiverBase {
 
         OperationParams memory operationParams = abi.decode(params, (OperationParams));
 
-        uint256 newFutureValue = amount + premium;
+        uint256 newFutureValue = amounts[0] + premiums[0];
 
         operationParams.market.sellCreditMarketOnBehalfOf(
             SellCreditMarketOnBehalfOfParams({
@@ -108,7 +113,7 @@ contract AutoRollover is FlashLoanSimpleReceiverBase {
             RepayParams({debtPositionId: operationParams.debtPositionId, borrower: operationParams.onBehalfOf})
         );
 
-        IERC20Metadata(asset).forceApprove(address(POOL), newFutureValue);
+        IERC20Metadata(assets[0]).forceApprove(address(POOL), newFutureValue);
 
         return true;
     }

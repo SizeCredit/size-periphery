@@ -16,11 +16,14 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {Errors} from "@size/src/market/libraries/Errors.sol";
 
 contract AutoRollover is Ownable2Step, FlashLoanReceiverBase {
     using SafeERC20 for IERC20Metadata;
 
     uint256 public constant EARLY_REPAYMENT_BUFFER = 1 hours;
+    uint256 public constant MIN_TENOR = 1 hours;
+    uint256 public constant MAX_TENOR = 7 days;
 
     struct OperationParams {
         ISize market;
@@ -51,6 +54,10 @@ contract AutoRollover is Ownable2Step, FlashLoanReceiverBase {
 
         if (debtPosition.dueDate > block.timestamp + EARLY_REPAYMENT_BUFFER) {
             revert PeripheryErrors.AUTO_REPAY_TOO_EARLY(debtPosition.dueDate, block.timestamp);
+        }
+
+        if (tenor < MIN_TENOR || tenor > MAX_TENOR) {
+            revert Errors.TENOR_OUT_OF_RANGE(tenor, MIN_TENOR, MAX_TENOR);
         }
 
         OperationParams memory operationParams = OperationParams({

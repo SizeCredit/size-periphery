@@ -13,24 +13,27 @@ import {Authorization, Action} from "@size/src/factory/libraries/Authorization.s
 
 contract CopyLimitOrdersForCollectionTest is BaseTest {
     CopyLimitOrdersForCollection public copyLimitOrdersForCollection;
+    CopyLimitOrdersParams public nullParams;
 
     function setUp() public override {
         super.setUp();
         vm.warp(block.timestamp + 123 days);
-        copyLimitOrdersForCollection = new CopyLimitOrdersForCollection(address(this));
+        copyLimitOrdersForCollection = new CopyLimitOrdersForCollection(address(this), sizeFactory);
         sizeFactory.createMarket(f, r, o, d);
     }
 
     function test_CopyLimitOrdersForCollection_initialState() public view {
-        assertEq(address(copyLimitOrdersForCollection.owner()), address(this));
-        assertEq(copyLimitOrdersForCollection.TIMELOCK_DELAY(), 1 days);
+        assertEq(
+            copyLimitOrdersForCollection.hasRole(copyLimitOrdersForCollection.DEFAULT_ADMIN_ROLE(), address(this)), true
+        );
+        assertEq(copyLimitOrdersForCollection.timelockDelay(), 1 days);
 
         (ISize[] memory markets, uint256[] memory addedAt) = copyLimitOrdersForCollection.getCollection();
         assertEq(markets.length, 0);
         assertEq(addedAt.length, 0);
     }
 
-    function test_CopyLimitOrdersForCollection_addToCollection_owner() public {
+    function test_CopyLimitOrdersForCollection_addToCollection_admin() public {
         ISize market = sizeFactory.getMarket(1);
         copyLimitOrdersForCollection.addToCollection(market);
 
@@ -40,14 +43,14 @@ contract CopyLimitOrdersForCollectionTest is BaseTest {
         assertEq(addedAt[0], block.timestamp);
     }
 
-    function test_CopyLimitOrdersForCollection_addToCollection_notOwner() public {
+    function test_CopyLimitOrdersForCollection_addToCollection_notAdmin() public {
         ISize market = sizeFactory.getMarket(1);
         vm.prank(alice);
         vm.expectRevert();
         copyLimitOrdersForCollection.addToCollection(market);
     }
 
-    function test_CopyLimitOrdersForCollection_removeFromCollection_owner() public {
+    function test_CopyLimitOrdersForCollection_removeFromCollection_admin() public {
         ISize market = sizeFactory.getMarket(1);
         copyLimitOrdersForCollection.addToCollection(market);
 
@@ -56,7 +59,7 @@ contract CopyLimitOrdersForCollectionTest is BaseTest {
         assertEq(address(markets[0]), address(market));
         assertEq(addedAt[0], block.timestamp);
 
-        vm.prank(copyLimitOrdersForCollection.owner());
+        vm.prank(address(this));
         copyLimitOrdersForCollection.removeFromCollection(market);
 
         (markets, addedAt) = copyLimitOrdersForCollection.getCollection();
@@ -64,7 +67,7 @@ contract CopyLimitOrdersForCollectionTest is BaseTest {
         assertEq(addedAt.length, 0);
     }
 
-    function test_CopyLimitOrdersForCollection_removeFromCollection_notOwner() public {
+    function test_CopyLimitOrdersForCollection_removeFromCollection_notAdmin() public {
         ISize market = sizeFactory.getMarket(1);
         vm.prank(alice);
         vm.expectRevert();
@@ -132,19 +135,19 @@ contract CopyLimitOrdersForCollectionTest is BaseTest {
         );
 
         vm.prank(candy);
-        copyLimitOrdersForCollection.copyLimitOrdersOnBehalfOf(market, bob);
+        copyLimitOrdersForCollection.copyLimitOrdersOnBehalfOf(market, bob, nullParams);
         assertEq(market.getUserCopyLimitOrders(bob).copyAddress, address(0));
 
         vm.warp(block.timestamp + 1 days + 1);
         vm.prank(candy);
-        copyLimitOrdersForCollection.copyLimitOrdersOnBehalfOf(market, bob);
+        copyLimitOrdersForCollection.copyLimitOrdersOnBehalfOf(market, bob, nullParams);
         assertEq(market.getUserCopyLimitOrders(bob).copyAddress, james);
     }
 
     function test_CopyLimitOrdersForCollection_copyLimitOrdersOnBehalfOf_nonExistingMarket() public {
         ISize market = sizeFactory.getMarket(1);
         vm.prank(bob);
-        copyLimitOrdersForCollection.copyLimitOrdersOnBehalfOf(market, alice);
+        copyLimitOrdersForCollection.copyLimitOrdersOnBehalfOf(market, alice, nullParams);
         assertEq(market.getUserCopyLimitOrders(alice).copyAddress, address(0));
     }
 
@@ -177,7 +180,7 @@ contract CopyLimitOrdersForCollectionTest is BaseTest {
         );
 
         vm.prank(candy);
-        copyLimitOrdersForCollection.copyLimitOrdersOnBehalfOf(bob);
+        copyLimitOrdersForCollection.copyLimitOrdersOnBehalfOf(bob, nullParams);
 
         assertEq(market1.getUserCopyLimitOrders(bob).copyAddress, james);
         assertEq(market2.getUserCopyLimitOrders(bob).copyAddress, james);

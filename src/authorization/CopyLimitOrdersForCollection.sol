@@ -8,12 +8,13 @@ import {
     CopyLimitOrdersOnBehalfOfParams
 } from "@size/src/market/libraries/actions/CopyLimitOrders.sol";
 import {OfferLibrary, CopyLimitOrder} from "@size/src/market/libraries/OfferLibrary.sol";
-import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
-import {Multicall} from "@openzeppelin/contracts/utils/Multicall.sol";
+import {AccessControlEnumerableUpgradeable} from
+    "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlEnumerableUpgradeable.sol";
+import {MulticallUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/MulticallUpgradeable.sol";
 import {EnumerableMap} from "@openzeppelin/contracts/utils/structs/EnumerableMap.sol";
 import {Errors} from "@size/src/market/libraries/Errors.sol";
 
-contract CopyLimitOrdersForCollection is AccessControl, Multicall {
+contract CopyLimitOrdersForCollection is AccessControlEnumerableUpgradeable, MulticallUpgradeable {
     using EnumerableMap for EnumerableMap.AddressToUintMap;
     using OfferLibrary for CopyLimitOrder;
 
@@ -30,26 +31,38 @@ contract CopyLimitOrdersForCollection is AccessControl, Multicall {
 
     ISizeFactory public factory;
     uint256 public timelockDelay;
-    mapping(address user => CopyLimitOrdersParams params) public userCopyLimitOrdersParams;
-    EnumerableMap.AddressToUintMap private collection;
+    mapping(address user => mapping(address collection => CopyLimitOrdersParams params)) public
+        userToCollectionToCopyLimitOrdersParams;
+    mapping(address collection => EnumerableMap.AddressToUintMap marketToAddedAt) internal collections;
 
     /*//////////////////////////////////////////////////////////////
                             EVENTS
     //////////////////////////////////////////////////////////////*/
 
-    event AddedToCollection(ISize market, uint256 addedAt);
-    event RemovedFromCollection(ISize market);
+    event AddedToCollection(address indexed collection, ISize indexed market, uint256 addedAt);
+    event RemovedFromCollection(address indexed collection, ISize indexed market);
     event CopyLimitOrdersParamsSet(
-        address indexed user, CopyLimitOrdersParams previousParams, CopyLimitOrdersParams newParams
+        address indexed user,
+        address indexed collection,
+        CopyLimitOrdersParams previousParams,
+        CopyLimitOrdersParams newParams
     );
     event FactorySet(ISizeFactory previousFactory, ISizeFactory newFactory);
     event TimelockDelaySet(uint256 previousDelay, uint256 newDelay);
 
     /*//////////////////////////////////////////////////////////////
-                            CONSTRUCTOR
+                            CONSTRUCTOR/INITIALIZER
     //////////////////////////////////////////////////////////////*/
 
-    constructor(address _admin, ISizeFactory _factory) {
+    // @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
+    function initialize(address _admin, ISizeFactory _factory) external initializer {
+        __AccessControlEnumerable_init();
+        __Multicall_init();
+
         _grantRole(DEFAULT_ADMIN_ROLE, _admin);
         _setTimelockDelay(1 days);
         _setFactory(_factory);
@@ -71,41 +84,45 @@ contract CopyLimitOrdersForCollection is AccessControl, Multicall {
         if (!factory.isMarket(address(market))) {
             revert Errors.INVALID_MARKET(address(market));
         }
-        collection.set(address(market), block.timestamp);
-        emit AddedToCollection(market, block.timestamp);
+        collections[msg.sender].set(address(market), block.timestamp);
+        emit AddedToCollection(msg.sender, market, block.timestamp);
     }
 
     function removeFromCollection(ISize market) external onlyRole(RATE_PROVIDER_ROLE) {
-        collection.remove(address(market));
-        emit RemovedFromCollection(market);
+        collections[msg.sender].remove(address(market));
+        emit RemovedFromCollection(msg.sender, market);
     }
 
     /*//////////////////////////////////////////////////////////////
                             BOT FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    function copyLimitOrdersOnBehalfOf(ISize market, address onBehalfOf, CopyLimitOrdersParams memory params)
-        public
-        onlyRole(BOT_ROLE)
-    {
-        (bool exists, uint256 addedAt) = collection.tryGet(address(market));
+    function copyLimitOrdersOnBehalfOf(
+        address collection,
+        ISize market,
+        address onBehalfOf,
+        CopyLimitOrdersParams memory params
+    ) public onlyRole(BOT_ROLE) {
+        (bool exists, uint256 addedAt) = collections[collection].tryGet(address(market));
 
         if (exists && addedAt + timelockDelay < block.timestamp) {
-            CopyLimitOrdersParams memory overridenParams =
-                _isNull(userCopyLimitOrdersParams[onBehalfOf]) ? params : userCopyLimitOrdersParams[onBehalfOf];
+            CopyLimitOrdersParams memory overridenParams = _isNull(
+                userToCollectionToCopyLimitOrdersParams[onBehalfOf][collection]
+            ) ? params : userToCollectionToCopyLimitOrdersParams[onBehalfOf][collection];
+            overridenParams.copyAddress = collection;
             market.copyLimitOrdersOnBehalfOf(
                 CopyLimitOrdersOnBehalfOfParams({params: overridenParams, onBehalfOf: onBehalfOf})
             );
         }
     }
 
-    function copyLimitOrdersOnBehalfOf(address onBehalfOf, CopyLimitOrdersParams calldata params)
+    function copyLimitOrdersOnBehalfOf(address collection, address onBehalfOf, CopyLimitOrdersParams calldata params)
         external /*onlyRole(BOT_ROLE)*/
     {
-        uint256 length = collection.length();
+        uint256 length = collections[collection].length();
         for (uint256 i = 0; i < length; i++) {
-            (address market,) = collection.at(i);
-            copyLimitOrdersOnBehalfOf(ISize(market), onBehalfOf, params);
+            (address market,) = collections[collection].at(i);
+            copyLimitOrdersOnBehalfOf(collection, ISize(market), onBehalfOf, params);
         }
     }
 
@@ -113,17 +130,23 @@ contract CopyLimitOrdersForCollection is AccessControl, Multicall {
                             PERMISSIONLESS FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    function setCopyLimitOrdersParams(CopyLimitOrdersParams calldata params) external {
-        emit CopyLimitOrdersParamsSet(msg.sender, userCopyLimitOrdersParams[msg.sender], params);
-        userCopyLimitOrdersParams[msg.sender] = params;
+    function setCopyLimitOrdersParams(address collection, CopyLimitOrdersParams calldata params) external {
+        emit CopyLimitOrdersParamsSet(
+            msg.sender, collection, userToCollectionToCopyLimitOrdersParams[msg.sender][collection], params
+        );
+        userToCollectionToCopyLimitOrdersParams[msg.sender][collection] = params;
     }
 
-    function getCollection() external view returns (ISize[] memory markets, uint256[] memory addedAt) {
-        uint256 length = collection.length();
+    function getCollection(address collection)
+        external
+        view
+        returns (ISize[] memory markets, uint256[] memory addedAt)
+    {
+        uint256 length = collections[collection].length();
         markets = new ISize[](length);
         addedAt = new uint256[](length);
         for (uint256 i = 0; i < length; i++) {
-            (address market, uint256 _addedAt) = collection.at(i);
+            (address market, uint256 _addedAt) = collections[collection].at(i);
             markets[i] = ISize(market);
             addedAt[i] = _addedAt;
         }

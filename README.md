@@ -13,7 +13,7 @@ This repository contains supporting contracts that interact with the [core Size 
 ### Coverage
 
 ```bash
-forge coverage --no-match-coverage "(script|test)" --report lcov && genhtml lcov.info -o report --branch-coverage && open report/index.html
+forge coverage --no-match-coverage "(script|test)" --report lcov && genhtml lcov.info -o report --branch-coverage --ignore-errors inconsistent,corrupt && open report/index.html
 ```
 
 ### Disclaimer

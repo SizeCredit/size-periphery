@@ -80,14 +80,14 @@ contract AutoRolloverTest is BaseTest {
     }
 
     function test_AutoRollover_rollover_too_early() public {
-        _test_AutoRollover_rollover(365 days, 365 days - 1 days);
+        _test_AutoRollover_rollover(2 days, 2 days - 1 hours);
     }
 
     function test_AutoRollover_rollover_early() public {
-        _test_AutoRollover_rollover(365 days, 365 days - 30 minutes);
+        _test_AutoRollover_rollover(2 days, 2 days - 30 minutes);
     }
 
     function test_AutoRollover_rollover_overdue() public {
-        _test_AutoRollover_rollover(365 days, 365 days + 1 hours);
+        _test_AutoRollover_rollover(2 days, 2 days + 1 hours);
     }
 }

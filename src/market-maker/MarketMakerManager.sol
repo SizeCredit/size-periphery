@@ -24,6 +24,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {YieldCurvesValidationLibrary} from "src/libraries/YieldCurvesValidationLibrary.sol";
 import {MarketMakerManagerFactory} from "src/market-maker/MarketMakerManagerFactory.sol";
+import {AutoCopyCollection} from "src/authorization/AutoCopyCollection.sol";
 
 contract MarketMakerManager is Initializable, Ownable2StepUpgradeable {
     using SafeERC20 for IERC20Metadata;
@@ -143,6 +144,26 @@ contract MarketMakerManager is Initializable, Ownable2StepUpgradeable {
             ISizeView(address(size)).getUserView(address(this)).user.loanOffer.curveRelativeTime
         );
         size.sellCreditLimit(params);
+    }
+
+    /// @notice Add a market to the collection
+    /// @param autoCopyCollection The AutoCopyCollection contract
+    /// @param market The market to add
+    function addToCollection(AutoCopyCollection autoCopyCollection, ISize market)
+        external
+        onlyBotWhenNotPausedOrOwner
+    {
+        autoCopyCollection.addToCollection(market);
+    }
+
+    /// @notice Remove a market from the collection
+    /// @param autoCopyCollection The AutoCopyCollection contract
+    /// @param market The market to remove
+    function removeFromCollection(AutoCopyCollection autoCopyCollection, ISize market)
+        external
+        onlyBotWhenNotPausedOrOwner
+    {
+        autoCopyCollection.removeFromCollection(market);
     }
 
     /*//////////////////////////////////////////////////////////////

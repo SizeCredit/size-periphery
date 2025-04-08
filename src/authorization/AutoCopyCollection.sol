@@ -14,7 +14,7 @@ import {MulticallUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/Mu
 import {EnumerableMap} from "@openzeppelin/contracts/utils/structs/EnumerableMap.sol";
 import {Errors} from "@size/src/market/libraries/Errors.sol";
 
-contract CopyLimitOrdersForCollection is AccessControlEnumerableUpgradeable, MulticallUpgradeable {
+contract AutoCopyCollection is AccessControlEnumerableUpgradeable, MulticallUpgradeable {
     using EnumerableMap for EnumerableMap.AddressToUintMap;
     using OfferLibrary for CopyLimitOrder;
 

@@ -33,7 +33,7 @@ contract CopyLimitOrdersForCollection is AccessControlEnumerableUpgradeable, Mul
     uint256 public timelockDelay;
     mapping(address user => mapping(address collection => CopyLimitOrdersParams params)) public
         userToCollectionToCopyLimitOrdersParams;
-    mapping(address collection => EnumerableMap.AddressToUintMap marketToAddedAt) internal collections;
+    mapping(address collection => EnumerableMap.AddressToUintMap marketToAddedAt) private collections;
 
     /*//////////////////////////////////////////////////////////////
                             EVENTS
@@ -156,17 +156,17 @@ contract CopyLimitOrdersForCollection is AccessControlEnumerableUpgradeable, Mul
                             PRIVATE FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    function _setTimelockDelay(uint256 newTimelockDelay) internal {
+    function _setTimelockDelay(uint256 newTimelockDelay) private {
         emit TimelockDelaySet(timelockDelay, newTimelockDelay);
         timelockDelay = newTimelockDelay;
     }
 
-    function _setFactory(ISizeFactory newFactory) internal {
+    function _setFactory(ISizeFactory newFactory) private {
         emit FactorySet(factory, newFactory);
         factory = newFactory;
     }
 
-    function _isNull(CopyLimitOrdersParams memory params) internal pure returns (bool) {
+    function _isNull(CopyLimitOrdersParams memory params) private pure returns (bool) {
         return params.copyAddress == address(0) && params.copyBorrowOffer.isNull() && params.copyLoanOffer.isNull();
     }
 }

@@ -15,6 +15,7 @@ contract ProposeUpgradeMMMBeacon is Script, Addresses {
     Safe.Client safe;
     Tenderly.Client tenderly;
     address signer;
+    string derivationPath;
 
     constructor() {
         safe.initialize(Addresses.addresses[block.chainid][CONTRACT.SIZE_GOVERNANCE]);
@@ -24,6 +25,7 @@ contract ProposeUpgradeMMMBeacon is Script, Addresses {
             vm.envString("TENDERLY_ACCESS_KEY")
         );
         signer = vm.envAddress("SIGNER");
+        derivationPath = vm.envString("LEDGER_PATH");
     }
 
     function run() external {
@@ -36,12 +38,11 @@ contract ProposeUpgradeMMMBeacon is Script, Addresses {
         safe.proposeTransaction(
             address(mmmFactory),
             abi.encodeCall(MarketMakerManagerFactory.upgradeBeacon, (address(implementation))),
-            signer,
-            true
+            address(this),
+            derivationPath
         );
 
-        Tenderly.VirtualTestnet memory vnet =
-            tenderly.createVirtualTestnet("ProposeUpgradeMMMBeacon", 1_000_000 + block.chainid);
+        Tenderly.VirtualTestnet memory vnet = tenderly.createVirtualTestnet("mmmbeacon", 1_000_000 + block.chainid);
         tenderly.setStorageAt(vnet, safe.instance().safe, bytes32(uint256(4)), bytes32(uint256(1)));
         tenderly.sendTransaction(
             vnet.id,
@@ -50,7 +51,8 @@ contract ProposeUpgradeMMMBeacon is Script, Addresses {
             safe.getExecTransactionData(
                 address(mmmFactory),
                 abi.encodeCall(MarketMakerManagerFactory.upgradeBeacon, (address(implementation))),
-                signer
+                signer,
+                derivationPath
             )
         );
 

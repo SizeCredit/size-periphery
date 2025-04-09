@@ -48,7 +48,9 @@ contract ProposeUpgradeMMMBeacon is Script, Addresses {
             signer,
             safe.instance().safe,
             safe.getExecTransactionData(
-                address(mmmFactory), abi.encodeCall(MarketMakerManagerFactory.upgradeBeacon, (address(implementation)))
+                address(mmmFactory),
+                abi.encodeCall(MarketMakerManagerFactory.upgradeBeacon, (address(implementation))),
+                signer
             )
         );
 

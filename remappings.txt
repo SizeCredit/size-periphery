@@ -7,3 +7,5 @@
 @src=lib/size-solidity/src
 @script=lib/size-solidity/script
 @test=lib/size-solidity/test
+@safe-utils=lib/safe-utils/src
+@tenderly-utils=lib/tenderly-utils/src

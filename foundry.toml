@@ -21,6 +21,7 @@ ignored_warnings_from = ["lib/aave-v3-core"]
 [rpc_endpoints]
   sepolia = "https://eth-sepolia.g.alchemy.com/v2/${API_KEY_ALCHEMY}"
   mainnet = "https://eth-mainnet.g.alchemy.com/v2/${API_KEY_ALCHEMY}"
+  vnet = "${TENDERLY_VNET_RPC_URL}"
   base_sepolia = "https://base-sepolia.g.alchemy.com/v2/${API_KEY_ALCHEMY}"
   base = "https://base-mainnet.g.alchemy.com/v2/${API_KEY_ALCHEMY}"
   anvil = "http://127.0.0.1:8545"

@@ -170,7 +170,6 @@ abstract contract DexSwap {
                 revert PeripheryErrors.INVALID_TOKEN_IN();
             }
 
-            // Calculate amount to approve
             currentBalance = IERC20(currentToken).balanceOf(address(this));
             uint256 amountToApprove = step.amountIn == 0 ? currentBalance : step.amountIn;
             
@@ -183,13 +182,10 @@ abstract contract DexSwap {
                 revert PeripheryErrors.GENERIC_SWAP_ROUTE_FAILED();
             }
 
-            // If this step requires token retrieval (e.g., for protocols that don't auto-forward)
             if (step.retrieveTokens) {
-                // The result should contain the output token address
                 address outputToken = abi.decode(result, (address));
                 currentToken = outputToken;
             } else {
-                // For the final step, decode the returned amount
                 if (i == steps.length - 1) {
                     return abi.decode(result, (uint256));
                 }

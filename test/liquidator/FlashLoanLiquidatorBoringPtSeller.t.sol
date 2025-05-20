@@ -17,7 +17,7 @@ import {PriceFeedMock} from "@test/mocks/PriceFeedMock.sol";
 import {SwapParams, SwapMethod} from "src/liquidator/DexSwap.sol";
 import {UpdateConfigParams} from "@size/src/market/libraries/actions/UpdateConfig.sol";
 
-contract FlashLoanLiquidatorGenericRouteTest is BaseTest, Addresses {
+contract FlashLoanLiquidatorBoringPtSellerTest is BaseTest, Addresses {
     FlashLoanLiquidator public flashLoanLiquidator;
     IERC20Metadata public underlyingCollateralToken;
     IERC20Metadata public underlyingBorrowToken;
@@ -88,7 +88,7 @@ contract FlashLoanLiquidatorGenericRouteTest is BaseTest, Addresses {
         );
     }
 
-    function testFork_FlashLoanLiquidatorGenericRoute_liquidate_PT_token() public {
+    function testFork_FlashLoanLiquidatorBoringPtSeller_liquidate_PT_token() public {
         assertEqApprox(IPriceFeed(size.oracle().priceFeed).getPrice(), 0.99e18, 0.01e18);
 
         uint256 collateralAmount = 1_200e18;
@@ -113,11 +113,11 @@ contract FlashLoanLiquidatorGenericRouteTest is BaseTest, Addresses {
 
         assertEqApprox(size.collateralRatio(borrower), 1.07e18, 0.01e18);
 
-        uint256 flashLoanLiquidatorBalanceBefore = size.getUserView(address(flashLoanLiquidator)).borrowATokenBalance;
+        uint256 flashLoanLiquidatorBalanceBefore = size.getUserView(bot).borrowATokenBalance;
 
         _flashLoanLiquidate(bot, debtPositionId);
 
-        uint256 flashLoanLiquidatorBalanceAfter = size.getUserView(address(flashLoanLiquidator)).borrowATokenBalance;
+        uint256 flashLoanLiquidatorBalanceAfter = size.getUserView(bot).borrowATokenBalance;
 
         assertGt(flashLoanLiquidatorBalanceAfter, flashLoanLiquidatorBalanceBefore);
     }

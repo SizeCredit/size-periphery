@@ -8,13 +8,11 @@ import {ISize} from "@size/src/market/interfaces/ISize.sol";
 import {DataView} from "@size/src/market/SizeViewData.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {FlashLoanLiquidator} from "src/liquidator/FlashLoanLiquidator.sol";
-import {SellCreditMarketParams} from "@size/src/market/libraries/actions/SellCreditMarket.sol";
 import {RESERVED_ID} from "@size/src/market/libraries/LoanLibrary.sol";
 import {AssertsHelper} from "@test/helpers/AssertsHelper.sol";
 import {YieldCurveHelper} from "@test/helpers/libraries/YieldCurveHelper.sol";
 import {SizeMock} from "@test/mocks/SizeMock.sol";
 import {IPriceFeed} from "@size/src/oracle/IPriceFeed.sol";
-import {DepositParams} from "@size/src/market/libraries/actions/Deposit.sol";
 import {PriceFeedMock} from "@test/mocks/PriceFeedMock.sol";
 import {SwapParams, SwapMethod} from "src/liquidator/DexSwap.sol";
 import {UpdateConfigParams} from "@size/src/market/libraries/actions/UpdateConfig.sol";
@@ -23,6 +21,7 @@ contract FlashLoanLiquidatorGenericRouteTest is BaseTest, Addresses {
     FlashLoanLiquidator public flashLoanLiquidator;
     IERC20Metadata public underlyingCollateralToken;
     IERC20Metadata public underlyingBorrowToken;
+    address public pendleMarket;
     address public borrower;
     address public lender;
     address public owner;
@@ -33,7 +32,14 @@ contract FlashLoanLiquidatorGenericRouteTest is BaseTest, Addresses {
         vm.rollFork(22524065);
 
         sizeFactory = SizeFactory(addresses[block.chainid][CONTRACT.SIZE_FACTORY]);
-        flashLoanLiquidator = FlashLoanLiquidator(addresses[block.chainid][CONTRACT.FLASH_LOAN_LIQUIDATOR]);
+        flashLoanLiquidator = new FlashLoanLiquidator(
+            addresses[block.chainid][CONTRACT.ADDRESS_PROVIDER],
+            address(0x1111),
+            address(0x2222),
+            address(0x3333),
+            addresses[block.chainid][CONTRACT.UNISWAP_V3_ROUTER]
+        );
+
         owner = addresses[block.chainid][CONTRACT.SIZE_GOVERNANCE];
         bot = flashLoanLiquidator.owner();
         borrower = makeAddr("borrower");
@@ -41,6 +47,7 @@ contract FlashLoanLiquidatorGenericRouteTest is BaseTest, Addresses {
 
         ISize[] memory markets = sizeFactory.getMarkets();
         size = SizeMock(address(markets[1]));
+        pendleMarket = 0xB162B764044697cf03617C2EFbcB1f42e31E4766;
 
         DataView memory data = size.data();
 
@@ -57,9 +64,13 @@ contract FlashLoanLiquidatorGenericRouteTest is BaseTest, Addresses {
         vm.label(address(underlyingBorrowToken), underlyingBorrowToken.symbol());
     }
 
+
     function _flashLoanLiquidate(address _liquidator, uint256 debtPositionId) internal {
         vm.startPrank(_liquidator);
-        bytes memory genericRouteData = hex"1337"; // TODO: fix this
+
+        uint24 fee = 500;
+        uint160 sqrtPriceLimitX96 = 0;
+
         flashLoanLiquidator.liquidatePositionWithFlashLoan(
             address(size),
             address(underlyingCollateralToken),
@@ -67,8 +78,8 @@ contract FlashLoanLiquidatorGenericRouteTest is BaseTest, Addresses {
             debtPositionId,
             0,
             SwapParams({
-                method: SwapMethod.GenericRoute,
-                data: genericRouteData,
+                method: SwapMethod.BoringPtSeller,
+                data: abi.encode(pendleMarket, fee, sqrtPriceLimitX96),
                 deadline: block.timestamp,
                 minimumReturnAmount: 0
             }),
@@ -102,6 +113,12 @@ contract FlashLoanLiquidatorGenericRouteTest is BaseTest, Addresses {
 
         assertEqApprox(size.collateralRatio(borrower), 1.07e18, 0.01e18);
 
+        uint256 flashLoanLiquidatorBalanceBefore = size.getUserView(address(flashLoanLiquidator)).borrowATokenBalance;
+
         _flashLoanLiquidate(bot, debtPositionId);
+
+        uint256 flashLoanLiquidatorBalanceAfter = size.getUserView(address(flashLoanLiquidator)).borrowATokenBalance;
+
+        assertGt(flashLoanLiquidatorBalanceAfter, flashLoanLiquidatorBalanceBefore);
     }
 }

@@ -10,13 +10,17 @@ import {IUniswapV2Router02} from "src/interfaces/dex/IUniswapV2Router02.sol";
 import {IUniswapV3Router} from "src/interfaces/dex/IUniswapV3Router.sol";
 import {IUnoswapRouter} from "src/interfaces/dex/IUnoswapRouter.sol";
 import {PeripheryErrors} from "src/libraries/PeripheryErrors.sol";
+import {BoringPtSeller} from "@pendle/contracts/oracles/PtYtLpOracle/samples/BoringPtSeller.sol";
+import {IPMarket} from "@pendle/contracts/interfaces/IPMarket.sol";
+import {IStandardizedYield} from "@pendle/contracts/interfaces/IStandardizedYield.sol";
 
 enum SwapMethod {
     OneInch,
     Unoswap,
     UniswapV2,
     UniswapV3,
-    GenericRoute
+    GenericRoute,
+    BoringPtSeller
 }
 
 struct SwapParams {
@@ -30,7 +34,7 @@ struct SwapParams {
 /// @custom:security-contact security@size.credit
 /// @author Size (https://size.credit/)
 /// @notice Contract that allows to swap tokens using different DEXs
-abstract contract DexSwap {
+abstract contract DexSwap is BoringPtSeller {
     using SafeERC20 for IERC20;
 
     I1InchAggregator public immutable oneInchAggregator;
@@ -78,6 +82,8 @@ abstract contract DexSwap {
             return _swapCollateralUniswapV3(
                 collateralToken, borrowToken, fee, sqrtPriceLimitX96, swapParams.minimumReturnAmount
             );
+        } else if (swapParams.method == SwapMethod.BoringPtSeller) {
+            return _swapCollateralBoringPtSeller(collateralToken, borrowToken, swapParams.data, swapParams.minimumReturnAmount);
         } else {
             revert PeripheryErrors.INVALID_SWAP_METHOD();
         }
@@ -180,5 +186,19 @@ abstract contract DexSwap {
         }
 
         return returnAmount;
+    }
+
+    function _swapCollateralBoringPtSeller(address collateralToken, address borrowToken, bytes memory data, uint256 minimumReturnAmount)
+        internal
+        returns (uint256)
+    {
+        // PT (e.g. PT-sUSDE-29MAY2025) to yieldToken (e.g. sUSDe)
+        (address market, uint24 fee, uint160 sqrtPriceLimitX96) = abi.decode(data, (address, uint24, uint160));
+        (IStandardizedYield SY, , ) = IPMarket(market).readTokens();
+        address tokenOut = SY.yieldToken();
+        _sellPtForToken(market, IERC20(collateralToken).balanceOf(address(this)), tokenOut);
+
+        // yieldToken (e.g. sUSDe) to borrowToken (e.g. USDC)
+        return _swapCollateralUniswapV3(tokenOut, borrowToken, fee, sqrtPriceLimitX96, minimumReturnAmount);
     }
 }

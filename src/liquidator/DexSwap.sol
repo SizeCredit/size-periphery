@@ -83,7 +83,9 @@ abstract contract DexSwap is BoringPtSeller {
                 collateralToken, borrowToken, fee, sqrtPriceLimitX96, swapParams.minimumReturnAmount
             );
         } else if (swapParams.method == SwapMethod.BoringPtSeller) {
-            return _swapCollateralBoringPtSeller(collateralToken, borrowToken, swapParams.data, swapParams.minimumReturnAmount);
+            return _swapCollateralBoringPtSeller(
+                collateralToken, borrowToken, swapParams.data, swapParams.minimumReturnAmount
+            );
         } else {
             revert PeripheryErrors.INVALID_SWAP_METHOD();
         }
@@ -188,13 +190,15 @@ abstract contract DexSwap is BoringPtSeller {
         return returnAmount;
     }
 
-    function _swapCollateralBoringPtSeller(address collateralToken, address borrowToken, bytes memory data, uint256 minimumReturnAmount)
-        internal
-        returns (uint256)
-    {
+    function _swapCollateralBoringPtSeller(
+        address collateralToken,
+        address borrowToken,
+        bytes memory data,
+        uint256 minimumReturnAmount
+    ) internal returns (uint256) {
         // PT (e.g. PT-sUSDE-29MAY2025) to yieldToken (e.g. sUSDe)
         (address market, uint24 fee, uint160 sqrtPriceLimitX96) = abi.decode(data, (address, uint24, uint160));
-        (IStandardizedYield SY, , ) = IPMarket(market).readTokens();
+        (IStandardizedYield SY,,) = IPMarket(market).readTokens();
         address tokenOut = SY.yieldToken();
         _sellPtForToken(market, IERC20(collateralToken).balanceOf(address(this)), tokenOut);
 

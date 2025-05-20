@@ -16,22 +16,29 @@ import {IPriceFeed} from "@size/src/oracle/IPriceFeed.sol";
 import {PriceFeedMock} from "@test/mocks/PriceFeedMock.sol";
 import {SwapParams, SwapMethod} from "src/liquidator/DexSwap.sol";
 import {UpdateConfigParams} from "@size/src/market/libraries/actions/UpdateConfig.sol";
+import {console} from "forge-std/console.sol";
 
 contract FlashLoanLiquidatorBoringPtSellerTest is BaseTest, Addresses {
     FlashLoanLiquidator public flashLoanLiquidator;
-    IERC20Metadata public underlyingCollateralToken;
-    IERC20Metadata public underlyingBorrowToken;
-    address public pendleMarket;
+    address public owner;
     address public borrower;
     address public lender;
-    address public owner;
     address public bot;
 
-    function setUp() public override {
-        vm.createSelectFork("mainnet");
-        vm.rollFork(22524065);
+    function setUp() public override {}
 
-        sizeFactory = SizeFactory(addresses[block.chainid][CONTRACT.SIZE_FACTORY]);
+    function _flashLoanLiquidate(
+        address _liquidator,
+        uint256 debtPositionId,
+        address pendleMarket,
+        IERC20Metadata underlyingCollateralToken,
+        IERC20Metadata underlyingBorrowToken
+    ) internal {
+        vm.startPrank(_liquidator);
+
+        uint24 fee = 500;
+        uint160 sqrtPriceLimitX96 = 0;
+
         flashLoanLiquidator = new FlashLoanLiquidator(
             addresses[block.chainid][CONTRACT.ADDRESS_PROVIDER],
             address(0x1111),
@@ -39,37 +46,6 @@ contract FlashLoanLiquidatorBoringPtSellerTest is BaseTest, Addresses {
             address(0x3333),
             addresses[block.chainid][CONTRACT.UNISWAP_V3_ROUTER]
         );
-
-        owner = addresses[block.chainid][CONTRACT.SIZE_GOVERNANCE];
-        bot = flashLoanLiquidator.owner();
-        borrower = makeAddr("borrower");
-        lender = makeAddr("lender");
-
-        ISize[] memory markets = sizeFactory.getMarkets();
-        size = SizeMock(address(markets[1]));
-        pendleMarket = 0xB162B764044697cf03617C2EFbcB1f42e31E4766;
-
-        DataView memory data = size.data();
-
-        underlyingCollateralToken = IERC20Metadata(data.underlyingCollateralToken);
-        underlyingBorrowToken = IERC20Metadata(data.underlyingBorrowToken);
-
-        assertEq(underlyingCollateralToken.symbol(), "PT-sUSDE-29MAY2025");
-        assertEq(underlyingBorrowToken.symbol(), "USDC");
-
-        vm.label(address(flashLoanLiquidator), "FlashLoanLiquidator");
-        vm.label(address(size), "Size");
-        vm.label(address(sizeFactory), "SizeFactory");
-        vm.label(address(underlyingCollateralToken), underlyingCollateralToken.symbol());
-        vm.label(address(underlyingBorrowToken), underlyingBorrowToken.symbol());
-    }
-
-
-    function _flashLoanLiquidate(address _liquidator, uint256 debtPositionId) internal {
-        vm.startPrank(_liquidator);
-
-        uint24 fee = 500;
-        uint160 sqrtPriceLimitX96 = 0;
 
         flashLoanLiquidator.liquidatePositionWithFlashLoan(
             address(size),
@@ -86,10 +62,53 @@ contract FlashLoanLiquidatorBoringPtSellerTest is BaseTest, Addresses {
             0,
             _liquidator
         );
+
+        vm.stopPrank();
     }
 
-    function testFork_FlashLoanLiquidatorBoringPtSeller_liquidate_PT_token() public {
-        assertEqApprox(IPriceFeed(size.oracle().priceFeed).getPrice(), 0.99e18, 0.01e18);
+    function testFork_FlashLoanLiquidatorBoringPtSeller_liquidate_PT_sUSDE_29MAY2025() public {
+        vm.createSelectFork("mainnet");
+        vm.rollFork(22524065);
+
+        _testFork_FlashLoanLiquidatorBoringPtSeller_liquidate_PT(
+            1, 0.99e18, 0.9e18, 0xB162B764044697cf03617C2EFbcB1f42e31E4766, "PT-sUSDE-29MAY2025", "USDC"
+        );
+    }
+
+    function testFork_FlashLoanLiquidatorBoringPtSeller_liquidate_PT_sUSDE_31JUL2025() public {
+        vm.createSelectFork("vnet");
+
+        _testFork_FlashLoanLiquidatorBoringPtSeller_liquidate_PT(
+            2, 0.96e18, 0.9e18, 0x4339Ffe2B7592Dc783ed13cCE310531aB366dEac, "PT-sUSDE-31JUL2025", "USDC"
+        );
+    }
+
+    function _testFork_FlashLoanLiquidatorBoringPtSeller_liquidate_PT(
+        uint256 marketIndex,
+        uint256 price,
+        uint256 newPrice,
+        address pendleMarket,
+        string memory underlyingCollateralSymbol,
+        string memory underlyingBorrowSymbol
+    ) public {
+        sizeFactory = SizeFactory(addresses[block.chainid][CONTRACT.SIZE_FACTORY]);
+        owner = addresses[block.chainid][CONTRACT.SIZE_GOVERNANCE];
+        borrower = makeAddr("borrower");
+        lender = makeAddr("lender");
+        bot = makeAddr("bot");
+
+        ISize[] memory markets = sizeFactory.getMarkets();
+        size = SizeMock(address(markets[marketIndex]));
+
+        DataView memory data = size.data();
+
+        IERC20Metadata underlyingCollateralToken = IERC20Metadata(data.underlyingCollateralToken);
+        IERC20Metadata underlyingBorrowToken = IERC20Metadata(data.underlyingBorrowToken);
+
+        assertEq(underlyingCollateralToken.symbol(), underlyingCollateralSymbol);
+        assertEq(underlyingBorrowToken.symbol(), underlyingBorrowSymbol);
+
+        assertEqApprox(IPriceFeed(size.oracle().priceFeed).getPrice(), price, 0.01e18);
 
         uint256 collateralAmount = 1_200e18;
         uint256 borrowAmount = 1_000e6;
@@ -102,20 +121,20 @@ contract FlashLoanLiquidatorBoringPtSellerTest is BaseTest, Addresses {
 
         uint256 debtPositionId = _sellCreditMarket(borrower, lender, RESERVED_ID, borrowAmount, 30 days, false);
 
-        assertEqApprox(size.collateralRatio(borrower), 1.19e18, 0.01e18);
+        assertGt(size.collateralRatio(borrower), size.riskConfig().crLiquidation);
 
         PriceFeedMock priceFeedMock = new PriceFeedMock(address(this));
 
         vm.prank(owner);
         size.updateConfig(UpdateConfigParams({key: "priceFeed", value: uint256(uint160(address(priceFeedMock)))}));
 
-        priceFeedMock.setPrice(0.9e18);
+        priceFeedMock.setPrice(newPrice);
 
-        assertEqApprox(size.collateralRatio(borrower), 1.07e18, 0.01e18);
+        assertLt(size.collateralRatio(borrower), size.riskConfig().crLiquidation);
 
         uint256 flashLoanLiquidatorBalanceBefore = size.getUserView(bot).borrowATokenBalance;
 
-        _flashLoanLiquidate(bot, debtPositionId);
+        _flashLoanLiquidate(bot, debtPositionId, pendleMarket, underlyingCollateralToken, underlyingBorrowToken);
 
         uint256 flashLoanLiquidatorBalanceAfter = size.getUserView(bot).borrowATokenBalance;
 

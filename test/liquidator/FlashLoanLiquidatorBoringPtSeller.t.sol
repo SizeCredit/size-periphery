@@ -90,7 +90,7 @@ contract FlashLoanLiquidatorBoringPtSellerTest is BaseTest, Addresses {
         address pendleMarket,
         string memory underlyingCollateralSymbol,
         string memory underlyingBorrowSymbol
-    ) public {
+    ) internal {
         sizeFactory = SizeFactory(addresses[block.chainid][CONTRACT.SIZE_FACTORY]);
         owner = addresses[block.chainid][CONTRACT.SIZE_GOVERNANCE];
         borrower = makeAddr("borrower");

@@ -19,7 +19,7 @@ import {PriceFeedMock} from "@test/mocks/PriceFeedMock.sol";
 import {SwapParams, SwapMethod} from "src/liquidator/DexSwap.sol";
 import {UpdateConfigParams} from "@size/src/market/libraries/actions/UpdateConfig.sol";
 
-contract FlashLoanLiquidatorVnetTest is BaseTest, Addresses {
+contract FlashLoanLiquidatorGenericRouteTest is BaseTest, Addresses {
     FlashLoanLiquidator public flashLoanLiquidator;
     IERC20Metadata public underlyingCollateralToken;
     IERC20Metadata public underlyingBorrowToken;
@@ -29,7 +29,9 @@ contract FlashLoanLiquidatorVnetTest is BaseTest, Addresses {
     address public bot;
 
     function setUp() public override {
-        vm.createSelectFork("vnet");
+        vm.createSelectFork("mainnet");
+        vm.rollFork(22524065);
+
         sizeFactory = SizeFactory(addresses[block.chainid][CONTRACT.SIZE_FACTORY]);
         flashLoanLiquidator = FlashLoanLiquidator(addresses[block.chainid][CONTRACT.FLASH_LOAN_LIQUIDATOR]);
         owner = addresses[block.chainid][CONTRACT.SIZE_GOVERNANCE];
@@ -38,14 +40,14 @@ contract FlashLoanLiquidatorVnetTest is BaseTest, Addresses {
         lender = makeAddr("lender");
 
         ISize[] memory markets = sizeFactory.getMarkets();
-        size = SizeMock(address(markets[2]));
+        size = SizeMock(address(markets[1]));
 
         DataView memory data = size.data();
 
         underlyingCollateralToken = IERC20Metadata(data.underlyingCollateralToken);
         underlyingBorrowToken = IERC20Metadata(data.underlyingBorrowToken);
 
-        assertEq(underlyingCollateralToken.symbol(), "PT-sUSDE-31JUL2025");
+        assertEq(underlyingCollateralToken.symbol(), "PT-sUSDE-29MAY2025");
         assertEq(underlyingBorrowToken.symbol(), "USDC");
 
         vm.label(address(flashLoanLiquidator), "FlashLoanLiquidator");
@@ -75,8 +77,8 @@ contract FlashLoanLiquidatorVnetTest is BaseTest, Addresses {
         );
     }
 
-    function testFork_FlashLoanLiquidatorVnet_liquidate_PT_token() public {
-        assertEqApprox(IPriceFeed(size.oracle().priceFeed).getPrice(), 0.95e18, 0.01e18);
+    function testFork_FlashLoanLiquidatorGenericRoute_liquidate_PT_token() public {
+        assertEqApprox(IPriceFeed(size.oracle().priceFeed).getPrice(), 0.99e18, 0.01e18);
 
         uint256 collateralAmount = 1_200e18;
         uint256 borrowAmount = 1_000e6;
@@ -89,7 +91,7 @@ contract FlashLoanLiquidatorVnetTest is BaseTest, Addresses {
 
         uint256 debtPositionId = _sellCreditMarket(borrower, lender, RESERVED_ID, borrowAmount, 30 days, false);
 
-        assertEqApprox(size.collateralRatio(borrower), 1.14e18, 0.01e18);
+        assertEqApprox(size.collateralRatio(borrower), 1.19e18, 0.01e18);
 
         PriceFeedMock priceFeedMock = new PriceFeedMock(address(this));
 

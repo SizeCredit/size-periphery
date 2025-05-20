@@ -30,6 +30,7 @@ contract CreateVnetLiquidatablePosition is Script, Addresses {
 
     address borrower = address(0x1111);
     address lender = address(0x2222);
+    address PRICE_FEED_MOCK_ADDRESS = 0xF4a21Ac7e51d17A0e1C8B59f7a98bb7A97806f14;
 
     constructor() {
         vm.createSelectFork("vnet");
@@ -42,7 +43,7 @@ contract CreateVnetLiquidatablePosition is Script, Addresses {
         );
         sizeFactory = ISizeFactory(addresses[block.chainid][CONTRACT.SIZE_FACTORY]);
         owner = addresses[block.chainid][CONTRACT.SIZE_GOVERNANCE];
-        size = sizeFactory.getMarket(2);
+        size = sizeFactory.getMarket(1);
     }
 
     function _tenderlyDeposit(address user, address token, uint256 amount) internal {
@@ -135,7 +136,9 @@ contract CreateVnetLiquidatablePosition is Script, Addresses {
         _tenderlySellCreditMarket(borrower, lender, RESERVED_ID, borrowAmount, 45 days, false);
         (uint256 debtPositionsCount,) = size.getPositionsCount();
         uint256 debtPositionId = DEBT_POSITION_ID_START + debtPositionsCount - 1;
-        PriceFeedMock priceFeedMock = new PriceFeedMock(owner);
+
+        PriceFeedMock priceFeedMock = PriceFeedMock(PRICE_FEED_MOCK_ADDRESS);
+
         _tenderlyUpdateConfig(owner, "priceFeed", uint256(uint160(address(priceFeedMock))));
         _tenderlyUpdatePrice(owner, priceFeedMock, 0.9e18);
 

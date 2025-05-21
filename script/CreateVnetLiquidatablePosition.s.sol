@@ -14,9 +14,7 @@ import {PriceFeedMock} from "@test/mocks/PriceFeedMock.sol";
 import {YieldCurve} from "@src/market/libraries/YieldCurveLibrary.sol";
 import {DepositParams} from "@src/market/libraries/actions/Deposit.sol";
 import {BuyCreditLimitParams} from "@src/market/libraries/actions/BuyCreditLimit.sol";
-import {
-    SellCreditMarketParams
-} from "@src/market/libraries/actions/SellCreditMarket.sol";
+import {SellCreditMarketParams} from "@src/market/libraries/actions/SellCreditMarket.sol";
 import {UpdateConfigParams} from "@src/market/libraries/actions/UpdateConfig.sol";
 
 contract CreateVnetLiquidatablePosition is Script, Addresses {

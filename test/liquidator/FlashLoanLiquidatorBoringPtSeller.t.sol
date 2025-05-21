@@ -66,20 +66,37 @@ contract FlashLoanLiquidatorBoringPtSellerTest is BaseTest, Addresses {
         vm.stopPrank();
     }
 
-    function testFork_FlashLoanLiquidatorBoringPtSeller_liquidate_PT_sUSDE_29MAY2025() public {
+    function testFork_FlashLoanLiquidatorBoringPtSeller_liquidate_PT_sUSDE_29MAY2025_before_maturity() public {
         vm.createSelectFork("mainnet");
         vm.rollFork(22524065);
 
         _testFork_FlashLoanLiquidatorBoringPtSeller_liquidate_PT(
-            1, 0.99e18, 0.9e18, 0xB162B764044697cf03617C2EFbcB1f42e31E4766, "PT-sUSDE-29MAY2025", "USDC"
+            1, 0.99e18, 0.9e18, 0xB162B764044697cf03617C2EFbcB1f42e31E4766, "PT-sUSDE-29MAY2025", "USDC", 0
         );
     }
 
-    function testFork_FlashLoanLiquidatorBoringPtSeller_liquidate_PT_sUSDE_31JUL2025() public {
+    function testFork_FlashLoanLiquidatorBoringPtSeller_liquidate_PT_sUSDE_31JUL2025_before_maturity() public {
         vm.createSelectFork("vnet");
 
         _testFork_FlashLoanLiquidatorBoringPtSeller_liquidate_PT(
-            2, 0.96e18, 0.9e18, 0x4339Ffe2B7592Dc783ed13cCE310531aB366dEac, "PT-sUSDE-31JUL2025", "USDC"
+            2, 0.96e18, 0.9e18, 0x4339Ffe2B7592Dc783ed13cCE310531aB366dEac, "PT-sUSDE-31JUL2025", "USDC", 0
+        );
+    }
+
+    function testFork_FlashLoanLiquidatorBoringPtSeller_liquidate_PT_sUSDE_29MAY2025_after_maturity() public {
+        vm.createSelectFork("mainnet");
+        vm.rollFork(22524065);
+
+        _testFork_FlashLoanLiquidatorBoringPtSeller_liquidate_PT(
+            1, 0.99e18, 0.9e18, 0xB162B764044697cf03617C2EFbcB1f42e31E4766, "PT-sUSDE-29MAY2025", "USDC", 30 days
+        );
+    }
+
+    function testFork_FlashLoanLiquidatorBoringPtSeller_liquidate_PT_sUSDE_31JUL2025_after_maturity() public {
+        vm.createSelectFork("vnet");
+
+        _testFork_FlashLoanLiquidatorBoringPtSeller_liquidate_PT(
+            2, 0.96e18, 0.9e18, 0x4339Ffe2B7592Dc783ed13cCE310531aB366dEac, "PT-sUSDE-31JUL2025", "USDC", 60 days
         );
     }
 
@@ -89,7 +106,8 @@ contract FlashLoanLiquidatorBoringPtSellerTest is BaseTest, Addresses {
         uint256 newPrice,
         address pendleMarket,
         string memory underlyingCollateralSymbol,
-        string memory underlyingBorrowSymbol
+        string memory underlyingBorrowSymbol,
+        uint256 delay
     ) internal {
         sizeFactory = SizeFactory(addresses[block.chainid][CONTRACT.SIZE_FACTORY]);
         owner = addresses[block.chainid][CONTRACT.SIZE_GOVERNANCE];
@@ -127,6 +145,8 @@ contract FlashLoanLiquidatorBoringPtSellerTest is BaseTest, Addresses {
 
         vm.prank(owner);
         size.updateConfig(UpdateConfigParams({key: "priceFeed", value: uint256(uint160(address(priceFeedMock)))}));
+
+        vm.warp(block.timestamp + delay);
 
         priceFeedMock.setPrice(newPrice);
 

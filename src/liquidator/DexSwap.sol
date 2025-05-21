@@ -196,14 +196,22 @@ abstract contract DexSwap is BoringPtSeller {
         bytes memory data,
         uint256 minimumReturnAmount
     ) internal returns (uint256) {
-        (address market, uint24 fee, uint160 sqrtPriceLimitX96) = abi.decode(data, (address, uint24, uint160));
+        (address market, uint24 fee, uint160 sqrtPriceLimitX96, bool tokenOutIsYieldToken) =
+            abi.decode(data, (address, uint24, uint160, bool));
 
-        // PT (e.g. PT-sUSDE-29MAY2025) to yieldToken (e.g. sUSDe)
         (IStandardizedYield SY,,) = IPMarket(market).readTokens();
-        address tokenOut = SY.yieldToken();
+        address tokenOut;
+        if (tokenOutIsYieldToken) {
+            // PT (e.g. PT-sUSDE-29MAY2025) to yieldToken (e.g. sUSDe)
+            tokenOut = SY.yieldToken();
+        } else {
+            // PT (e.g. PT-wstUSR-25SEP2025) to asset (e.g. wstUSR)
+            (, tokenOut,) = SY.assetInfo();
+        }
+
         _sellPtForToken(market, IERC20(collateralToken).balanceOf(address(this)), tokenOut);
 
-        // yieldToken (e.g. sUSDe) to borrowToken (e.g. USDC)
+        // tokenOut to borrowToken (e.g. USDC)
         return _swapCollateralUniswapV3(tokenOut, borrowToken, fee, sqrtPriceLimitX96, minimumReturnAmount);
     }
 }

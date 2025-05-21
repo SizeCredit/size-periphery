@@ -29,18 +29,20 @@ contract FlashLoanLiquidatorBoringPtSellerTest is BaseTest, Addresses {
     address public constant PT_sUSDE_31JUL2025_MARKET = 0x4339Ffe2B7592Dc783ed13cCE310531aB366dEac;
     address public constant PT_sUSDE_29MAY2025_MARKET = 0xB162B764044697cf03617C2EFbcB1f42e31E4766;
 
+    struct FlashLoanLiquidateTestParams {
+        uint256 debtPositionId;
+        address pendleMarket;
+        IERC20Metadata underlyingCollateralToken;
+        IERC20Metadata underlyingBorrowToken;
+        bool tokenOutIsYieldToken;
+    }
+
     function setUp() public override {
         vm.createSelectFork("mainnet");
         vm.rollFork(22531110);
     }
 
-    function _flashLoanLiquidate(
-        address _liquidator,
-        uint256 debtPositionId,
-        address pendleMarket,
-        IERC20Metadata underlyingCollateralToken,
-        IERC20Metadata underlyingBorrowToken
-    ) internal {
+    function _flashLoanLiquidate(address _liquidator, FlashLoanLiquidateTestParams memory params) internal {
         vm.startPrank(_liquidator);
 
         uint24 fee = 500;
@@ -56,13 +58,13 @@ contract FlashLoanLiquidatorBoringPtSellerTest is BaseTest, Addresses {
 
         flashLoanLiquidator.liquidatePositionWithFlashLoan(
             address(size),
-            address(underlyingCollateralToken),
-            address(underlyingBorrowToken),
-            debtPositionId,
+            address(params.underlyingCollateralToken),
+            address(params.underlyingBorrowToken),
+            params.debtPositionId,
             0,
             SwapParams({
                 method: SwapMethod.BoringPtSeller,
-                data: abi.encode(pendleMarket, fee, sqrtPriceLimitX96),
+                data: abi.encode(params.pendleMarket, fee, sqrtPriceLimitX96, params.tokenOutIsYieldToken),
                 deadline: block.timestamp,
                 minimumReturnAmount: 0
             }),
@@ -75,37 +77,37 @@ contract FlashLoanLiquidatorBoringPtSellerTest is BaseTest, Addresses {
 
     function testFork_FlashLoanLiquidatorBoringPtSeller_liquidate_PT_sUSDE_29MAY2025_before_maturity() public {
         _testFork_FlashLoanLiquidatorBoringPtSeller_liquidate_PT(
-            1, 0.99e18, 0.9e18, PT_sUSDE_29MAY2025_MARKET, "PT-sUSDE-29MAY2025", "USDC", 0
+            1, 0.99e18, 0.9e18, PT_sUSDE_29MAY2025_MARKET, "PT-sUSDE-29MAY2025", "USDC", 0, true
         );
     }
 
     function testFork_FlashLoanLiquidatorBoringPtSeller_liquidate_PT_sUSDE_31JUL2025_before_maturity() public {
         _testFork_FlashLoanLiquidatorBoringPtSeller_liquidate_PT(
-            2, 0.96e18, 0.9e18, PT_sUSDE_31JUL2025_MARKET, "PT-sUSDE-31JUL2025", "USDC", 0
+            2, 0.96e18, 0.9e18, PT_sUSDE_31JUL2025_MARKET, "PT-sUSDE-31JUL2025", "USDC", 0, true
         );
     }
 
     function testFork_FlashLoanLiquidatorBoringPtSeller_liquidate_PT_wstUSR_25SEP2025_before_maturity() public {
         _testFork_FlashLoanLiquidatorBoringPtSeller_liquidate_PT(
-            3, 0.96e18, 0.9e18, PT_wstUSR_25SEP2025_MARKET, "PT-wstUSR-25SEP2025", "USDC", 0
+            3, 0.96e18, 0.9e18, PT_wstUSR_25SEP2025_MARKET, "PT-wstUSR-25SEP2025", "USDC", 0, false
         );
     }
 
     function testFork_FlashLoanLiquidatorBoringPtSeller_liquidate_PT_sUSDE_29MAY2025_after_maturity() public {
         _testFork_FlashLoanLiquidatorBoringPtSeller_liquidate_PT(
-            1, 0.99e18, 0.9e18, PT_sUSDE_29MAY2025_MARKET, "PT-sUSDE-29MAY2025", "USDC", 30 days
+            1, 0.99e18, 0.9e18, PT_sUSDE_29MAY2025_MARKET, "PT-sUSDE-29MAY2025", "USDC", 30 days, true
         );
     }
 
     function testFork_FlashLoanLiquidatorBoringPtSeller_liquidate_PT_sUSDE_31JUL2025_after_maturity() public {
         _testFork_FlashLoanLiquidatorBoringPtSeller_liquidate_PT(
-            2, 0.96e18, 0.9e18, PT_sUSDE_31JUL2025_MARKET, "PT-sUSDE-31JUL2025", "USDC", 60 days
+            2, 0.96e18, 0.9e18, PT_sUSDE_31JUL2025_MARKET, "PT-sUSDE-31JUL2025", "USDC", 60 days, true
         );
     }
 
     function testFork_FlashLoanLiquidatorBoringPtSeller_liquidate_PT_wstUSR_25SEP2025_after_maturity() public {
         _testFork_FlashLoanLiquidatorBoringPtSeller_liquidate_PT(
-            3, 0.96e18, 0.9e18, PT_wstUSR_25SEP2025_MARKET, "PT-wstUSR-25SEP2025", "USDC", 180 days
+            3, 0.96e18, 0.9e18, PT_wstUSR_25SEP2025_MARKET, "PT-wstUSR-25SEP2025", "USDC", 180 days, false
         );
     }
 
@@ -116,7 +118,8 @@ contract FlashLoanLiquidatorBoringPtSellerTest is BaseTest, Addresses {
         address pendleMarket,
         string memory underlyingCollateralSymbol,
         string memory underlyingBorrowSymbol,
-        uint256 delay
+        uint256 delay,
+        bool tokenOutIsYieldToken
     ) internal {
         sizeFactory = SizeFactory(addresses[block.chainid][CONTRACT.SIZE_FACTORY]);
         owner = addresses[block.chainid][CONTRACT.SIZE_GOVERNANCE];
@@ -124,13 +127,10 @@ contract FlashLoanLiquidatorBoringPtSellerTest is BaseTest, Addresses {
         lender = makeAddr("lender");
         bot = makeAddr("bot");
 
-        ISize[] memory markets = sizeFactory.getMarkets();
-        size = SizeMock(address(markets[marketIndex]));
+        size = SizeMock(address(sizeFactory.getMarkets()[marketIndex]));
 
-        DataView memory data = size.data();
-
-        IERC20Metadata underlyingCollateralToken = IERC20Metadata(data.underlyingCollateralToken);
-        IERC20Metadata underlyingBorrowToken = IERC20Metadata(data.underlyingBorrowToken);
+        IERC20Metadata underlyingCollateralToken = IERC20Metadata(size.data().underlyingCollateralToken);
+        IERC20Metadata underlyingBorrowToken = IERC20Metadata(size.data().underlyingBorrowToken);
 
         assertEq(underlyingCollateralToken.symbol(), underlyingCollateralSymbol);
         assertEq(underlyingBorrowToken.symbol(), underlyingBorrowSymbol);
@@ -163,7 +163,14 @@ contract FlashLoanLiquidatorBoringPtSellerTest is BaseTest, Addresses {
 
         uint256 flashLoanLiquidatorBalanceBefore = size.getUserView(bot).borrowATokenBalance;
 
-        _flashLoanLiquidate(bot, debtPositionId, pendleMarket, underlyingCollateralToken, underlyingBorrowToken);
+        FlashLoanLiquidateTestParams memory params = FlashLoanLiquidateTestParams({
+            debtPositionId: debtPositionId,
+            pendleMarket: pendleMarket,
+            underlyingCollateralToken: underlyingCollateralToken,
+            underlyingBorrowToken: underlyingBorrowToken,
+            tokenOutIsYieldToken: tokenOutIsYieldToken
+        });
+        _flashLoanLiquidate(bot, params);
 
         uint256 flashLoanLiquidatorBalanceAfter = size.getUserView(bot).borrowATokenBalance;
 

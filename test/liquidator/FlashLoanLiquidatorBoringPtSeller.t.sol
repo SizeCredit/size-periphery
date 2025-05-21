@@ -25,7 +25,14 @@ contract FlashLoanLiquidatorBoringPtSellerTest is BaseTest, Addresses {
     address public lender;
     address public bot;
 
-    function setUp() public override {}
+    address public constant PT_wstUSR_25SEP2025_MARKET = 0x09fA04Aac9c6d1c6131352EE950CD67ecC6d4fB9;
+    address public constant PT_sUSDE_31JUL2025_MARKET = 0x4339Ffe2B7592Dc783ed13cCE310531aB366dEac;
+    address public constant PT_sUSDE_29MAY2025_MARKET = 0xB162B764044697cf03617C2EFbcB1f42e31E4766;
+
+    function setUp() public override {
+        vm.createSelectFork("mainnet");
+        vm.rollFork(22531110);
+    }
 
     function _flashLoanLiquidate(
         address _liquidator,
@@ -67,36 +74,38 @@ contract FlashLoanLiquidatorBoringPtSellerTest is BaseTest, Addresses {
     }
 
     function testFork_FlashLoanLiquidatorBoringPtSeller_liquidate_PT_sUSDE_29MAY2025_before_maturity() public {
-        vm.createSelectFork("mainnet");
-        vm.rollFork(22524065);
-
         _testFork_FlashLoanLiquidatorBoringPtSeller_liquidate_PT(
-            1, 0.99e18, 0.9e18, 0xB162B764044697cf03617C2EFbcB1f42e31E4766, "PT-sUSDE-29MAY2025", "USDC", 0
+            1, 0.99e18, 0.9e18, PT_sUSDE_29MAY2025_MARKET, "PT-sUSDE-29MAY2025", "USDC", 0
         );
     }
 
     function testFork_FlashLoanLiquidatorBoringPtSeller_liquidate_PT_sUSDE_31JUL2025_before_maturity() public {
-        vm.createSelectFork("vnet");
-
         _testFork_FlashLoanLiquidatorBoringPtSeller_liquidate_PT(
-            2, 0.96e18, 0.9e18, 0x4339Ffe2B7592Dc783ed13cCE310531aB366dEac, "PT-sUSDE-31JUL2025", "USDC", 0
+            2, 0.96e18, 0.9e18, PT_sUSDE_31JUL2025_MARKET, "PT-sUSDE-31JUL2025", "USDC", 0
+        );
+    }
+
+    function testFork_FlashLoanLiquidatorBoringPtSeller_liquidate_PT_wstUSR_25SEP2025_before_maturity() public {
+        _testFork_FlashLoanLiquidatorBoringPtSeller_liquidate_PT(
+            3, 0.96e18, 0.9e18, PT_wstUSR_25SEP2025_MARKET, "PT-wstUSR-25SEP2025", "USDC", 0
         );
     }
 
     function testFork_FlashLoanLiquidatorBoringPtSeller_liquidate_PT_sUSDE_29MAY2025_after_maturity() public {
-        vm.createSelectFork("mainnet");
-        vm.rollFork(22524065);
-
         _testFork_FlashLoanLiquidatorBoringPtSeller_liquidate_PT(
-            1, 0.99e18, 0.9e18, 0xB162B764044697cf03617C2EFbcB1f42e31E4766, "PT-sUSDE-29MAY2025", "USDC", 30 days
+            1, 0.99e18, 0.9e18, PT_sUSDE_29MAY2025_MARKET, "PT-sUSDE-29MAY2025", "USDC", 30 days
         );
     }
 
     function testFork_FlashLoanLiquidatorBoringPtSeller_liquidate_PT_sUSDE_31JUL2025_after_maturity() public {
-        vm.createSelectFork("vnet");
-
         _testFork_FlashLoanLiquidatorBoringPtSeller_liquidate_PT(
-            2, 0.96e18, 0.9e18, 0x4339Ffe2B7592Dc783ed13cCE310531aB366dEac, "PT-sUSDE-31JUL2025", "USDC", 60 days
+            2, 0.96e18, 0.9e18, PT_sUSDE_31JUL2025_MARKET, "PT-sUSDE-31JUL2025", "USDC", 60 days
+        );
+    }
+
+    function testFork_FlashLoanLiquidatorBoringPtSeller_liquidate_PT_wstUSR_25SEP2025_after_maturity() public {
+        _testFork_FlashLoanLiquidatorBoringPtSeller_liquidate_PT(
+            3, 0.96e18, 0.9e18, PT_wstUSR_25SEP2025_MARKET, "PT-wstUSR-25SEP2025", "USDC", 180 days
         );
     }
 

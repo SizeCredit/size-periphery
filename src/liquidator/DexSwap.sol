@@ -205,7 +205,7 @@ abstract contract DexSwap is BoringPtSeller {
             // PT (e.g. PT-sUSDE-29MAY2025) to yieldToken (e.g. sUSDe)
             tokenOut = SY.yieldToken();
         } else {
-            // PT (e.g. PT-wstUSR-25SEP2025) to asset (e.g. wstUSR)
+            // PT (e.g. PT-wstUSR-25SEP2025) to asset (e.g. USR)
             (, tokenOut,) = SY.assetInfo();
         }
 

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.23;
 
-import {SwapMethod} from "src/liquidator/DexSwap.sol";
+import {SwapMethod, BoringPtSellerParams} from "src/liquidator/DexSwap.sol";
 import {FlashLoanLiquidator, ReplacementParams, SwapParams} from "src/liquidator/FlashLoanLiquidator.sol";
 import {Mock1InchAggregator} from "test/mocks/Mock1InchAggregator.sol";
 import {MockAavePool} from "@test/mocks/MockAavePool.sol";
@@ -66,7 +66,12 @@ contract FlashLoanLiquidatorTest is BaseTest {
             method: SwapMethod.OneInch,
             data: abi.encode(""), // Data is not used in the mock
             minimumReturnAmount: 0,
-            deadline: block.timestamp
+            deadline: block.timestamp,
+            hasPtSellerStep: false,
+            ptSellerParams: BoringPtSellerParams({
+                market: address(0),
+                tokenOutIsYieldToken: false
+            })
         });
 
         // Call the liquidatePositionWithFlashLoan function
@@ -145,7 +150,12 @@ contract FlashLoanLiquidatorTest is BaseTest {
             method: SwapMethod.OneInch,
             data: abi.encode(""), // Data is not used in the mock
             minimumReturnAmount: 0,
-            deadline: block.timestamp
+            deadline: block.timestamp,
+            hasPtSellerStep: false,
+            ptSellerParams: BoringPtSellerParams({
+                market: address(0),
+                tokenOutIsYieldToken: false
+            })
         });
 
         // Create ReplacementParams
@@ -225,7 +235,12 @@ contract FlashLoanLiquidatorTest is BaseTest {
             method: SwapMethod.OneInch,
             data: abi.encode(""), // Data is not used in the mock
             minimumReturnAmount: 0,
-            deadline: block.timestamp
+            deadline: block.timestamp,
+            hasPtSellerStep: false,
+            ptSellerParams: BoringPtSellerParams({
+                market: address(0),
+                tokenOutIsYieldToken: false
+            })
         });
 
         // Call the liquidatePositionWithFlashLoan function
@@ -300,7 +315,12 @@ contract FlashLoanLiquidatorTest is BaseTest {
             method: SwapMethod.OneInch,
             data: abi.encode(""), // Data is not used in the mock
             minimumReturnAmount: 0,
-            deadline: block.timestamp
+            deadline: block.timestamp,
+            hasPtSellerStep: false,
+            ptSellerParams: BoringPtSellerParams({
+                market: address(0),
+                tokenOutIsYieldToken: false
+            })
         });
 
         // Setup balance and allowance for unprofitable liquidation

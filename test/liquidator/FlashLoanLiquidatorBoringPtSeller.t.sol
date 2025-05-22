@@ -14,7 +14,7 @@ import {YieldCurveHelper} from "@test/helpers/libraries/YieldCurveHelper.sol";
 import {SizeMock} from "@test/mocks/SizeMock.sol";
 import {IPriceFeed} from "@size/src/oracle/IPriceFeed.sol";
 import {PriceFeedMock} from "@test/mocks/PriceFeedMock.sol";
-import {SwapParams, SwapMethod} from "src/liquidator/DexSwap.sol";
+import {SwapParams, SwapMethod, BoringPtSellerParams} from "src/liquidator/DexSwap.sol";
 import {UpdateConfigParams} from "@size/src/market/libraries/actions/UpdateConfig.sol";
 import {console} from "forge-std/console.sol";
 
@@ -63,10 +63,15 @@ contract FlashLoanLiquidatorBoringPtSellerTest is BaseTest, Addresses {
             params.debtPositionId,
             0,
             SwapParams({
-                method: SwapMethod.BoringPtSeller,
-                data: abi.encode(params.pendleMarket, fee, sqrtPriceLimitX96, params.tokenOutIsYieldToken),
+                method: SwapMethod.UniswapV3,
+                data: abi.encode(fee, sqrtPriceLimitX96),
                 deadline: block.timestamp,
-                minimumReturnAmount: 0
+                minimumReturnAmount: 0,
+                hasPtSellerStep: true,
+                ptSellerParams: BoringPtSellerParams({
+                    market: params.pendleMarket,
+                    tokenOutIsYieldToken: params.tokenOutIsYieldToken
+                })
             }),
             0,
             _liquidator

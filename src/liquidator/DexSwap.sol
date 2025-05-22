@@ -28,6 +28,14 @@ struct SwapParams {
     bytes data; // Encoded data for the specific swap method
     uint256 deadline; // Deadline for the swap to occur
     uint256 minimumReturnAmount; // Minimum return amount from the swap
+    // Optional PT seller step
+    bool hasPtSellerStep;
+    BoringPtSellerParams ptSellerParams;
+}
+
+struct BoringPtSellerParams {
+    address market;
+    bool tokenOutIsYieldToken;
 }
 
 /// @title DexSwap
@@ -65,26 +73,76 @@ abstract contract DexSwap is BoringPtSeller {
         internal
         returns (uint256)
     {
-        if (swapParams.method == SwapMethod.GenericRoute) {
-            return _swapCollateralGenericRoute(collateralToken, swapParams.data);
-        } else if (swapParams.method == SwapMethod.OneInch) {
-            return _swapCollateral1Inch(collateralToken, borrowToken, swapParams.data, swapParams.minimumReturnAmount);
-        } else if (swapParams.method == SwapMethod.Unoswap) {
-            address pool = abi.decode(swapParams.data, (address));
-            return _swapCollateralUnoswap(collateralToken, borrowToken, pool, swapParams.minimumReturnAmount);
-        } else if (swapParams.method == SwapMethod.UniswapV2) {
-            address[] memory path = abi.decode(swapParams.data, (address[]));
+        // If PT seller step is required, execute it first
+        if (swapParams.hasPtSellerStep) {
+            // Execute PT seller step
+            address intermediateToken = _executePtSellerStep(
+                collateralToken,
+                swapParams.ptSellerParams
+            );
+
+            // Create new swap params for the second step
+            SwapParams memory secondStepParams = SwapParams({
+                method: swapParams.method,
+                data: swapParams.data,
+                deadline: swapParams.deadline,
+                minimumReturnAmount: swapParams.minimumReturnAmount,
+                hasPtSellerStep: false,
+                ptSellerParams: BoringPtSellerParams({
+                    market: address(0),
+                    tokenOutIsYieldToken: false
+                })
+            });
+
+            // Execute the second step with the intermediate token
+            return _executeSwapStep(intermediateToken, borrowToken, secondStepParams);
+        }
+
+        // If no PT seller step, execute single swap
+        return _executeSwapStep(collateralToken, borrowToken, swapParams);
+    }
+
+    function _executePtSellerStep(
+        address collateralToken,
+        BoringPtSellerParams memory params
+    ) internal returns (address) {
+        (IStandardizedYield SY,,) = IPMarket(params.market).readTokens();
+        address tokenOut;
+        if (params.tokenOutIsYieldToken) {
+            // PT (e.g. PT-sUSDE-29MAY2025) to yieldToken (e.g. sUSDe)
+            tokenOut = SY.yieldToken();
+        } else {
+            // PT (e.g. PT-wstUSR-25SEP2025) to asset (e.g. USR)
+            (, tokenOut,) = SY.assetInfo();
+        }
+
+        // Sell PT for tokenOut
+        _sellPtForToken(params.market, IERC20(collateralToken).balanceOf(address(this)), tokenOut);
+        
+        return tokenOut;
+    }
+
+    function _executeSwapStep(
+        address inputToken,
+        address outputToken,
+        SwapParams memory params
+    ) internal returns (uint256) {
+        if (params.method == SwapMethod.GenericRoute) {
+            return _swapCollateralGenericRoute(inputToken, params.data);
+        } else if (params.method == SwapMethod.OneInch) {
+            return _swapCollateral1Inch(inputToken, outputToken, params.data, params.minimumReturnAmount);
+        } else if (params.method == SwapMethod.Unoswap) {
+            address pool = abi.decode(params.data, (address));
+            return _swapCollateralUnoswap(inputToken, outputToken, pool, params.minimumReturnAmount);
+        } else if (params.method == SwapMethod.UniswapV2) {
+            address[] memory path = abi.decode(params.data, (address[]));
             return _swapCollateralUniswapV2(
-                collateralToken, borrowToken, path, swapParams.deadline, swapParams.minimumReturnAmount
+                inputToken, outputToken, path, params.deadline, params.minimumReturnAmount
             );
-        } else if (swapParams.method == SwapMethod.UniswapV3) {
-            (uint24 fee, uint160 sqrtPriceLimitX96) = abi.decode(swapParams.data, (uint24, uint160));
+        } else if (params.method == SwapMethod.UniswapV3) {
+            (uint24 fee, uint160 sqrtPriceLimitX96) = abi.decode(params.data, (uint24, uint160));
             return _swapCollateralUniswapV3(
-                collateralToken, borrowToken, fee, sqrtPriceLimitX96, swapParams.minimumReturnAmount
-            );
-        } else if (swapParams.method == SwapMethod.BoringPtSeller) {
-            return _swapCollateralBoringPtSeller(
-                collateralToken, borrowToken, swapParams.data, swapParams.minimumReturnAmount
+                inputToken, outputToken, fee, sqrtPriceLimitX96, params.minimumReturnAmount
             );
         } else {
             revert PeripheryErrors.INVALID_SWAP_METHOD();
@@ -188,30 +246,5 @@ abstract contract DexSwap is BoringPtSeller {
         }
 
         return returnAmount;
-    }
-
-    function _swapCollateralBoringPtSeller(
-        address collateralToken,
-        address borrowToken,
-        bytes memory data,
-        uint256 minimumReturnAmount
-    ) internal returns (uint256) {
-        (address market, uint24 fee, uint160 sqrtPriceLimitX96, bool tokenOutIsYieldToken) =
-            abi.decode(data, (address, uint24, uint160, bool));
-
-        (IStandardizedYield SY,,) = IPMarket(market).readTokens();
-        address tokenOut;
-        if (tokenOutIsYieldToken) {
-            // PT (e.g. PT-sUSDE-29MAY2025) to yieldToken (e.g. sUSDe)
-            tokenOut = SY.yieldToken();
-        } else {
-            // PT (e.g. PT-wstUSR-25SEP2025) to asset (e.g. USR)
-            (, tokenOut,) = SY.assetInfo();
-        }
-
-        _sellPtForToken(market, IERC20(collateralToken).balanceOf(address(this)), tokenOut);
-
-        // tokenOut to borrowToken (e.g. USDC)
-        return _swapCollateralUniswapV3(tokenOut, borrowToken, fee, sqrtPriceLimitX96, minimumReturnAmount);
     }
 }

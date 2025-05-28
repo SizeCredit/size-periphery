@@ -19,6 +19,7 @@ import {Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {Errors} from "@size/src/market/libraries/Errors.sol";
 import {DexSwap, SwapParams} from "src/liquidator/DexSwap.sol";
+import {console} from "forge-std/console.sol";
 
 contract AutoRollover is Ownable2Step, FlashLoanReceiverBase, DexSwap {
     using SafeERC20 for IERC20Metadata;
@@ -150,15 +151,24 @@ contract AutoRollover is Ownable2Step, FlashLoanReceiverBase, DexSwap {
         address initiator,
         bytes calldata params
     ) external override returns (bool) {
+        console.log("\n=== executeOperation Start ===");
+        console.log("Assets:", assets[0]);
+        console.log("Amount:", amounts[0]);
+        console.log("Premium:", premiums[0]);
+        console.log("Initiator:", initiator);
+
         if (msg.sender != address(POOL)) {
+            console.log("Error: Not AAVE Pool");
             revert PeripheryErrors.NOT_AAVE_POOL();
         }
         if (initiator != address(this)) {
+            console.log("Error: Not Initiator");
             revert PeripheryErrors.NOT_INITIATOR();
         }
 
         // Decode the operation type first
         OperationType operationType = abi.decode(params, (OperationType));
+        console.log("Operation Type:", uint8(operationType));
 
         if (operationType == OperationType.Rollover) {
             OperationParams memory rolloverParams = abi.decode(params, (OperationParams));
@@ -186,15 +196,27 @@ contract AutoRollover is Ownable2Step, FlashLoanReceiverBase, DexSwap {
 
             IERC20Metadata(assets[0]).forceApprove(address(POOL), newFutureValue);
         } else {
+            console.log("\n=== Repay Operation Start ===");
             RepayOperationParams memory repayParams = abi.decode(params, (RepayOperationParams));
             uint256 totalDebt = amounts[0] + premiums[0];
+            console.log("Total Debt (including premium):", totalDebt);
+            console.log("Debt Position ID:", repayParams.debtPositionId);
+            console.log("On Behalf Of:", repayParams.onBehalfOf);
+            console.log("Collateral Withdraw Amount:", repayParams.collateralWithdrawAmount);
 
             // Repay the debt position
+            console.log("\nRepaying debt position...");
             repayParams.market.repay(
                 RepayParams({debtPositionId: repayParams.debtPositionId, borrower: repayParams.onBehalfOf})
             );
+            console.log("Debt position repaid");
 
             // Withdraw collateral
+            console.log("\nWithdrawing collateral...");
+            console.log("Collateral Token:", address(repayParams.market.data().underlyingCollateralToken));
+            console.log("Borrow Token:", address(repayParams.market.data().underlyingBorrowToken));
+            console.log("Withdraw Amount:", repayParams.collateralWithdrawAmount);
+            
             repayParams.market.withdraw(
                 WithdrawParams({
                     token: address(repayParams.market.data().underlyingCollateralToken),
@@ -202,18 +224,35 @@ contract AutoRollover is Ownable2Step, FlashLoanReceiverBase, DexSwap {
                     to: address(this)
                 })
             );
+            console.log("Collateral withdrawn");
+
+            // Log balances before swap
+            console.log("\n=== Pre-Swap Balances ===");
+            console.log("AutoRollover Collateral Balance:", IERC20Metadata(address(repayParams.market.data().underlyingCollateralToken)).balanceOf(address(this)));
+            console.log("AutoRollover Borrow Token Balance:", IERC20Metadata(address(repayParams.market.data().underlyingBorrowToken)).balanceOf(address(this)));
 
             // Swap collateral for borrow token
+            console.log("\nExecuting swap...");
             _swapCollateral(
                 address(repayParams.market.data().underlyingCollateralToken),
                 address(repayParams.market.data().underlyingBorrowToken),
                 repayParams.swapParams
             );
+            console.log("Swap completed");
+
+            // Log balances after swap
+            console.log("\n=== Post-Swap Balances ===");
+            console.log("AutoRollover Collateral Balance:", IERC20Metadata(address(repayParams.market.data().underlyingCollateralToken)).balanceOf(address(this)));
+            console.log("AutoRollover Borrow Token Balance:", IERC20Metadata(address(repayParams.market.data().underlyingBorrowToken)).balanceOf(address(this)));
 
             // Approve and repay flash loan
+            console.log("\nApproving flash loan repayment...");
+            console.log("Amount to approve:", totalDebt);
             IERC20Metadata(assets[0]).forceApprove(address(POOL), totalDebt);
+            console.log("Flash loan approved");
         }
 
+        console.log("\n=== executeOperation End ===");
         return true;
     }
 }

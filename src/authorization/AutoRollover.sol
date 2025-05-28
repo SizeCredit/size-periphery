@@ -6,7 +6,7 @@ import {DebtPosition, RESERVED_ID} from "@size/src/market/libraries/LoanLibrary.
 import {DataView} from "@size/src/market/SizeViewData.sol";
 import {PeripheryErrors} from "src/libraries/PeripheryErrors.sol";
 import {RepayParams} from "@size/src/market/libraries/actions/Repay.sol";
-import {WithdrawParams} from "@size/src/market/libraries/actions/Withdraw.sol";
+import {WithdrawParams, WithdrawOnBehalfOfParams} from "@size/src/market/libraries/actions/Withdraw.sol";
 import {
     SellCreditMarketParams,
     SellCreditMarketOnBehalfOfParams
@@ -286,11 +286,14 @@ contract AutoRollover is Ownable2Step, FlashLoanReceiverBase, DexSwap {
             console.log("Borrower Collateral Balance Before:", IERC20Metadata(operationParams.market.data().underlyingCollateralToken).balanceOf(operationParams.onBehalfOf));
             console.log("Market Collateral Balance Before:", IERC20Metadata(operationParams.market.data().underlyingCollateralToken).balanceOf(address(operationParams.market)));
             
-            operationParams.market.withdraw(
-                WithdrawParams({
-                    token: address(operationParams.market.data().underlyingCollateralToken),
-                    amount: operationParams.repayParams.collateralWithdrawAmount,
-                    to: address(this)
+            operationParams.market.withdrawOnBehalfOf(
+                WithdrawOnBehalfOfParams({
+                    params: WithdrawParams({
+                        token: address(operationParams.market.data().underlyingCollateralToken),
+                        amount: operationParams.repayParams.collateralWithdrawAmount,
+                        to: address(this)
+                    }),
+                    onBehalfOf: operationParams.onBehalfOf
                 })
             );
             console.log("withdraw succeeded");

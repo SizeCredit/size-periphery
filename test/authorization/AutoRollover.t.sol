@@ -47,6 +47,8 @@ contract AutoRolloverTest is BaseTest {
     function test_AutoRollover_initialState() public view {
         assertEq(autoRollover.owner(), james);
         assertEq(autoRollover.EARLY_REPAYMENT_BUFFER(), 1 hours);
+        assertTrue(autoRollover.ROLLOVER());
+        assertFalse(autoRollover.REPAY());
     }
 
     function _setupLoan(uint256 tenor) private returns (uint256) {

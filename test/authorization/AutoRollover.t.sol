@@ -140,10 +140,11 @@ contract AutoRolloverTest is BaseTest {
 
         // Calculate collateral amount needed (105% of debt value to account for swap slippage)
         uint256 collateralAmount = (debtAmount * 105) / 100;
+        uint256 expectedRemainingCollateral = _before.bob.collateralTokenBalance - collateralAmount;
         console.log("\n=== Repay Parameters ===");
         console.log("Collateral Amount to Withdraw:", collateralAmount);
+        console.log("Expected Remaining Collateral:", expectedRemainingCollateral);
         console.log("Debt Amount to Repay:", debtAmount);
-        console.log("Required Collateral Ratio:", (collateralAmount * 1e18) / debtAmount);
         
         // Calculate expected swap amounts
         uint256 price = priceFeed.getPrice();
@@ -209,12 +210,13 @@ contract AutoRolloverTest is BaseTest {
         Vars memory _after = _state();
         console.log("Bob's Debt Balance:", _after.bob.debtBalance);
         console.log("Bob's Collateral Balance:", _after.bob.collateralTokenBalance);
+        console.log("Expected Remaining Collateral:", expectedRemainingCollateral);
         console.log("Bob's Borrow Token Balance:", _after.bob.borrowATokenBalance);
         console.log("AutoRollover WETH Balance:", weth.balanceOf(address(autoRollover)));
         console.log("AutoRollover USDC Balance:", usdc.balanceOf(address(autoRollover)));
 
         assertEq(_after.bob.debtBalance, 0, "Bob's debt should be 0");
-        assertEq(_after.bob.collateralTokenBalance, 0, "Bob's collateral should be 0");
+        assertEq(_after.bob.collateralTokenBalance, expectedRemainingCollateral, "Bob's collateral should match expected remaining amount");
     }
 
     function test_AutoRollover_rollover_too_early() public {

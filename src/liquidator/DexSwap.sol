@@ -69,17 +69,14 @@ abstract contract DexSwap is BoringPtSeller {
         uniswapV3Router = IUniswapV3Router(_uniswapV3Router);
     }
 
-    function _swapCollateral(address collateralToken, address borrowToken, SwapParams memory swapParams)
+    function _swap(address collateralToken, address borrowToken, SwapParams memory swapParams)
         internal
         returns (uint256)
     {
         // If PT seller step is required, execute it first
         if (swapParams.hasPtSellerStep) {
             // Execute PT seller step
-            address intermediateToken = _executePtSellerStep(
-                collateralToken,
-                swapParams.ptSellerParams
-            );
+            address intermediateToken = _executePtSellerStep(collateralToken, swapParams.ptSellerParams);
 
             // Create new swap params for the second step
             SwapParams memory secondStepParams = SwapParams({
@@ -88,10 +85,7 @@ abstract contract DexSwap is BoringPtSeller {
                 deadline: swapParams.deadline,
                 minimumReturnAmount: swapParams.minimumReturnAmount,
                 hasPtSellerStep: false,
-                ptSellerParams: BoringPtSellerParams({
-                    market: address(0),
-                    tokenOutIsYieldToken: false
-                })
+                ptSellerParams: BoringPtSellerParams({market: address(0), tokenOutIsYieldToken: false})
             });
 
             // Execute the second step with the intermediate token
@@ -102,10 +96,10 @@ abstract contract DexSwap is BoringPtSeller {
         return _executeSwapStep(collateralToken, borrowToken, swapParams);
     }
 
-    function _executePtSellerStep(
-        address collateralToken,
-        BoringPtSellerParams memory params
-    ) internal returns (address) {
+    function _executePtSellerStep(address collateralToken, BoringPtSellerParams memory params)
+        internal
+        returns (address)
+    {
         (IStandardizedYield SY,,) = IPMarket(params.market).readTokens();
         address tokenOut;
         if (params.tokenOutIsYieldToken) {
@@ -118,43 +112,36 @@ abstract contract DexSwap is BoringPtSeller {
 
         // Sell PT for tokenOut
         _sellPtForToken(params.market, IERC20(collateralToken).balanceOf(address(this)), tokenOut);
-        
+
         return tokenOut;
     }
 
-    function _executeSwapStep(
-        address inputToken,
-        address outputToken,
-        SwapParams memory params
-    ) internal returns (uint256) {
+    function _executeSwapStep(address inputToken, address outputToken, SwapParams memory params)
+        internal
+        returns (uint256)
+    {
         if (params.method == SwapMethod.GenericRoute) {
-            return _swapCollateralGenericRoute(inputToken, params.data);
+            return _swapGenericRoute(inputToken, params.data);
         } else if (params.method == SwapMethod.OneInch) {
-            return _swapCollateral1Inch(inputToken, outputToken, params.data, params.minimumReturnAmount);
+            return _swap1Inch(inputToken, outputToken, params.data, params.minimumReturnAmount);
         } else if (params.method == SwapMethod.Unoswap) {
             address pool = abi.decode(params.data, (address));
-            return _swapCollateralUnoswap(inputToken, outputToken, pool, params.minimumReturnAmount);
+            return _swapUnoswap(inputToken, outputToken, pool, params.minimumReturnAmount);
         } else if (params.method == SwapMethod.UniswapV2) {
             address[] memory path = abi.decode(params.data, (address[]));
-            return _swapCollateralUniswapV2(
-                inputToken, outputToken, path, params.deadline, params.minimumReturnAmount
-            );
+            return _swapUniswapV2(inputToken, outputToken, path, params.deadline, params.minimumReturnAmount);
         } else if (params.method == SwapMethod.UniswapV3) {
             (uint24 fee, uint160 sqrtPriceLimitX96) = abi.decode(params.data, (uint24, uint160));
-            return _swapCollateralUniswapV3(
-                inputToken, outputToken, fee, sqrtPriceLimitX96, params.minimumReturnAmount
-            );
+            return _swapUniswapV3(inputToken, outputToken, fee, sqrtPriceLimitX96, params.minimumReturnAmount);
         } else {
             revert PeripheryErrors.INVALID_SWAP_METHOD();
         }
     }
 
-    function _swapCollateral1Inch(
-        address collateralToken,
-        address borrowToken,
-        bytes memory data,
-        uint256 minimumReturnAmount
-    ) internal returns (uint256) {
+    function _swap1Inch(address collateralToken, address borrowToken, bytes memory data, uint256 minimumReturnAmount)
+        internal
+        returns (uint256)
+    {
         IERC20(collateralToken).forceApprove(address(oneInchAggregator), type(uint256).max);
         uint256 swappedAmount = oneInchAggregator.swap(
             collateralToken, borrowToken, IERC20(collateralToken).balanceOf(address(this)), minimumReturnAmount, data
@@ -162,7 +149,7 @@ abstract contract DexSwap is BoringPtSeller {
         return swappedAmount;
     }
 
-    function _swapCollateralUniswapV2(
+    function _swapUniswapV2(
         address collateralToken,
         address, /* borrowToken */
         address[] memory tokenPaths,
@@ -176,12 +163,10 @@ abstract contract DexSwap is BoringPtSeller {
         return amounts[amounts.length - 1];
     }
 
-    function _swapCollateralUnoswap(
-        address collateralToken,
-        address, /* borrowToken */
-        address pool,
-        uint256 minimumReturnAmount
-    ) internal returns (uint256) {
+    function _swapUnoswap(address collateralToken, address, /* borrowToken */ address pool, uint256 minimumReturnAmount)
+        internal
+        returns (uint256)
+    {
         IERC20(collateralToken).forceApprove(address(unoswapRouter), type(uint256).max);
         uint256 returnAmount = unoswapRouter.unoswapTo(
             address(this), collateralToken, IERC20(collateralToken).balanceOf(address(this)), minimumReturnAmount, pool
@@ -190,7 +175,7 @@ abstract contract DexSwap is BoringPtSeller {
         return returnAmount;
     }
 
-    function _swapCollateralUniswapV3(
+    function _swapUniswapV3(
         address collateralToken,
         address borrowToken,
         uint24 fee,
@@ -214,7 +199,7 @@ abstract contract DexSwap is BoringPtSeller {
         return amountOut;
     }
 
-    function _swapCollateralGenericRoute(address collateralToken, bytes memory routeData) internal returns (uint256) {
+    function _swapGenericRoute(address collateralToken, bytes memory routeData) internal returns (uint256) {
         // Decode the first 32 bytes as the target router address
         address router;
         assembly {

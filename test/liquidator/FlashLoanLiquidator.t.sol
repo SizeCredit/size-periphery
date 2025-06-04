@@ -68,10 +68,7 @@ contract FlashLoanLiquidatorTest is BaseTest {
             minimumReturnAmount: 0,
             deadline: block.timestamp,
             hasPtSellerStep: false,
-            ptSellerParams: BoringPtSellerParams({
-                market: address(0),
-                tokenOutIsYieldToken: false
-            })
+            ptSellerParams: BoringPtSellerParams({market: address(0), tokenOutIsYieldToken: false})
         });
 
         // Call the liquidatePositionWithFlashLoan function
@@ -152,10 +149,7 @@ contract FlashLoanLiquidatorTest is BaseTest {
             minimumReturnAmount: 0,
             deadline: block.timestamp,
             hasPtSellerStep: false,
-            ptSellerParams: BoringPtSellerParams({
-                market: address(0),
-                tokenOutIsYieldToken: false
-            })
+            ptSellerParams: BoringPtSellerParams({market: address(0), tokenOutIsYieldToken: false})
         });
 
         // Create ReplacementParams
@@ -237,10 +231,7 @@ contract FlashLoanLiquidatorTest is BaseTest {
             minimumReturnAmount: 0,
             deadline: block.timestamp,
             hasPtSellerStep: false,
-            ptSellerParams: BoringPtSellerParams({
-                market: address(0),
-                tokenOutIsYieldToken: false
-            })
+            ptSellerParams: BoringPtSellerParams({market: address(0), tokenOutIsYieldToken: false})
         });
 
         // Call the liquidatePositionWithFlashLoan function
@@ -317,10 +308,7 @@ contract FlashLoanLiquidatorTest is BaseTest {
             minimumReturnAmount: 0,
             deadline: block.timestamp,
             hasPtSellerStep: false,
-            ptSellerParams: BoringPtSellerParams({
-                market: address(0),
-                tokenOutIsYieldToken: false
-            })
+            ptSellerParams: BoringPtSellerParams({market: address(0), tokenOutIsYieldToken: false})
         });
 
         // Setup balance and allowance for unprofitable liquidation

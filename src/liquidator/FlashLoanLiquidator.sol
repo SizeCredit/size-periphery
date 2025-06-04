@@ -311,7 +311,7 @@ contract FlashLoanLiquidator is Ownable, FlashLoanReceiverBase, DexSwap {
             );
         }
 
-        _swapCollateral(opParams.collateralToken, opParams.borrowToken, opParams.swapParams);
+        _swap(opParams.collateralToken, opParams.borrowToken, opParams.swapParams);
 
         _settleFlashLoan(assets, amounts, premiums, opParams.recipient, opParams.depositProfits, opParams.sizeMarket);
 

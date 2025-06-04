@@ -25,10 +25,6 @@ contract FlashLoanLiquidatorBoringPtSellerTest is BaseTest, Addresses {
     address public lender;
     address public bot;
 
-    address public constant PT_wstUSR_25SEP2025_MARKET = 0x09fA04Aac9c6d1c6131352EE950CD67ecC6d4fB9;
-    address public constant PT_sUSDE_31JUL2025_MARKET = 0x4339Ffe2B7592Dc783ed13cCE310531aB366dEac;
-    address public constant PT_sUSDE_29MAY2025_MARKET = 0xB162B764044697cf03617C2EFbcB1f42e31E4766;
-
     struct FlashLoanLiquidateTestParams {
         uint256 debtPositionId;
         address pendleMarket;

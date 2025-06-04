@@ -57,12 +57,13 @@ contract LeverageUp is DexSwap, IRequiresAuthorization {
         InitializeRiskConfigParams memory riskConfig = size.riskConfig();
         uint256 price = IPriceFeed(size.oracle().priceFeed).getPrice();
 
+        dataView.underlyingCollateralToken.forceApprove(address(size), type(uint256).max);
+
         dataView.underlyingCollateralToken.safeTransferFrom(msg.sender, address(this), collateralAmount);
         size.deposit(
             DepositParams({token: address(dataView.underlyingCollateralToken), amount: collateralAmount, to: msg.sender})
         );
 
-        dataView.underlyingCollateralToken.forceApprove(address(size), type(uint256).max);
         for (uint256 i = 0; i < maxIterations; i++) {
             CurrentLeverage memory currentLeverage = _currentLeverage(dataView, msg.sender);
 
@@ -72,11 +73,14 @@ contract LeverageUp is DexSwap, IRequiresAuthorization {
                 size, riskConfig, dataView, currentLeverage, sellCreditMarketParamsArray, price, leveragePercent
             );
 
+            uint256 borrowATokenAmount = dataView.borrowAToken.balanceOf(address(this));
+            if (borrowATokenAmount == 0) break;
+
             size.withdrawOnBehalfOf(
                 WithdrawOnBehalfOfParams({
                     params: WithdrawParams({
                         token: address(dataView.underlyingBorrowToken),
-                        amount: type(uint256).max,
+                        amount: borrowTokenAmount,
                         to: address(this)
                     }),
                     onBehalfOf: msg.sender
@@ -136,11 +140,15 @@ contract LeverageUp is DexSwap, IRequiresAuthorization {
         uint256 price,
         uint256 leveragePercent
     ) private {
-        uint256 maxBorrowAmount =
-            Math.mulDivDown(currentLeverage.totalCollateral, price, riskConfig.crOpening) - currentLeverage.totalDebt;
+        uint256 maxBorrowAmount = Math.mulDivDown(
+            currentLeverage.totalCollateral * 10 ** dataView.debtToken.decimals(),
+            price,
+            riskConfig.crOpening * 10 ** dataView.collateralToken.decimals()
+        ) - currentLeverage.totalDebt;
         for (uint256 j = 0; j < sellCreditMarketParamsArray.length; j++) {
-            uint256 cash =
-                Math.min(dataView.borrowAToken.balanceOf(sellCreditMarketParamsArray[j].lender), maxBorrowAmount);
+            uint256 lenderCashBalance = dataView.borrowAToken.balanceOf(sellCreditMarketParamsArray[j].lender);
+            sellCreditMarketParamsArray[j].amount =
+                Math.mulDivDown(Math.min(lenderCashBalance, maxBorrowAmount), 0.95e18, PERCENT); // quick fix to account for swap fees
 
             if (
                 size.getSellCreditMarketSwapData(sellCreditMarketParamsArray[j]).creditAmountIn
@@ -157,7 +165,7 @@ contract LeverageUp is DexSwap, IRequiresAuthorization {
                 })
             );
 
-            maxBorrowAmount -= cash;
+            maxBorrowAmount -= sellCreditMarketParamsArray[j].amount;
 
             currentLeverage = _currentLeverage(dataView, msg.sender);
             if (currentLeverage.currentLeveragePercent >= leveragePercent) break;

@@ -47,7 +47,7 @@ contract LeverageUp is DexSwap, IRequiresAuthorization {
         uint256 collateralAmount,
         uint256 leveragePercent,
         uint256 maxIterations,
-        SwapParams memory swapParams
+        SwapParams[] memory swapParamsArray
     ) external {
         if (leveragePercent < PERCENT || leveragePercent > maxLeveragePercent(size)) {
             revert InvalidLeveragePercent(leveragePercent, PERCENT, maxLeveragePercent(size));
@@ -80,14 +80,14 @@ contract LeverageUp is DexSwap, IRequiresAuthorization {
                 WithdrawOnBehalfOfParams({
                     params: WithdrawParams({
                         token: address(dataView.underlyingBorrowToken),
-                        amount: borrowTokenAmount,
+                        amount: borrowATokenAmount,
                         to: address(this)
                     }),
                     onBehalfOf: msg.sender
                 })
             );
 
-            _swap(address(dataView.underlyingBorrowToken), address(dataView.underlyingCollateralToken), swapParams);
+            _swap(swapParamsArray);
 
             collateralAmount = dataView.underlyingCollateralToken.balanceOf(address(this));
 

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.23;
 
-import {SwapMethod, SwapParams, BoringPtSellerParams} from "src/liquidator/DexSwap.sol";
+import {SwapMethod, BuyPtParams, UniswapV3Params, SwapParams} from "src/liquidator/DexSwap.sol";
 import {LeverageUp} from "src/zaps/LeverageUp.sol";
 import {Mock1InchAggregator} from "test/mocks/Mock1InchAggregator.sol";
 
@@ -75,18 +75,24 @@ contract LeverageUpTest is BaseTest, Addresses {
 
         uint24 fee = 500;
         uint160 sqrtPriceLimitX96 = 0;
-        SwapParams memory swapParams = SwapParams({
-            method: SwapMethod.UniswapV3,
-            data: abi.encode(fee, sqrtPriceLimitX96),
-            deadline: block.timestamp,
-            minimumReturnAmount: 0,
-            hasPtSellerStep: true,
-            ptSellerParams: BoringPtSellerParams({market: pendleMarket, tokenOutIsYieldToken: false})
+
+        BuyPtParams memory buyPtParams = BuyPtParams({market: pendleMarket});
+
+        UniswapV3Params memory uniswapV3Params = UniswapV3Params({
+            tokenIn: address(size.data().underlyingCollateralToken),
+            tokenOut: address(size.data().underlyingBorrowToken),
+            fee: fee,
+            sqrtPriceLimitX96: sqrtPriceLimitX96,
+            amountOutMinimum: 0
         });
+
+        SwapParams[] memory swapParamsArray = new SwapParams[](2);
+        swapParamsArray[0] = SwapParams({method: SwapMethod.UniswapV3, data: abi.encode(uniswapV3Params)});
+        swapParamsArray[1] = SwapParams({method: SwapMethod.BuyPt, data: abi.encode(buyPtParams)});
 
         vm.prank(user_);
         leverageUp.leverageUpWithSwap(
-            size, sellCreditMarketParamsArray, collateralAmount_, leveragePercent_, maxIterations, swapParams
+            size, sellCreditMarketParamsArray, collateralAmount_, leveragePercent_, maxIterations, swapParamsArray
         );
     }
 

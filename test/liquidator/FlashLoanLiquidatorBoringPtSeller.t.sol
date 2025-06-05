@@ -52,9 +52,7 @@ contract FlashLoanLiquidatorBoringPtSellerTest is BaseTest, Addresses {
             tokenOutIsYieldToken: params.tokenOutIsYieldToken
         });
 
-        address tokenOut = flashLoanLiquidator.getPtSellerTokenOut(
-            address(params.underlyingCollateralToken), params.pendleMarket, params.tokenOutIsYieldToken
-        );
+        address tokenOut = flashLoanLiquidator.getPtSellerTokenOut(params.pendleMarket, params.tokenOutIsYieldToken);
 
         UniswapV3Params memory uniswapV3Params = UniswapV3Params({
             tokenIn: address(tokenOut),

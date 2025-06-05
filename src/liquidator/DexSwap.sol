@@ -13,6 +13,12 @@ import {PeripheryErrors} from "src/libraries/PeripheryErrors.sol";
 import {BoringPtSeller} from "@pendle/contracts/oracles/PtYtLpOracle/samples/BoringPtSeller.sol";
 import {IPMarket} from "@pendle/contracts/interfaces/IPMarket.sol";
 import {IStandardizedYield} from "@pendle/contracts/interfaces/IStandardizedYield.sol";
+import {
+    createDefaultApproxParams,
+    createTokenInputSimple,
+    createEmptyLimitOrderData
+} from "@pendle/contracts/interfaces/IPAllActionTypeV3.sol";
+import {IPAllActionV3} from "@pendle/contracts/interfaces/IPAllActionV3.sol";
 
 enum SwapMethod {
     OneInch,
@@ -68,6 +74,9 @@ struct UnoswapParams {
 
 struct BuyPtParams {
     address market;
+    address tokenIn;
+    address router;
+    uint256 minPtOut;
 }
 
 struct GenericRouteParams {
@@ -135,17 +144,23 @@ abstract contract DexSwap is BoringPtSeller {
 
     function _executePtSellerStep(bytes memory data) internal {
         BoringPtSellerParams memory params = abi.decode(data, (BoringPtSellerParams));
-
-        (IStandardizedYield SY,,) = IPMarket(params.market).readTokens();
-        address tokenOut = getPtSellerTokenOut(params.pt, params.market, params.tokenOutIsYieldToken);
-
-        // Sell PT for tokenOut
+        address tokenOut = getPtSellerTokenOut(params.market, params.tokenOutIsYieldToken);
         _sellPtForToken(params.market, IERC20(params.pt).balanceOf(address(this)), tokenOut);
     }
 
     function _executeBuyPtStep(bytes memory data) internal {
         BuyPtParams memory params = abi.decode(data, (BuyPtParams));
-        // TODO
+
+        IERC20(params.tokenIn).forceApprove(params.router, type(uint256).max);
+
+        IPAllActionV3(params.router).swapExactTokenForPt(
+            address(this),
+            address(params.market),
+            params.minPtOut,
+            createDefaultApproxParams(),
+            createTokenInputSimple(params.tokenIn, IERC20(params.tokenIn).balanceOf(address(this))),
+            createEmptyLimitOrderData()
+        );
     }
 
     function _swap1Inch(bytes memory data) internal {
@@ -205,7 +220,7 @@ abstract contract DexSwap is BoringPtSeller {
         }
     }
 
-    function getPtSellerTokenOut(address pt, address market, bool tokenOutIsYieldToken) public view returns (address) {
+    function getPtSellerTokenOut(address market, bool tokenOutIsYieldToken) public view returns (address) {
         (IStandardizedYield SY,,) = IPMarket(market).readTokens();
         address tokenOut;
         if (tokenOutIsYieldToken) {

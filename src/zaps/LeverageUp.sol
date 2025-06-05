@@ -4,7 +4,6 @@ pragma solidity 0.8.23;
 import {ISize} from "@size/src/market/interfaces/ISize.sol";
 import {DepositParams} from "@size/src/market/interfaces/ISize.sol";
 import {WithdrawParams} from "@size/src/market/interfaces/ISize.sol";
-import {DepositOnBehalfOfParams, WithdrawOnBehalfOfParams} from "@size/src/market/interfaces/v1.7/ISizeV1_7.sol";
 import {
     SellCreditMarketParams,
     SellCreditMarketOnBehalfOfParams
@@ -29,7 +28,7 @@ import {Action, ActionsBitmap, Authorization} from "@size/src/factory/libraries/
 contract LeverageUp is DexSwap, IRequiresAuthorization {
     using SafeERC20 for IERC20Metadata;
 
-    error InvalidLeveragePercent(uint256 leveragePercent, uint256 minLeveragePercent, uint256 maxLeveragePercent);
+    error InvalidPercent(uint256 percent, uint256 minPercent, uint256 maxPercent);
 
     struct CurrentLeverage {
         uint256 totalCollateral;
@@ -46,11 +45,15 @@ contract LeverageUp is DexSwap, IRequiresAuthorization {
         SellCreditMarketParams[] memory sellCreditMarketParamsArray,
         uint256 collateralAmount,
         uint256 leveragePercent,
+        uint256 borrowPercent,
         uint256 maxIterations,
         SwapParams[] memory swapParamsArray
     ) external {
         if (leveragePercent < PERCENT || leveragePercent > maxLeveragePercent(size)) {
-            revert InvalidLeveragePercent(leveragePercent, PERCENT, maxLeveragePercent(size));
+            revert InvalidPercent(leveragePercent, PERCENT, maxLeveragePercent(size));
+        }
+        if (borrowPercent > PERCENT) {
+            revert InvalidPercent(borrowPercent, 0, PERCENT);
         }
 
         DataView memory dataView = size.data();
@@ -65,25 +68,29 @@ contract LeverageUp is DexSwap, IRequiresAuthorization {
         );
 
         for (uint256 i = 0; i < maxIterations; i++) {
-            CurrentLeverage memory currentLeverage = _currentLeverage(dataView, msg.sender);
+            CurrentLeverage memory currentLeverage = _currentLeverage(size, dataView, msg.sender);
 
             if (currentLeverage.currentLeveragePercent >= leveragePercent) break;
 
             _sellCreditMarket(
-                size, riskConfig, dataView, currentLeverage, sellCreditMarketParamsArray, price, leveragePercent
+                size,
+                riskConfig,
+                dataView,
+                currentLeverage,
+                sellCreditMarketParamsArray,
+                price,
+                leveragePercent,
+                borrowPercent
             );
 
             uint256 borrowATokenAmount = dataView.borrowAToken.balanceOf(address(this));
             if (borrowATokenAmount == 0) break;
 
-            size.withdrawOnBehalfOf(
-                WithdrawOnBehalfOfParams({
-                    params: WithdrawParams({
-                        token: address(dataView.underlyingBorrowToken),
-                        amount: borrowATokenAmount,
-                        to: address(this)
-                    }),
-                    onBehalfOf: msg.sender
+            size.withdraw(
+                WithdrawParams({
+                    token: address(dataView.underlyingBorrowToken),
+                    amount: borrowATokenAmount,
+                    to: address(this)
                 })
             );
 
@@ -108,18 +115,17 @@ contract LeverageUp is DexSwap, IRequiresAuthorization {
     }
 
     function currentLeveragePercent(ISize size, address account) public view returns (uint256) {
-        CurrentLeverage memory currentLeverage = _currentLeverage(size.data(), account);
+        CurrentLeverage memory currentLeverage = _currentLeverage(size, size.data(), account);
         return currentLeverage.currentLeveragePercent;
     }
 
     function getActionsBitmap() external pure override returns (ActionsBitmap) {
-        Action[] memory actions = new Action[](2);
+        Action[] memory actions = new Action[](1);
         actions[0] = Action.SELL_CREDIT_MARKET;
-        actions[1] = Action.WITHDRAW;
         return Authorization.getActionsBitmap(actions);
     }
 
-    function _currentLeverage(DataView memory dataView, address account)
+    function _currentLeverage(ISize size, DataView memory dataView, address account)
         private
         view
         returns (CurrentLeverage memory currentLeverage)
@@ -127,7 +133,9 @@ contract LeverageUp is DexSwap, IRequiresAuthorization {
         currentLeverage.totalCollateral = dataView.collateralToken.balanceOf(account);
         currentLeverage.totalDebt = dataView.debtToken.balanceOf(account);
         currentLeverage.currentLeveragePercent = Math.mulDivDown(
-            currentLeverage.totalCollateral, PERCENT, currentLeverage.totalCollateral - currentLeverage.totalDebt
+            currentLeverage.totalCollateral,
+            PERCENT,
+            currentLeverage.totalCollateral - size.debtTokenAmountToCollateralTokenAmount(currentLeverage.totalDebt)
         );
     }
 
@@ -138,7 +146,8 @@ contract LeverageUp is DexSwap, IRequiresAuthorization {
         CurrentLeverage memory currentLeverage,
         SellCreditMarketParams[] memory sellCreditMarketParamsArray,
         uint256 price,
-        uint256 leveragePercent
+        uint256 leveragePercent,
+        uint256 borrowPercent
     ) private {
         uint256 maxBorrowAmount = Math.mulDivDown(
             currentLeverage.totalCollateral * 10 ** dataView.debtToken.decimals(),
@@ -148,7 +157,7 @@ contract LeverageUp is DexSwap, IRequiresAuthorization {
         for (uint256 j = 0; j < sellCreditMarketParamsArray.length; j++) {
             uint256 lenderCashBalance = dataView.borrowAToken.balanceOf(sellCreditMarketParamsArray[j].lender);
             sellCreditMarketParamsArray[j].amount =
-                Math.mulDivDown(Math.min(lenderCashBalance, maxBorrowAmount), 0.95e18, PERCENT); // quick fix to account for swap fees
+                Math.mulDivDown(Math.min(lenderCashBalance, maxBorrowAmount), borrowPercent, PERCENT); // quick fix to account for swap fees
 
             if (
                 size.getSellCreditMarketSwapData(sellCreditMarketParamsArray[j]).creditAmountIn
@@ -167,7 +176,7 @@ contract LeverageUp is DexSwap, IRequiresAuthorization {
 
             maxBorrowAmount -= sellCreditMarketParamsArray[j].amount;
 
-            currentLeverage = _currentLeverage(dataView, msg.sender);
+            currentLeverage = _currentLeverage(size, dataView, msg.sender);
             if (currentLeverage.currentLeveragePercent >= leveragePercent) break;
         }
     }

@@ -21,6 +21,8 @@ contract Addresses {
     address public constant PT_wstUSR_25SEP2025_MARKET = 0x09fA04Aac9c6d1c6131352EE950CD67ecC6d4fB9;
     address public constant PT_sUSDE_31JUL2025_MARKET = 0x4339Ffe2B7592Dc783ed13cCE310531aB366dEac;
     address public constant PT_sUSDE_29MAY2025_MARKET = 0xB162B764044697cf03617C2EFbcB1f42e31E4766;
+    // https://docs.pendle.finance/Developers/Contracts/PendleRouter
+    address public constant PENDLE_ROUTER = 0x888888888889758F76e7103c6CbF23ABbF58F946;
 
     constructor() {
         // https://aave.com/docs/resources/addresses

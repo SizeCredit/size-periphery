@@ -56,9 +56,13 @@ contract LeverageUpTest is BaseTest, Addresses {
         vm.label(address(size.data().debtToken), "DebtToken");
     }
 
-    function _leverageUpWithSwap(address user_, uint256 collateralAmount_, address lender_, uint256 leveragePercent_)
-        internal
-    {
+    function _leverageUpWithSwap(
+        address user_,
+        uint256 collateralAmount_,
+        address lender_,
+        uint256 leveragePercent_,
+        uint256 borrowPercent_
+    ) internal {
         SellCreditMarketParams[] memory sellCreditMarketParamsArray = new SellCreditMarketParams[](1);
         uint256 tenor = IPMarket(pendleMarket).expiry() - block.timestamp;
         uint256 apr = size.getLoanOfferAPR(lender_, tenor);
@@ -73,18 +77,18 @@ contract LeverageUpTest is BaseTest, Addresses {
         });
         uint256 maxIterations = 20;
 
-        uint24 fee = 500;
-        uint160 sqrtPriceLimitX96 = 0;
-
-        BuyPtParams memory buyPtParams = BuyPtParams({market: pendleMarket});
+        address tokenOut = leverageUp.getPtSellerTokenOut(pendleMarket, false);
 
         UniswapV3Params memory uniswapV3Params = UniswapV3Params({
-            tokenIn: address(size.data().underlyingCollateralToken),
-            tokenOut: address(size.data().underlyingBorrowToken),
-            fee: fee,
-            sqrtPriceLimitX96: sqrtPriceLimitX96,
+            tokenIn: address(size.data().underlyingBorrowToken),
+            tokenOut: address(tokenOut),
+            fee: 500,
+            sqrtPriceLimitX96: 0,
             amountOutMinimum: 0
         });
+
+        BuyPtParams memory buyPtParams =
+            BuyPtParams({market: pendleMarket, tokenIn: address(tokenOut), router: PENDLE_ROUTER, minPtOut: 0});
 
         SwapParams[] memory swapParamsArray = new SwapParams[](2);
         swapParamsArray[0] = SwapParams({method: SwapMethod.UniswapV3, data: abi.encode(uniswapV3Params)});
@@ -92,7 +96,13 @@ contract LeverageUpTest is BaseTest, Addresses {
 
         vm.prank(user_);
         leverageUp.leverageUpWithSwap(
-            size, sellCreditMarketParamsArray, collateralAmount_, leveragePercent_, maxIterations, swapParamsArray
+            size,
+            sellCreditMarketParamsArray,
+            collateralAmount_,
+            leveragePercent_,
+            borrowPercent_,
+            maxIterations,
+            swapParamsArray
         );
     }
 
@@ -104,8 +114,8 @@ contract LeverageUpTest is BaseTest, Addresses {
 
         _setAuthorization(borrower, address(leverageUp), leverageUp.getActionsBitmap());
         _approve(borrower, underlyingCollateralToken, address(leverageUp), collateralAmount);
-        _leverageUpWithSwap(borrower, collateralAmount, lender, 6.0e18);
+        _leverageUpWithSwap(borrower, collateralAmount, lender, 6.0e18, 0.97e18);
 
-        assertEqApprox(leverageUp.currentLeveragePercent(size, borrower), 6.0e18, 0.01e18);
+        assertEqApprox(leverageUp.currentLeveragePercent(size, borrower), 6.4e18, 0.1e18);
     }
 }

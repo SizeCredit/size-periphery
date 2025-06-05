@@ -146,7 +146,7 @@ contract AutoRepay is Initializable, Ownable2StepUpgradeable, UpgradeableFlashLo
                 params: DepositParams({
                     token: address(data.underlyingBorrowToken),
                     amount: amount,
-                    to: params.onBehalfOf
+                    to: address(this)
                 }),
                 onBehalfOf: address(this)
             })

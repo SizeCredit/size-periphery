@@ -139,14 +139,16 @@ contract AutoRepay is Initializable, Ownable2StepUpgradeable, UpgradeableFlashLo
 
     function _handleDeposit(AutoRepayStorage.OperationParams memory params, uint256 amount) private {
         DataView memory data = params.market.data();
+        IERC20Metadata(data.underlyingBorrowToken).forceApprove(address(params.market), amount);
+        
         params.market.depositOnBehalfOf(
             DepositOnBehalfOfParams({
                 params: DepositParams({
                     token: address(data.underlyingBorrowToken),
                     amount: amount,
-                    to: address(this)
+                    to: params.onBehalfOf
                 }),
-                onBehalfOf: params.onBehalfOf
+                onBehalfOf: address(this)
             })
         );
     }

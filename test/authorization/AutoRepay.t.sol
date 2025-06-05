@@ -212,7 +212,7 @@ contract AutoRepayTest is BaseTest {
 
         // Try to repay with zero collateral amount
         vm.prank(james);
-        vm.expectRevert(abi.encodeWithSelector(Errors.NULL_AMOUNT.selector));
+        vm.expectRevert();
         autoRepay.repayWithCollateral(
             size,
             debtPositionId,

@@ -58,7 +58,8 @@ contract LeverageUpTest is BaseTest, Addresses {
 
     function _leverageUpWithSwap(
         address user_,
-        uint256 collateralAmount_,
+        address tokenIn_,
+        uint256 amount_,
         address lender_,
         uint256 leveragePercent_,
         uint256 borrowPercent_
@@ -75,7 +76,6 @@ contract LeverageUpTest is BaseTest, Addresses {
             maxAPR: apr,
             exactAmountIn: false
         });
-        uint256 maxIterations = 20;
 
         address tokenOut = leverageUp.getPtSellerTokenOut(pendleMarket, false);
 
@@ -96,17 +96,11 @@ contract LeverageUpTest is BaseTest, Addresses {
 
         vm.prank(user_);
         leverageUp.leverageUpWithSwap(
-            size,
-            sellCreditMarketParamsArray,
-            collateralAmount_,
-            leveragePercent_,
-            borrowPercent_,
-            maxIterations,
-            swapParamsArray
+            size, sellCreditMarketParamsArray, tokenIn_, amount_, leveragePercent_, borrowPercent_, swapParamsArray
         );
     }
 
-    function testFork_LeverageUp_leverageUp_6x() public {
+    function testFork_LeverageUp_leverageUp_6x_starting_with_collateral() public {
         uint256 collateralAmount = 10_000e18;
         address underlyingCollateralToken = address(size.data().underlyingCollateralToken);
 
@@ -114,9 +108,22 @@ contract LeverageUpTest is BaseTest, Addresses {
 
         _setAuthorization(borrower, address(leverageUp), leverageUp.getActionsBitmap());
         _approve(borrower, underlyingCollateralToken, address(leverageUp), collateralAmount);
-        _leverageUpWithSwap(borrower, collateralAmount, lender, 6.0e18, 0.97e18);
+        _leverageUpWithSwap(borrower, underlyingCollateralToken, collateralAmount, lender, 6.0e18, 0.97e18);
 
         assertEqApprox(leverageUp.currentLeveragePercent(size, borrower), 6.4e18, 0.1e18);
+    }
+
+    function testFork_LeverageUp_leverageUp_6x_starting_with_cash() public {
+        uint256 cash = 10_000e6;
+        address underlyingBorrowToken = address(size.data().underlyingBorrowToken);
+
+        _mint(underlyingBorrowToken, borrower, cash);
+
+        _setAuthorization(borrower, address(leverageUp), leverageUp.getActionsBitmap());
+        _approve(borrower, underlyingBorrowToken, address(leverageUp), cash);
+        _leverageUpWithSwap(borrower, underlyingBorrowToken, cash, lender, 6.0e18, 0.97e18);
+
+        assertEqApprox(leverageUp.currentLeveragePercent(size, borrower), 6.8e18, 0.1e18);
     }
 
     function testFork_LeverageUp_leverageUp_max() public {
@@ -131,7 +138,7 @@ contract LeverageUpTest is BaseTest, Addresses {
 
         assertEqApprox(maxLeveragePercent, 9.3e18, 0.1e18);
 
-        _leverageUpWithSwap(borrower, collateralAmount, lender, maxLeveragePercent, 0.973e18);
+        _leverageUpWithSwap(borrower, underlyingCollateralToken, collateralAmount, lender, maxLeveragePercent, 0.973e18);
 
         assertEqApprox(leverageUp.currentLeveragePercent(size, borrower), 7.9e18, 0.1e18);
     }

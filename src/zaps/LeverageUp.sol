@@ -29,6 +29,12 @@ contract LeverageUp is DexSwap, IRequiresAuthorization {
     using SafeERC20 for IERC20Metadata;
 
     error InvalidPercent(uint256 percent, uint256 minPercent, uint256 maxPercent);
+    error InvalidToken(address token);
+
+    event Loop(uint256 i);
+    event LogCurrentLeverage(uint256 currentLeveragePercent, uint256 leveragePercent);
+
+    uint256 public constant MAX_ITERATIONS = 20;
 
     struct CurrentLeverage {
         uint256 totalCollateral;
@@ -43,10 +49,10 @@ contract LeverageUp is DexSwap, IRequiresAuthorization {
     function leverageUpWithSwap(
         ISize size,
         SellCreditMarketParams[] memory sellCreditMarketParamsArray,
-        uint256 collateralAmount,
+        address tokenIn,
+        uint256 amount,
         uint256 leveragePercent,
         uint256 borrowPercent,
-        uint256 maxIterations,
         SwapParams[] memory swapParamsArray
     ) external {
         if (leveragePercent < PERCENT || leveragePercent > maxLeveragePercent(size)) {
@@ -57,18 +63,36 @@ contract LeverageUp is DexSwap, IRequiresAuthorization {
         }
 
         DataView memory dataView = size.data();
+
+        if (
+            tokenIn != address(dataView.underlyingCollateralToken) && tokenIn != address(dataView.underlyingBorrowToken)
+        ) {
+            revert InvalidToken(tokenIn);
+        }
+
         InitializeRiskConfigParams memory riskConfig = size.riskConfig();
         uint256 price = IPriceFeed(size.oracle().priceFeed).getPrice();
 
         dataView.underlyingCollateralToken.forceApprove(address(size), type(uint256).max);
 
-        dataView.underlyingCollateralToken.safeTransferFrom(msg.sender, address(this), collateralAmount);
+        IERC20Metadata(tokenIn).safeTransferFrom(msg.sender, address(this), amount);
+        if (tokenIn != address(dataView.underlyingCollateralToken)) {
+            _swap(swapParamsArray);
+        }
+
         size.deposit(
-            DepositParams({token: address(dataView.underlyingCollateralToken), amount: collateralAmount, to: msg.sender})
+            DepositParams({
+                token: address(dataView.underlyingCollateralToken),
+                amount: dataView.underlyingCollateralToken.balanceOf(address(this)),
+                to: msg.sender
+            })
         );
 
-        for (uint256 i = 0; i < maxIterations; i++) {
+        for (uint256 i = 0; i < MAX_ITERATIONS; i++) {
+            emit Loop(i);
             CurrentLeverage memory currentLeverage = _currentLeverage(size, dataView, msg.sender);
+
+            emit LogCurrentLeverage(currentLeverage.currentLeveragePercent, leveragePercent);
 
             if (currentLeverage.currentLeveragePercent >= leveragePercent) break;
 
@@ -96,14 +120,10 @@ contract LeverageUp is DexSwap, IRequiresAuthorization {
 
             _swap(swapParamsArray);
 
-            collateralAmount = dataView.underlyingCollateralToken.balanceOf(address(this));
+            amount = dataView.underlyingCollateralToken.balanceOf(address(this));
 
             size.deposit(
-                DepositParams({
-                    token: address(dataView.underlyingCollateralToken),
-                    amount: collateralAmount,
-                    to: msg.sender
-                })
+                DepositParams({token: address(dataView.underlyingCollateralToken), amount: amount, to: msg.sender})
             );
         }
         dataView.underlyingCollateralToken.forceApprove(address(size), 0);

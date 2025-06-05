@@ -18,15 +18,7 @@ import {IPoolAddressesProvider} from "@aave/interfaces/IPoolAddressesProvider.so
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-contract AutoRepay is Initializable, Ownable2StepUpgradeable, UpgradeableFlashLoanReceiver, DexSwap {
-    using SafeERC20 for IERC20Metadata;
-
-    // State variables for configurable parameters
-    uint256 public earlyRepaymentBuffer;
-
-    // Events for parameter updates
-    event EarlyRepaymentBufferUpdated(uint256 oldValue, uint256 newValue);
-
+library AutoRepayStorage {
     struct OperationParams {
         ISize market;
         uint256 debtPositionId;
@@ -34,6 +26,17 @@ contract AutoRepay is Initializable, Ownable2StepUpgradeable, UpgradeableFlashLo
         uint256 collateralAmount;
         SwapParams[] swapParams;
     }
+}
+
+contract AutoRepay is Initializable, Ownable2StepUpgradeable, UpgradeableFlashLoanReceiver, DexSwap {
+    using SafeERC20 for IERC20Metadata;
+    using AutoRepayStorage for AutoRepayStorage.OperationParams;
+
+    // State variables for configurable parameters
+    uint256 public earlyRepaymentBuffer;
+
+    // Events for parameter updates
+    event EarlyRepaymentBufferUpdated(uint256 oldValue, uint256 newValue);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor(
@@ -85,12 +88,11 @@ contract AutoRepay is Initializable, Ownable2StepUpgradeable, UpgradeableFlashLo
             revert PeripheryErrors.AUTO_REPAY_TOO_EARLY(debtPosition.dueDate, block.timestamp);
         }
 
-        // Verify collateral amount is not zero
         if (collateralAmount == 0) {
             revert Errors.NULL_AMOUNT();
         }
 
-        OperationParams memory operationParams = OperationParams({
+        AutoRepayStorage.OperationParams memory operationParams = AutoRepayStorage.OperationParams({
             market: market,
             debtPositionId: debtPositionId,
             onBehalfOf: onBehalfOf,
@@ -100,7 +102,6 @@ contract AutoRepay is Initializable, Ownable2StepUpgradeable, UpgradeableFlashLo
 
         bytes memory params = abi.encode(operationParams);
 
-        // Request flash loan for the debt amount
         address[] memory assets = new address[](1);
         assets[0] = address(data.underlyingBorrowToken);
         uint256[] memory amounts = new uint256[](1);
@@ -125,45 +126,56 @@ contract AutoRepay is Initializable, Ownable2StepUpgradeable, UpgradeableFlashLo
             revert PeripheryErrors.NOT_INITIATOR();
         }
 
-        OperationParams memory operationParams = abi.decode(params, (OperationParams));
-        ISize market = operationParams.market;
-        DataView memory data = market.data();
+        AutoRepayStorage.OperationParams memory operationParams = abi.decode(params, (AutoRepayStorage.OperationParams));
+        
+        _handleDeposit(operationParams, amounts[0]);
+        _handleRepay(operationParams);
+        _handleWithdraw(operationParams);
+        _handleSwap(operationParams);
+        _handleFlashLoanRepayment(assets[0], amounts[0], premiums[0]);
 
-        // 1. Deposit flash loaned tokens
-        market.depositOnBehalfOf(
+        return true;
+    }
+
+    function _handleDeposit(AutoRepayStorage.OperationParams memory params, uint256 amount) private {
+        DataView memory data = params.market.data();
+        params.market.depositOnBehalfOf(
             DepositOnBehalfOfParams({
                 params: DepositParams({
                     token: address(data.underlyingBorrowToken),
-                    amount: amounts[0],
+                    amount: amount,
                     to: address(this)
                 }),
-                onBehalfOf: operationParams.onBehalfOf
+                onBehalfOf: params.onBehalfOf
             })
         );
+    }
 
-        // 2. Repay the loan using deposited tokens
-        market.repay(RepayParams({
-            debtPositionId: operationParams.debtPositionId,
-            borrower: operationParams.onBehalfOf
+    function _handleRepay(AutoRepayStorage.OperationParams memory params) private {
+        params.market.repay(RepayParams({
+            debtPositionId: params.debtPositionId,
+            borrower: params.onBehalfOf
         }));
+    }
 
-        // 3. Withdraw collateral tokens
-        market.withdrawOnBehalfOf(WithdrawOnBehalfOfParams({
+    function _handleWithdraw(AutoRepayStorage.OperationParams memory params) private {
+        DataView memory data = params.market.data();
+        params.market.withdrawOnBehalfOf(WithdrawOnBehalfOfParams({
             params: WithdrawParams({
                 token: address(data.underlyingCollateralToken),
-                amount: operationParams.collateralAmount,
+                amount: params.collateralAmount,
                 to: address(this)
             }),
-            onBehalfOf: operationParams.onBehalfOf
+            onBehalfOf: params.onBehalfOf
         }));
+    }
 
-        // 4. Execute swap(s) to convert collateral to debt tokens
-        _swap(operationParams.swapParams);
+    function _handleSwap(AutoRepayStorage.OperationParams memory params) private {
+        _swap(params.swapParams);
+    }
 
-        // 5. Approve and repay flash loan
-        uint256 amountOwed = amounts[0] + premiums[0];
-        IERC20Metadata(assets[0]).forceApprove(address(POOL), amountOwed);
-
-        return true;
+    function _handleFlashLoanRepayment(address asset, uint256 amount, uint256 premium) private {
+        uint256 amountOwed = amount + premium;
+        IERC20Metadata(asset).forceApprove(address(POOL), amountOwed);
     }
 }

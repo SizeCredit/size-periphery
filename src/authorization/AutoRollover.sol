@@ -10,15 +10,15 @@ import {
     SellCreditMarketParams,
     SellCreditMarketOnBehalfOfParams
 } from "@size/src/market/libraries/actions/SellCreditMarket.sol";
-import {FlashLoanReceiverBase} from "@aave/flashloan/base/FlashLoanReceiverBase.sol";
 import {IPoolAddressesProvider} from "@aave/interfaces/IPoolAddressesProvider.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {Errors} from "@size/src/market/libraries/Errors.sol";
+import {UpgradeableFlashLoanReceiver} from "./UpgradeableFlashLoanReceiver.sol";
 
-contract AutoRollover is Initializable, Ownable2StepUpgradeable, FlashLoanReceiverBase {
+contract AutoRollover is Initializable, Ownable2StepUpgradeable, UpgradeableFlashLoanReceiver {
     using SafeERC20 for IERC20Metadata;
 
     // State variables for configurable parameters
@@ -32,7 +32,7 @@ contract AutoRollover is Initializable, Ownable2StepUpgradeable, FlashLoanReceiv
     event MaxTenorUpdated(uint256 oldValue, uint256 newValue);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() FlashLoanReceiverBase(IPoolAddressesProvider(address(0))) {
+    constructor() {
         _disableInitializers();
     }
 
@@ -43,9 +43,9 @@ contract AutoRollover is Initializable, Ownable2StepUpgradeable, FlashLoanReceiv
         uint256 _minTenor,
         uint256 _maxTenor
     ) public initializer {
-        __Ownable2Step_init(_owner);
-        // Initialize FlashLoanReceiverBase by setting the ADDRESSES_PROVIDER
-        ADDRESSES_PROVIDER = _addressProvider;
+        __Ownable2Step_init();
+        __FlashLoanReceiver_init(_addressProvider);
+        _transferOwnership(_owner);
 
         if (_minTenor >= _maxTenor) {
             revert Errors.INVALID_TENOR_RANGE(_minTenor, _maxTenor);

@@ -9,6 +9,7 @@ This repository contains supporting contracts that interact with the [core Size 
 - Liquidator contracts
 - Market Maker contracts
 - Authorization contracts
+- Zap contracts
 
 ### Coverage
 

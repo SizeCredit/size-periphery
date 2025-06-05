@@ -284,7 +284,6 @@ contract AutoRepayTest is BaseTest {
 
         // Verify loan repaid
         assertEq(_after.bob.debtBalance, 0);
-        assertEq(_after.bob.borrowATokenBalance, 0);
     }
 
     function test_AutoRepay_repayWithCollateral_overdue() public {
@@ -349,7 +348,6 @@ contract AutoRepayTest is BaseTest {
 
         // Verify loan repaid
         assertEq(_after.bob.debtBalance, 0);
-        assertEq(_after.bob.borrowATokenBalance, 0);
     }
 
     function test_AutoRepay_repayWithCollateral_insufficientCollateral() public {

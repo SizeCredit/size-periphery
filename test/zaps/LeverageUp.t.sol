@@ -106,7 +106,7 @@ contract LeverageUpTest is BaseTest, Addresses {
         );
     }
 
-    function testFork_LeverageUp_leverageUp() public {
+    function testFork_LeverageUp_leverageUp_6x() public {
         uint256 collateralAmount = 10_000e18;
         address underlyingCollateralToken = address(size.data().underlyingCollateralToken);
 
@@ -117,5 +117,22 @@ contract LeverageUpTest is BaseTest, Addresses {
         _leverageUpWithSwap(borrower, collateralAmount, lender, 6.0e18, 0.97e18);
 
         assertEqApprox(leverageUp.currentLeveragePercent(size, borrower), 6.4e18, 0.1e18);
+    }
+
+    function testFork_LeverageUp_leverageUp_max() public {
+        uint256 collateralAmount = 10_000e18;
+        address underlyingCollateralToken = address(size.data().underlyingCollateralToken);
+
+        _mint(underlyingCollateralToken, borrower, collateralAmount);
+
+        _setAuthorization(borrower, address(leverageUp), leverageUp.getActionsBitmap());
+        _approve(borrower, underlyingCollateralToken, address(leverageUp), collateralAmount);
+        uint256 maxLeveragePercent = leverageUp.maxLeveragePercent(size);
+
+        assertEqApprox(maxLeveragePercent, 9.3e18, 0.1e18);
+
+        _leverageUpWithSwap(borrower, collateralAmount, lender, maxLeveragePercent, 0.973e18);
+
+        assertEqApprox(leverageUp.currentLeveragePercent(size, borrower), 7.9e18, 0.1e18);
     }
 }

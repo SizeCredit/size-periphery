@@ -111,7 +111,7 @@ contract LeverageUp is DexSwap, IRequiresAuthorization {
 
     function maxLeveragePercent(ISize size) public view returns (uint256) {
         InitializeRiskConfigParams memory riskConfig = size.riskConfig();
-        return Math.mulDivDown(PERCENT, riskConfig.crLiquidation, riskConfig.crLiquidation - PERCENT);
+        return Math.mulDivDown(PERCENT, riskConfig.crOpening, riskConfig.crOpening - PERCENT);
     }
 
     function currentLeveragePercent(ISize size, address account) public view returns (uint256) {

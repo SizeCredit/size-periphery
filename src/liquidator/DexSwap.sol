@@ -151,14 +151,16 @@ abstract contract DexSwap is BoringPtSeller {
     function _executeBuyPtStep(bytes memory data) internal {
         BuyPtParams memory params = abi.decode(data, (BuyPtParams));
 
-        IERC20(params.tokenIn).forceApprove(params.router, type(uint256).max);
+        uint256 amountIn = IERC20(params.tokenIn).balanceOf(address(this));
+
+        IERC20(params.tokenIn).forceApprove(params.router, amountIn);
 
         IPAllActionV3(params.router).swapExactTokenForPt(
             address(this),
             address(params.market),
             params.minPtOut,
             createDefaultApproxParams(),
-            createTokenInputSimple(params.tokenIn, IERC20(params.tokenIn).balanceOf(address(this))),
+            createTokenInputSimple(params.tokenIn, amountIn),
             createEmptyLimitOrderData()
         );
     }

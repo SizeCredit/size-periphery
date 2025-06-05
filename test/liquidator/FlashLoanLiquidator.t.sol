@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.23;
 
-import {SwapMethod, BoringPtSellerParams} from "src/liquidator/DexSwap.sol";
-import {FlashLoanLiquidator, ReplacementParams, SwapParams} from "src/liquidator/FlashLoanLiquidator.sol";
+import {SwapMethod, BoringPtSellerParams, SwapParams, OneInchParams} from "src/liquidator/DexSwap.sol";
+import {FlashLoanLiquidator, ReplacementParams} from "src/liquidator/FlashLoanLiquidator.sol";
 import {Mock1InchAggregator} from "test/mocks/Mock1InchAggregator.sol";
 import {MockAavePool} from "@test/mocks/MockAavePool.sol";
 
@@ -61,18 +61,12 @@ contract FlashLoanLiquidatorTest is BaseTest {
         Vars memory _before = _state();
         uint256 beforeLiquidatorUSDC = usdc.balanceOf(liquidator);
 
+        OneInchParams memory oneInchParams =
+            OneInchParams({fromToken: address(weth), toToken: address(usdc), minReturn: 0, data: ""});
+
         // Create SwapParams for a 1inch swap
-        SwapParams memory swapParams = SwapParams({
-            method: SwapMethod.OneInch,
-            data: abi.encode(""), // Data is not used in the mock
-            minimumReturnAmount: 0,
-            deadline: block.timestamp,
-            hasPtSellerStep: false,
-            ptSellerParams: BoringPtSellerParams({
-                market: address(0),
-                tokenOutIsYieldToken: false
-            })
-        });
+        SwapParams[] memory swapParamsArray = new SwapParams[](1);
+        swapParamsArray[0] = SwapParams({method: SwapMethod.OneInch, data: abi.encode(oneInchParams)});
 
         // Call the liquidatePositionWithFlashLoan function
         vm.prank(liquidator);
@@ -82,7 +76,8 @@ contract FlashLoanLiquidatorTest is BaseTest {
             address(usdc),
             debtPositionId,
             0, // minimumCollateralProfit
-            swapParams, // Pass the swapParams
+            block.timestamp + 1 days,
+            swapParamsArray, // Pass the swapParams
             0, // supplementAmount
             address(0)
         );
@@ -145,18 +140,12 @@ contract FlashLoanLiquidatorTest is BaseTest {
         _deposit(candy, usdc, 1000e6);
         _sellCreditLimit(candy, 400 days, [int256(0.03e18), 0.03e18], [uint256(1 days), 365 days]); // Valid borrow offer
 
+        OneInchParams memory oneInchParams =
+            OneInchParams({fromToken: address(weth), toToken: address(usdc), minReturn: 0, data: ""});
+
         // Create SwapParams for a 1inch swap
-        SwapParams memory swapParams = SwapParams({
-            method: SwapMethod.OneInch,
-            data: abi.encode(""), // Data is not used in the mock
-            minimumReturnAmount: 0,
-            deadline: block.timestamp,
-            hasPtSellerStep: false,
-            ptSellerParams: BoringPtSellerParams({
-                market: address(0),
-                tokenOutIsYieldToken: false
-            })
-        });
+        SwapParams[] memory swapParamsArray = new SwapParams[](1);
+        swapParamsArray[0] = SwapParams({method: SwapMethod.OneInch, data: abi.encode(oneInchParams)});
 
         // Create ReplacementParams
         ReplacementParams memory replacementParams =
@@ -170,7 +159,8 @@ contract FlashLoanLiquidatorTest is BaseTest {
             address(usdc),
             debtPositionId,
             0, // minimumCollateralProfit
-            swapParams,
+            block.timestamp + 1 days,
+            swapParamsArray,
             0, // supplementAmount
             address(0),
             replacementParams
@@ -230,18 +220,12 @@ contract FlashLoanLiquidatorTest is BaseTest {
         Vars memory _before = _state();
         uint256 beforeLiquidatorUSDC = usdc.balanceOf(liquidator);
 
+        OneInchParams memory oneInchParams =
+            OneInchParams({fromToken: address(weth), toToken: address(usdc), minReturn: 0, data: ""});
+
         // Create SwapParams for a 1inch swap
-        SwapParams memory swapParams = SwapParams({
-            method: SwapMethod.OneInch,
-            data: abi.encode(""), // Data is not used in the mock
-            minimumReturnAmount: 0,
-            deadline: block.timestamp,
-            hasPtSellerStep: false,
-            ptSellerParams: BoringPtSellerParams({
-                market: address(0),
-                tokenOutIsYieldToken: false
-            })
-        });
+        SwapParams[] memory swapParamsArray = new SwapParams[](1);
+        swapParamsArray[0] = SwapParams({method: SwapMethod.OneInch, data: abi.encode(oneInchParams)});
 
         // Call the liquidatePositionWithFlashLoan function
         vm.prank(liquidator);
@@ -251,7 +235,8 @@ contract FlashLoanLiquidatorTest is BaseTest {
             address(usdc),
             debtPositionId,
             0, // minimumCollateralProfit
-            swapParams, // Pass the swapParams
+            block.timestamp + 1 days,
+            swapParamsArray, // Pass the swapParams
             0, // supplementAmount
             liquidator
         );
@@ -310,18 +295,12 @@ contract FlashLoanLiquidatorTest is BaseTest {
 
         assertTrue(size.isDebtPositionLiquidatable(debtPositionId));
 
+        OneInchParams memory oneInchParams =
+            OneInchParams({fromToken: address(weth), toToken: address(usdc), minReturn: 0, data: ""});
+
         // Create SwapParams for a 1inch swap
-        SwapParams memory swapParams = SwapParams({
-            method: SwapMethod.OneInch,
-            data: abi.encode(""), // Data is not used in the mock
-            minimumReturnAmount: 0,
-            deadline: block.timestamp,
-            hasPtSellerStep: false,
-            ptSellerParams: BoringPtSellerParams({
-                market: address(0),
-                tokenOutIsYieldToken: false
-            })
-        });
+        SwapParams[] memory swapParamsArray = new SwapParams[](1);
+        swapParamsArray[0] = SwapParams({method: SwapMethod.OneInch, data: abi.encode(oneInchParams)});
 
         // Setup balance and allowance for unprofitable liquidation
         uint256 supplementAmount = 14e6;
@@ -339,7 +318,8 @@ contract FlashLoanLiquidatorTest is BaseTest {
             address(usdc),
             debtPositionId,
             0, // minimumCollateralProfit
-            swapParams, // Pass the swapParams
+            block.timestamp + 1 days,
+            swapParamsArray, // Pass the swapParams
             supplementAmount,
             liquidator
         );

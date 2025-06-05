@@ -20,6 +20,8 @@ import {DexSwap, SwapParams} from "src/liquidator/DexSwap.sol";
 
 import {PeripheryErrors} from "src/libraries/PeripheryErrors.sol";
 
+string constant DESCRIPTION = "FlashLoanLiquidator (DexSwap takes SwapParams[] as input)";
+
 struct ReplacementParams {
     uint256 minAPR;
     uint256 deadline;
@@ -33,7 +35,8 @@ struct OperationParams {
     uint256 debtPositionId;
     uint256 minimumCollateralProfit;
     address recipient;
-    SwapParams swapParams;
+    uint256 deadline;
+    SwapParams[] swapParamsArray;
     bool depositProfits;
     bool useReplacement;
     ReplacementParams replacementParams;
@@ -191,7 +194,8 @@ contract FlashLoanLiquidator is Ownable, FlashLoanReceiverBase, DexSwap {
         address borrowToken,
         uint256 debtPositionId,
         uint256 minimumCollateralProfit,
-        SwapParams memory swapParams,
+        uint256 deadline,
+        SwapParams[] memory swapParamsArray,
         uint256 supplementAmount,
         address recipient
     ) external {
@@ -209,11 +213,12 @@ contract FlashLoanLiquidator is Ownable, FlashLoanReceiverBase, DexSwap {
             borrowToken: borrowToken,
             debtPositionId: debtPositionId,
             minimumCollateralProfit: minimumCollateralProfit,
+            deadline: deadline,
             recipient: depositProfits ? recipient : msg.sender,
             depositProfits: depositProfits,
-            swapParams: swapParams,
+            swapParamsArray: swapParamsArray,
             useReplacement: false,
-            replacementParams: ReplacementParams({minAPR: 0, deadline: swapParams.deadline, replacementBorrower: address(0)}),
+            replacementParams: ReplacementParams({minAPR: 0, deadline: 0, replacementBorrower: address(0)}),
             debtAmount: debtAmount
         });
 
@@ -235,7 +240,8 @@ contract FlashLoanLiquidator is Ownable, FlashLoanReceiverBase, DexSwap {
         address borrowToken,
         uint256 debtPositionId,
         uint256 minimumCollateralProfit,
-        SwapParams memory swapParams,
+        uint256 deadline,
+        SwapParams[] memory swapParamsArray,
         uint256 supplementAmount,
         address recipient,
         ReplacementParams memory replacementParams
@@ -256,7 +262,8 @@ contract FlashLoanLiquidator is Ownable, FlashLoanReceiverBase, DexSwap {
             minimumCollateralProfit: minimumCollateralProfit,
             recipient: depositProfits ? recipient : msg.sender,
             depositProfits: depositProfits,
-            swapParams: swapParams,
+            deadline: deadline,
+            swapParamsArray: swapParamsArray,
             useReplacement: true,
             replacementParams: replacementParams,
             debtAmount: debtAmount
@@ -307,11 +314,11 @@ contract FlashLoanLiquidator is Ownable, FlashLoanReceiverBase, DexSwap {
                 opParams.debtAmount,
                 opParams.debtPositionId,
                 opParams.minimumCollateralProfit,
-                opParams.replacementParams.deadline
+                opParams.deadline
             );
         }
 
-        _swapCollateral(opParams.collateralToken, opParams.borrowToken, opParams.swapParams);
+        _swap(opParams.swapParamsArray);
 
         _settleFlashLoan(assets, amounts, premiums, opParams.recipient, opParams.depositProfits, opParams.sizeMarket);
 
@@ -320,5 +327,9 @@ contract FlashLoanLiquidator is Ownable, FlashLoanReceiverBase, DexSwap {
 
     function recover(address token, address to, uint256 amount) external onlyOwner {
         IERC20(token).safeTransfer(to, amount);
+    }
+
+    function description() external pure returns (string memory) {
+        return DESCRIPTION;
     }
 }

@@ -14,7 +14,7 @@ import {YieldCurveHelper} from "@test/helpers/libraries/YieldCurveHelper.sol";
 import {SizeMock} from "@test/mocks/SizeMock.sol";
 import {IPriceFeed} from "@size/src/oracle/IPriceFeed.sol";
 import {PriceFeedMock} from "@test/mocks/PriceFeedMock.sol";
-import {SwapParams, SwapMethod, BoringPtSellerParams} from "src/liquidator/DexSwap.sol";
+import {SwapMethod, BoringPtSellerParams, SwapParams, UniswapV3Params} from "src/liquidator/DexSwap.sol";
 import {UpdateConfigParams} from "@size/src/market/libraries/actions/UpdateConfig.sol";
 import {console} from "forge-std/console.sol";
 
@@ -24,10 +24,6 @@ contract FlashLoanLiquidatorBoringPtSellerTest is BaseTest, Addresses {
     address public borrower;
     address public lender;
     address public bot;
-
-    address public constant PT_wstUSR_25SEP2025_MARKET = 0x09fA04Aac9c6d1c6131352EE950CD67ecC6d4fB9;
-    address public constant PT_sUSDE_31JUL2025_MARKET = 0x4339Ffe2B7592Dc783ed13cCE310531aB366dEac;
-    address public constant PT_sUSDE_29MAY2025_MARKET = 0xB162B764044697cf03617C2EFbcB1f42e31E4766;
 
     struct FlashLoanLiquidateTestParams {
         uint256 debtPositionId;
@@ -42,11 +38,37 @@ contract FlashLoanLiquidatorBoringPtSellerTest is BaseTest, Addresses {
         vm.rollFork(22531110);
     }
 
-    function _flashLoanLiquidate(address _liquidator, FlashLoanLiquidateTestParams memory params) internal {
-        vm.startPrank(_liquidator);
-
+    function _getSwapParams(FlashLoanLiquidateTestParams memory params)
+        internal
+        view
+        returns (SwapParams[] memory swapParamsArray)
+    {
         uint24 fee = 500;
         uint160 sqrtPriceLimitX96 = 0;
+
+        BoringPtSellerParams memory ptSellerParams = BoringPtSellerParams({
+            pt: address(params.underlyingCollateralToken),
+            market: params.pendleMarket,
+            tokenOutIsYieldToken: params.tokenOutIsYieldToken
+        });
+
+        address tokenOut = flashLoanLiquidator.getPtSellerTokenOut(params.pendleMarket, params.tokenOutIsYieldToken);
+
+        UniswapV3Params memory uniswapV3Params = UniswapV3Params({
+            tokenIn: address(tokenOut),
+            tokenOut: address(params.underlyingBorrowToken),
+            fee: fee,
+            sqrtPriceLimitX96: sqrtPriceLimitX96,
+            amountOutMinimum: 0
+        });
+
+        swapParamsArray = new SwapParams[](2);
+        swapParamsArray[0] = SwapParams({method: SwapMethod.BoringPtSeller, data: abi.encode(ptSellerParams)});
+        swapParamsArray[1] = SwapParams({method: SwapMethod.UniswapV3, data: abi.encode(uniswapV3Params)});
+    }
+
+    function _flashLoanLiquidate(address _liquidator, FlashLoanLiquidateTestParams memory params) internal {
+        vm.startPrank(_liquidator);
 
         flashLoanLiquidator = new FlashLoanLiquidator(
             addresses[block.chainid][CONTRACT.ADDRESS_PROVIDER],
@@ -62,17 +84,8 @@ contract FlashLoanLiquidatorBoringPtSellerTest is BaseTest, Addresses {
             address(params.underlyingBorrowToken),
             params.debtPositionId,
             0,
-            SwapParams({
-                method: SwapMethod.UniswapV3,
-                data: abi.encode(fee, sqrtPriceLimitX96),
-                deadline: block.timestamp,
-                minimumReturnAmount: 0,
-                hasPtSellerStep: true,
-                ptSellerParams: BoringPtSellerParams({
-                    market: params.pendleMarket,
-                    tokenOutIsYieldToken: params.tokenOutIsYieldToken
-                })
-            }),
+            block.timestamp,
+            _getSwapParams(params),
             0,
             _liquidator
         );

@@ -18,7 +18,9 @@ import {IPoolAddressesProvider} from "@aave/interfaces/IPoolAddressesProvider.so
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-library AutoRepayStorage {
+contract AutoRepay is Initializable, Ownable2StepUpgradeable, UpgradeableFlashLoanReceiver, DexSwap {
+    using SafeERC20 for IERC20Metadata;
+
     struct OperationParams {
         ISize market;
         uint256 debtPositionId;
@@ -26,11 +28,6 @@ library AutoRepayStorage {
         uint256 collateralAmount;
         SwapParams[] swapParams;
     }
-}
-
-contract AutoRepay is Initializable, Ownable2StepUpgradeable, UpgradeableFlashLoanReceiver, DexSwap {
-    using SafeERC20 for IERC20Metadata;
-    using AutoRepayStorage for AutoRepayStorage.OperationParams;
 
     // State variables for configurable parameters
     uint256 public earlyRepaymentBuffer;
@@ -92,7 +89,7 @@ contract AutoRepay is Initializable, Ownable2StepUpgradeable, UpgradeableFlashLo
             revert Errors.NULL_AMOUNT();
         }
 
-        AutoRepayStorage.OperationParams memory operationParams = AutoRepayStorage.OperationParams({
+        OperationParams memory operationParams = OperationParams({
             market: market,
             debtPositionId: debtPositionId,
             onBehalfOf: onBehalfOf,
@@ -126,7 +123,7 @@ contract AutoRepay is Initializable, Ownable2StepUpgradeable, UpgradeableFlashLo
             revert PeripheryErrors.NOT_INITIATOR();
         }
 
-        AutoRepayStorage.OperationParams memory operationParams = abi.decode(params, (AutoRepayStorage.OperationParams));
+        OperationParams memory operationParams = abi.decode(params, (OperationParams));
         
         _handleDeposit(operationParams, amounts[0]);
         _handleRepay(operationParams);
@@ -138,7 +135,7 @@ contract AutoRepay is Initializable, Ownable2StepUpgradeable, UpgradeableFlashLo
         return true;
     }
 
-    function _handleDeposit(AutoRepayStorage.OperationParams memory params, uint256 amount) private {
+    function _handleDeposit(OperationParams memory params, uint256 amount) private {
         DataView memory data = params.market.data();
         IERC20Metadata(data.underlyingBorrowToken).forceApprove(address(params.market), amount);
         
@@ -154,14 +151,14 @@ contract AutoRepay is Initializable, Ownable2StepUpgradeable, UpgradeableFlashLo
         );
     }
 
-    function _handleRepay(AutoRepayStorage.OperationParams memory params) private {
+    function _handleRepay(OperationParams memory params) private {
         params.market.repay(RepayParams({
             debtPositionId: params.debtPositionId,
             borrower: params.onBehalfOf
         }));
     }
 
-    function _handleWithdraw(AutoRepayStorage.OperationParams memory params) private {
+    function _handleWithdraw(OperationParams memory params) private {
         DataView memory data = params.market.data();
         params.market.withdrawOnBehalfOf(WithdrawOnBehalfOfParams({
             params: WithdrawParams({
@@ -173,7 +170,7 @@ contract AutoRepay is Initializable, Ownable2StepUpgradeable, UpgradeableFlashLo
         }));
     }
 
-    function _handleSwap(AutoRepayStorage.OperationParams memory params) private {
+    function _handleSwap(OperationParams memory params) private {
         _swap(params.swapParams);
     }
 
@@ -182,7 +179,7 @@ contract AutoRepay is Initializable, Ownable2StepUpgradeable, UpgradeableFlashLo
         IERC20Metadata(asset).forceApprove(address(POOL), amountOwed);
     }
 
-    function _handleLeftoverDebtTokens(AutoRepayStorage.OperationParams memory params) private {
+    function _handleLeftoverDebtTokens(OperationParams memory params) private {
         DataView memory data = params.market.data();
         address debtToken = address(data.underlyingBorrowToken);
         uint256 leftoverAmount = IERC20Metadata(debtToken).balanceOf(address(this));

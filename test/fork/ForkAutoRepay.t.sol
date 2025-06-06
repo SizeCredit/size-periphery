@@ -12,6 +12,7 @@ import {console} from "forge-std/console.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 contract ForkAutoRepayTest is ForkTestVirtualsUSDC {
+    // https://basescan.org/tx/0x93cb5935b1d8bf8b11990671aad0008c31ceb1bca5511c900d84ed0944271e40
     address constant BORROWER = 0x0f0B08CE5Cf394C77CA9763366656C629FDba449;
     uint256 constant DEBT_POSITION_ID = 181;
     uint24 constant FEE = 3000;

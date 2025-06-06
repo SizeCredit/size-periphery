@@ -6,6 +6,8 @@ import {AutoRollover} from "src/authorization/AutoRollover.sol";
 import {ISize} from "@src/market/interfaces/ISize.sol";
 import {IPoolAddressesProvider} from "@aave/interfaces/IPoolAddressesProvider.sol";
 import {DebtPosition} from "@src/market/libraries/LoanLibrary.sol";
+import {console} from "forge-std/console.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 contract ForkAutoRolloverTest is ForkTestVirtualsUSDC {
     address constant BORROWER = 0x0f0B08CE5Cf394C77CA9763366656C629FDba449;
@@ -19,13 +21,31 @@ contract ForkAutoRolloverTest is ForkTestVirtualsUSDC {
     }
 
     function testFork_AutoRollover() public {
-        // Deploy and initialize AutoRollover
-        AutoRollover autoRollover = new AutoRollover();
-        autoRollover.initialize(address(this), IPoolAddressesProvider(POOL_ADDRESSES_PROVIDER), 1 hours, 1 days, 365 days);
+        // Log addresses and parameters
+        console.log("Deploying AutoRollover with:");
+        console.log("POOL_ADDRESSES_PROVIDER:", POOL_ADDRESSES_PROVIDER);
+        console.log("Owner:", address(this));
+        console.log("size:", address(size));
+        console.log("usdc:", address(usdc));
+        console.log("virtuals:", address(virtuals));
+
+        // Deploy implementation and proxy (format exactly as in working setup)
+        AutoRollover autoRolloverImplementation = new AutoRollover();
+        bytes memory initData = abi.encodeWithSelector(
+            AutoRollover.initialize.selector,
+            address(this),
+            IPoolAddressesProvider(POOL_ADDRESSES_PROVIDER),
+            1 hours,
+            1 days,
+            365 days
+        );
+        AutoRollover autoRollover = AutoRollover(address(new ERC1967Proxy(address(autoRolloverImplementation), initData)));
+        console.log("AutoRollover proxy deployed at:", address(autoRollover));
 
         // Fetch debt position
         DebtPosition memory debtPosition = size.getDebtPosition(DEBT_POSITION_ID);
         uint256 dueDate = debtPosition.dueDate;
+        console.log("Debt position dueDate:", dueDate);
 
         // Set rollover params
         uint256 tenor = 30 days;
@@ -34,6 +54,7 @@ contract ForkAutoRolloverTest is ForkTestVirtualsUSDC {
 
         // Impersonate owner and call rollover
         vm.startPrank(address(this));
+        console.log("Calling rollover...");
         autoRollover.rollover(
             size,
             DEBT_POSITION_ID,
@@ -44,9 +65,11 @@ contract ForkAutoRolloverTest is ForkTestVirtualsUSDC {
             deadline
         );
         vm.stopPrank();
+        console.log("rollover called");
 
         // Assert old debt is repaid (futureValue == 0)
         debtPosition = size.getDebtPosition(DEBT_POSITION_ID);
+        console.log("Debt position futureValue after:", debtPosition.futureValue);
         assertEq(debtPosition.futureValue, 0, "Debt should be repaid after rollover");
     }
 } 

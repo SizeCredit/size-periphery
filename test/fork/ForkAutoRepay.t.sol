@@ -8,6 +8,8 @@ import {SwapParams, SwapMethod, UniswapV3Params} from "src/liquidator/DexSwap.so
 import {IPoolAddressesProvider} from "@aave/interfaces/IPoolAddressesProvider.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {DebtPosition} from "@src/market/libraries/LoanLibrary.sol";
+import {console} from "forge-std/console.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 contract ForkAutoRepayTest is ForkTestVirtualsUSDC {
     address constant BORROWER = 0x0f0B08CE5Cf394C77CA9763366656C629FDba449;
@@ -25,13 +27,34 @@ contract ForkAutoRepayTest is ForkTestVirtualsUSDC {
     }
 
     function testFork_AutoRepay() public {
-        // Deploy and initialize AutoRepay
-        AutoRepay autoRepay = new AutoRepay(ONE_INCH, UNOSWAP, UNISWAP_V2, UNISWAP_V3_ROUTER);
-        autoRepay.initialize(address(this), IPoolAddressesProvider(POOL_ADDRESSES_PROVIDER), 1 hours);
+        // Log addresses and parameters
+        console.log("Deploying AutoRepay with:");
+        console.log("ONE_INCH:", ONE_INCH);
+        console.log("UNOSWAP:", UNOSWAP);
+        console.log("UNISWAP_V2:", UNISWAP_V2);
+        console.log("UNISWAP_V3_ROUTER:", UNISWAP_V3_ROUTER);
+        console.log("POOL_ADDRESSES_PROVIDER:", POOL_ADDRESSES_PROVIDER);
+        console.log("Owner:", address(this));
+        console.log("size:", address(size));
+        console.log("usdc:", address(usdc));
+        console.log("virtuals:", address(virtuals));
+
+        // Deploy implementation and proxy (format exactly as in working setup)
+        AutoRepay autoRepayImplementation = new AutoRepay(ONE_INCH, UNOSWAP, UNISWAP_V2, UNISWAP_V3_ROUTER);
+        bytes memory initData = abi.encodeWithSelector(
+            AutoRepay.initialize.selector,
+            address(this),
+            IPoolAddressesProvider(POOL_ADDRESSES_PROVIDER),
+            1 hours
+        );
+        AutoRepay autoRepay = AutoRepay(address(new ERC1967Proxy(address(autoRepayImplementation), initData)));
+        console.log("AutoRepay proxy deployed at:", address(autoRepay));
 
         // Fetch debt position
         DebtPosition memory debtPosition = size.getDebtPosition(DEBT_POSITION_ID);
         uint256 collateralAmount = size.getUserView(BORROWER).collateralTokenBalance;
+        console.log("Debt position futureValue:", debtPosition.futureValue);
+        console.log("Collateral amount:", collateralAmount);
 
         // Prepare UniswapV3Params
         UniswapV3Params memory uniParams = UniswapV3Params({
@@ -49,6 +72,7 @@ contract ForkAutoRepayTest is ForkTestVirtualsUSDC {
 
         // Impersonate bot and call repayWithCollateral
         vm.startPrank(address(this));
+        console.log("Calling repayWithCollateral...");
         autoRepay.repayWithCollateral(
             size,
             DEBT_POSITION_ID,
@@ -57,9 +81,11 @@ contract ForkAutoRepayTest is ForkTestVirtualsUSDC {
             swapParams
         );
         vm.stopPrank();
+        console.log("repayWithCollateral called");
 
         // Assert debt is repaid (futureValue == 0)
         debtPosition = size.getDebtPosition(DEBT_POSITION_ID);
+        console.log("Debt position futureValue after:", debtPosition.futureValue);
         assertEq(debtPosition.futureValue, 0, "Debt should be repaid");
     }
 } 

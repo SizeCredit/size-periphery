@@ -55,6 +55,7 @@ contract FlashLoanLiquidatorBoringPtSellerTest is BaseTest, Addresses {
         address tokenOut = flashLoanLiquidator.getPtSellerTokenOut(params.pendleMarket, params.tokenOutIsYieldToken);
 
         UniswapV3Params memory uniswapV3Params = UniswapV3Params({
+            router: addresses[block.chainid][CONTRACT.UNISWAP_V3_ROUTER],
             tokenIn: address(tokenOut),
             tokenOut: address(params.underlyingBorrowToken),
             fee: fee,
@@ -70,13 +71,7 @@ contract FlashLoanLiquidatorBoringPtSellerTest is BaseTest, Addresses {
     function _flashLoanLiquidate(address _liquidator, FlashLoanLiquidateTestParams memory params) internal {
         vm.startPrank(_liquidator);
 
-        flashLoanLiquidator = new FlashLoanLiquidator(
-            addresses[block.chainid][CONTRACT.ADDRESS_PROVIDER],
-            address(0x1111),
-            address(0x2222),
-            address(0x3333),
-            addresses[block.chainid][CONTRACT.UNISWAP_V3_ROUTER]
-        );
+        flashLoanLiquidator = new FlashLoanLiquidator(addresses[block.chainid][CONTRACT.ADDRESS_PROVIDER]);
 
         flashLoanLiquidator.liquidatePositionWithFlashLoan(
             address(size),

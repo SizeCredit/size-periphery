@@ -15,28 +15,14 @@ contract DeployFlashLoanLiquidator is Script, Addresses {
         vm.startBroadcast();
 
         address addressProvider = addresses[block.chainid][CONTRACT.ADDRESS_PROVIDER];
-        address aggregator1inch = addresses[block.chainid][CONTRACT.AGGREGATOR_1INCH];
-        address unoswapRouter = addresses[block.chainid][CONTRACT.UNOSWAP_ROUTER];
-        address uniswapV2Router = addresses[block.chainid][CONTRACT.UNISWAP_V2_ROUTER];
-        address uniswapV3Router = addresses[block.chainid][CONTRACT.UNISWAP_V3_ROUTER];
 
-        FlashLoanLiquidator flashLoanLiquidator =
-            new FlashLoanLiquidator(addressProvider, aggregator1inch, unoswapRouter, uniswapV2Router, uniswapV3Router);
+        FlashLoanLiquidator flashLoanLiquidator = new FlashLoanLiquidator(addressProvider);
 
         console.log("Deployed FlashLoanLiquidator at:", address(flashLoanLiquidator));
-        exportDeploymentDetails(
-            flashLoanLiquidator, addressProvider, aggregator1inch, unoswapRouter, uniswapV2Router, uniswapV3Router
-        );
+        exportDeploymentDetails(flashLoanLiquidator, addressProvider);
     }
 
-    function exportDeploymentDetails(
-        FlashLoanLiquidator flashLoanLiquidator,
-        address addressProvider,
-        address aggregator1inch,
-        address unoswapRouter,
-        address uniswapV2Router,
-        address uniswapV3Router
-    ) internal {
+    function exportDeploymentDetails(FlashLoanLiquidator flashLoanLiquidator, address addressProvider) internal {
         string memory root = vm.projectRoot();
         string memory path = string.concat(root, "/deployments/");
         string memory chainIdStr = vm.toString(block.chainid);
@@ -48,10 +34,6 @@ contract DeployFlashLoanLiquidator is Script, Addresses {
         // Serialize deployment details
         deploymentsObject = vm.serializeAddress(".deployments", "FlashLoanLiquidator", address(flashLoanLiquidator));
         deploymentsObject = vm.serializeAddress(".deployments", "addressProvider", addressProvider);
-        deploymentsObject = vm.serializeAddress(".deployments", "aggregator1inch", aggregator1inch);
-        deploymentsObject = vm.serializeAddress(".deployments", "unoswapRouter", unoswapRouter);
-        deploymentsObject = vm.serializeAddress(".deployments", "uniswapV2Router", uniswapV2Router);
-        deploymentsObject = vm.serializeAddress(".deployments", "uniswapV3Router", uniswapV3Router);
         // Combine serialized data
         finalObject = vm.serializeString(".", "deployments", deploymentsObject);
 

@@ -19,6 +19,7 @@ import {
     createEmptyLimitOrderData
 } from "@pendle/contracts/interfaces/IPAllActionTypeV3.sol";
 import {IPAllActionV3} from "@pendle/contracts/interfaces/IPAllActionV3.sol";
+import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 enum SwapMethod {
     OneInch,
@@ -42,6 +43,7 @@ struct BoringPtSellerParams {
 }
 
 struct OneInchParams {
+    address router;
     address fromToken;
     address toToken;
     uint256 minReturn;
@@ -49,6 +51,7 @@ struct OneInchParams {
 }
 
 struct UniswapV2Params {
+    address router;
     uint256 amountIn;
     uint256 amountOutMin;
     address[] path;
@@ -57,6 +60,7 @@ struct UniswapV2Params {
 }
 
 struct UniswapV3Params {
+    address router;
     address tokenIn;
     address tokenOut;
     uint24 fee;
@@ -65,6 +69,7 @@ struct UniswapV3Params {
 }
 
 struct UnoswapParams {
+    address router;
     address recipient;
     address srcToken;
     uint256 amount;
@@ -89,32 +94,8 @@ struct GenericRouteParams {
 /// @custom:security-contact security@size.credit
 /// @author Size (https://size.credit/)
 /// @notice Contract that allows to swap tokens using different DEXs
-abstract contract DexSwap is BoringPtSeller {
+abstract contract DexSwap is BoringPtSeller, Initializable {
     using SafeERC20 for IERC20;
-
-    I1InchAggregator public immutable oneInchAggregator;
-    IUnoswapRouter public immutable unoswapRouter;
-    IUniswapV2Router02 public immutable uniswapV2Router;
-    IUniswapV3Router public immutable uniswapV3Router;
-
-    constructor(
-        address _oneInchAggregator,
-        address _unoswapRouter,
-        address _uniswapV2Router,
-        address _uniswapV3Router
-    ) {
-        if (
-            _oneInchAggregator == address(0) || _unoswapRouter == address(0) || _uniswapV2Router == address(0)
-                || _uniswapV3Router == address(0)
-        ) {
-            revert Errors.NULL_ADDRESS();
-        }
-
-        oneInchAggregator = I1InchAggregator(_oneInchAggregator);
-        unoswapRouter = IUnoswapRouter(_unoswapRouter);
-        uniswapV2Router = IUniswapV2Router02(_uniswapV2Router);
-        uniswapV3Router = IUniswapV3Router(_uniswapV3Router);
-    }
 
     function _swap(SwapParams[] memory swapParamsArray) internal {
         for (uint256 i = 0; i < swapParamsArray.length; i++) {
@@ -167,8 +148,8 @@ abstract contract DexSwap is BoringPtSeller {
 
     function _swap1Inch(bytes memory data) internal {
         OneInchParams memory params = abi.decode(data, (OneInchParams));
-        IERC20(params.fromToken).forceApprove(address(oneInchAggregator), type(uint256).max);
-        oneInchAggregator.swap(
+        IERC20(params.fromToken).forceApprove(params.router, type(uint256).max);
+        I1InchAggregator(params.router).swap(
             params.fromToken,
             params.toToken,
             IERC20(params.fromToken).balanceOf(address(this)),
@@ -179,22 +160,24 @@ abstract contract DexSwap is BoringPtSeller {
 
     function _swapUniswapV2(bytes memory data) internal {
         UniswapV2Params memory params = abi.decode(data, (UniswapV2Params));
-        IERC20(params.path[0]).forceApprove(address(uniswapV2Router), type(uint256).max);
-        uniswapV2Router.swapExactTokensForTokens(
+        IERC20(params.path[0]).forceApprove(params.router, type(uint256).max);
+        IUniswapV2Router02(params.router).swapExactTokensForTokens(
             params.amountIn, params.amountOutMin, params.path, params.to, params.deadline
         );
     }
 
     function _swapUnoswap(bytes memory data) internal {
         UnoswapParams memory params = abi.decode(data, (UnoswapParams));
-        IERC20(params.srcToken).forceApprove(address(unoswapRouter), type(uint256).max);
-        unoswapRouter.unoswapTo(address(this), params.srcToken, params.amount, params.minReturn, params.pool);
+        IERC20(params.srcToken).forceApprove(params.router, type(uint256).max);
+        IUnoswapRouter(params.router).unoswapTo(
+            address(this), params.srcToken, params.amount, params.minReturn, params.pool
+        );
     }
 
     function _swapUniswapV3(bytes memory data) internal {
         UniswapV3Params memory params = abi.decode(data, (UniswapV3Params));
         uint256 amountIn = IERC20(params.tokenIn).balanceOf(address(this));
-        IERC20(params.tokenIn).forceApprove(address(uniswapV3Router), amountIn);
+        IERC20(params.tokenIn).forceApprove(params.router, amountIn);
 
         IUniswapV3Router.ExactInputSingleParams memory swapParams = IUniswapV3Router.ExactInputSingleParams({
             tokenIn: params.tokenIn,
@@ -206,7 +189,7 @@ abstract contract DexSwap is BoringPtSeller {
             sqrtPriceLimitX96: params.sqrtPriceLimitX96
         });
 
-        uniswapV3Router.exactInputSingle(swapParams);
+        IUniswapV3Router(params.router).exactInputSingle(swapParams);
     }
 
     function _swapGenericRoute(bytes memory data) internal {

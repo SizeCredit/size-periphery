@@ -40,7 +40,8 @@ contract ForkAutoRolloverTest is ForkTestVirtualsUSDC {
             1 days,
             365 days
         );
-        AutoRollover autoRollover = AutoRollover(address(new ERC1967Proxy(address(autoRolloverImplementation), initData)));
+        AutoRollover autoRollover =
+            AutoRollover(address(new ERC1967Proxy(address(autoRolloverImplementation), initData)));
         console.log("AutoRollover proxy deployed at:", address(autoRollover));
 
         // Fetch debt position
@@ -56,15 +57,7 @@ contract ForkAutoRolloverTest is ForkTestVirtualsUSDC {
         // Impersonate owner and call rollover
         vm.startPrank(address(this));
         console.log("Calling rollover...");
-        autoRollover.rollover(
-            size,
-            DEBT_POSITION_ID,
-            BORROWER,
-            LENDER,
-            tenor,
-            maxAPR,
-            deadline
-        );
+        autoRollover.rollover(size, DEBT_POSITION_ID, BORROWER, LENDER, tenor, maxAPR, deadline);
         vm.stopPrank();
         console.log("rollover called");
 
@@ -73,4 +66,4 @@ contract ForkAutoRolloverTest is ForkTestVirtualsUSDC {
         console.log("Debt position futureValue after:", debtPosition.futureValue);
         assertEq(debtPosition.futureValue, 0, "Debt should be repaid after rollover");
     }
-} 
+}

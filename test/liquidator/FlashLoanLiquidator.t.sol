@@ -5,7 +5,7 @@ import {SwapMethod, BoringPtSellerParams, SwapParams, OneInchParams} from "src/l
 import {FlashLoanLiquidator, ReplacementParams} from "src/liquidator/FlashLoanLiquidator.sol";
 import {Mock1InchAggregator} from "test/mocks/Mock1InchAggregator.sol";
 import {MockAavePool} from "@test/mocks/MockAavePool.sol";
-
+import {Addresses, CONTRACT} from "script/Addresses.s.sol";
 import {BaseTest, Vars} from "@size/test/BaseTest.sol";
 
 import {DebtPosition} from "@size/src/market/libraries/LoanLibrary.sol";
@@ -13,7 +13,7 @@ import {YieldCurveHelper} from "@size/test/helpers/libraries/YieldCurveHelper.so
 
 import {console} from "forge-std/console.sol";
 
-contract FlashLoanLiquidatorTest is BaseTest {
+contract FlashLoanLiquidatorTest is BaseTest, Addresses {
     MockAavePool public mockAavePool;
     Mock1InchAggregator public mock1InchAggregator;
     FlashLoanLiquidator public flashLoanLiquidator;
@@ -30,13 +30,7 @@ contract FlashLoanLiquidatorTest is BaseTest {
         _mint(address(usdc), address(mockAavePool), 100_000e6);
 
         // Initialize the FlashLoanLiquidator contract
-        flashLoanLiquidator = new FlashLoanLiquidator(
-            address(mockAavePool),
-            address(mock1InchAggregator),
-            address(1), // placeholder for the unoswap router
-            address(1), // placeholder for the uniswapv2 aggregator
-            address(1) // placeholder for the uniswapv3 router
-        );
+        flashLoanLiquidator = new FlashLoanLiquidator(address(mockAavePool));
 
         // Set the FlashLoanLiquidator contract as the keeper
         _setKeeperRole(address(flashLoanLiquidator));
@@ -61,8 +55,13 @@ contract FlashLoanLiquidatorTest is BaseTest {
         Vars memory _before = _state();
         uint256 beforeLiquidatorUSDC = usdc.balanceOf(liquidator);
 
-        OneInchParams memory oneInchParams =
-            OneInchParams({fromToken: address(weth), toToken: address(usdc), minReturn: 0, data: ""});
+        OneInchParams memory oneInchParams = OneInchParams({
+            fromToken: address(weth),
+            toToken: address(usdc),
+            minReturn: 0,
+            data: "",
+            router: address(mock1InchAggregator)
+        });
 
         // Create SwapParams for a 1inch swap
         SwapParams[] memory swapParamsArray = new SwapParams[](1);
@@ -109,13 +108,7 @@ contract FlashLoanLiquidatorTest is BaseTest {
 
         // Initialize the FlashLoanLiquidator contract
         vm.prank(liquidator);
-        flashLoanLiquidator = new FlashLoanLiquidator(
-            address(mockAavePool),
-            address(mock1InchAggregator),
-            address(1), // placeholder for the unoswap router
-            address(1), // placeholder for the uniswapv2 aggregator
-            address(1) // placeholder for the uniswapv3 router
-        );
+        flashLoanLiquidator = new FlashLoanLiquidator(address(mockAavePool));
 
         // Add debug logs to track balances
         console.log("Initial WETH balance of mock1inch:", weth.balanceOf(address(mock1InchAggregator)));
@@ -140,8 +133,13 @@ contract FlashLoanLiquidatorTest is BaseTest {
         _deposit(candy, usdc, 1000e6);
         _sellCreditLimit(candy, 400 days, [int256(0.03e18), 0.03e18], [uint256(1 days), 365 days]); // Valid borrow offer
 
-        OneInchParams memory oneInchParams =
-            OneInchParams({fromToken: address(weth), toToken: address(usdc), minReturn: 0, data: ""});
+        OneInchParams memory oneInchParams = OneInchParams({
+            fromToken: address(weth),
+            toToken: address(usdc),
+            minReturn: 0,
+            data: "",
+            router: address(mock1InchAggregator)
+        });
 
         // Create SwapParams for a 1inch swap
         SwapParams[] memory swapParamsArray = new SwapParams[](1);
@@ -184,13 +182,7 @@ contract FlashLoanLiquidatorTest is BaseTest {
         _mint(address(usdc), address(mockAavePool), 100_000e6);
 
         // Initialize the FlashLoanLiquidator contract
-        flashLoanLiquidator = new FlashLoanLiquidator(
-            address(mockAavePool),
-            address(mock1InchAggregator),
-            address(1), // placeholder for the unoswap router
-            address(1), // placeholder for the uniswapv2 aggregator
-            address(1) // placeholder for the uniswapv3 router
-        );
+        flashLoanLiquidator = new FlashLoanLiquidator(address(mockAavePool));
 
         // Add debug logs
         console.log("Mock AAVE Pool:", address(mockAavePool));
@@ -220,8 +212,13 @@ contract FlashLoanLiquidatorTest is BaseTest {
         Vars memory _before = _state();
         uint256 beforeLiquidatorUSDC = usdc.balanceOf(liquidator);
 
-        OneInchParams memory oneInchParams =
-            OneInchParams({fromToken: address(weth), toToken: address(usdc), minReturn: 0, data: ""});
+        OneInchParams memory oneInchParams = OneInchParams({
+            fromToken: address(weth),
+            toToken: address(usdc),
+            minReturn: 0,
+            data: "",
+            router: address(mock1InchAggregator)
+        });
 
         // Create SwapParams for a 1inch swap
         SwapParams[] memory swapParamsArray = new SwapParams[](1);
@@ -267,13 +264,7 @@ contract FlashLoanLiquidatorTest is BaseTest {
         _mint(address(usdc), address(mockAavePool), 100_000e6);
 
         // Initialize the FlashLoanLiquidator contract
-        flashLoanLiquidator = new FlashLoanLiquidator(
-            address(mockAavePool),
-            address(mock1InchAggregator),
-            address(1), // placeholder for the unoswap router
-            address(1), // placeholder for the uniswapv2 aggregator
-            address(1) // placeholder for the uniswapv3 router
-        );
+        flashLoanLiquidator = new FlashLoanLiquidator(address(mockAavePool));
 
         // Set the FlashLoanLiquidator contract as the keeper
         _setKeeperRole(address(flashLoanLiquidator));
@@ -295,8 +286,13 @@ contract FlashLoanLiquidatorTest is BaseTest {
 
         assertTrue(size.isDebtPositionLiquidatable(debtPositionId));
 
-        OneInchParams memory oneInchParams =
-            OneInchParams({fromToken: address(weth), toToken: address(usdc), minReturn: 0, data: ""});
+        OneInchParams memory oneInchParams = OneInchParams({
+            fromToken: address(weth),
+            toToken: address(usdc),
+            minReturn: 0,
+            data: "",
+            router: address(mock1InchAggregator)
+        });
 
         // Create SwapParams for a 1inch swap
         SwapParams[] memory swapParamsArray = new SwapParams[](1);

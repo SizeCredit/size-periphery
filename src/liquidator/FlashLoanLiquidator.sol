@@ -50,16 +50,9 @@ struct OperationParams {
 contract FlashLoanLiquidator is Ownable, FlashLoanReceiverBase, DexSwap {
     using SafeERC20 for IERC20;
 
-    constructor(
-        address _addressProvider,
-        address _1inchAggregator,
-        address _unoswapRouter,
-        address _uniswapV2Router,
-        address _uniswapV3Router
-    )
+    constructor(address _addressProvider)
         Ownable(msg.sender)
         FlashLoanReceiverBase(IPoolAddressesProvider(_addressProvider))
-        DexSwap(_1inchAggregator, _unoswapRouter, _uniswapV2Router, _uniswapV3Router)
     {
         if (_addressProvider == address(0)) {
             revert Errors.NULL_ADDRESS();

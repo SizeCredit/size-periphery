@@ -27,4 +27,4 @@ contract ForkTestVirtualsUSDC is Test {
         // Owner is not strictly needed for most tests, but can be set if required
         owner = address(0);
     }
-} 
+}

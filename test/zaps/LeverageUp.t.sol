@@ -40,12 +40,7 @@ contract LeverageUpTest is BaseTest, Addresses {
 
         assertEqApprox(IPriceFeed(size.oracle().priceFeed).getPrice(), 0.98e18, 0.01e18);
 
-        leverageUp = new LeverageUp(
-            address(type(uint160).max),
-            address(type(uint160).max),
-            addresses[block.chainid][CONTRACT.UNISWAP_V2_ROUTER],
-            addresses[block.chainid][CONTRACT.UNISWAP_V3_ROUTER]
-        );
+        leverageUp = new LeverageUp();
 
         vm.label(pendleMarket, "PendleMarket");
         vm.label(address(size), "Size");
@@ -80,6 +75,7 @@ contract LeverageUpTest is BaseTest, Addresses {
         address tokenOut = leverageUp.getPtSellerTokenOut(pendleMarket, false);
 
         UniswapV3Params memory uniswapV3Params = UniswapV3Params({
+            router: addresses[block.chainid][CONTRACT.UNISWAP_V3_ROUTER],
             tokenIn: address(size.data().underlyingBorrowToken),
             tokenOut: address(tokenOut),
             fee: 500,

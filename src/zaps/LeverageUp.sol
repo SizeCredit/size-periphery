@@ -42,9 +42,7 @@ contract LeverageUp is DexSwap, IRequiresAuthorization {
         uint256 currentLeveragePercent;
     }
 
-    constructor(address _1inchAggregator, address _unoswapRouter, address _uniswapRouter, address _uniswapV3Router)
-        DexSwap(_1inchAggregator, _unoswapRouter, _uniswapRouter, _uniswapV3Router)
-    {}
+    constructor() {}
 
     function leverageUpWithSwap(
         ISize size,

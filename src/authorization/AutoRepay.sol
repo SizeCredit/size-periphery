@@ -126,13 +126,14 @@ contract AutoRepay is Initializable, Ownable2StepUpgradeable, UpgradeableFlashLo
         }
 
         OperationParams memory operationParams = abi.decode(params, (OperationParams));
-        
+        uint256 flashloanDebt = amounts[0] + premiums[0];
+
         _handleDeposit(operationParams, amounts[0]);
         _handleRepay(operationParams);
         _handleWithdraw(operationParams);
-        _handleSwap(operationParams);
-        _handleFlashLoanRepayment(assets[0], amounts[0], premiums[0]);
-        _handleLeftoverDebtTokens(operationParams, amounts[0] + premiums[0]);
+        _swap(operationParams.swapParams);
+        _handleLeftoverDebtTokens(operationParams, flashloanDebt);
+        IERC20Metadata(assets[0]).forceApprove(address(POOL), flashloanDebt);
 
         return true;
     }
@@ -172,19 +173,11 @@ contract AutoRepay is Initializable, Ownable2StepUpgradeable, UpgradeableFlashLo
         }));
     }
 
-    function _handleSwap(OperationParams memory params) private {
-        _swap(params.swapParams);
-    }
-
-    function _handleFlashLoanRepayment(address asset, uint256 amount, uint256 premium) private {
-        uint256 amountOwed = amount + premium;
-        IERC20Metadata(asset).forceApprove(address(POOL), amountOwed);
-    }
-
     function _handleLeftoverDebtTokens(OperationParams memory params, uint256 amountOwed) private {
         DataView memory data = params.market.data();
         address debtToken = address(data.underlyingBorrowToken);
-        uint256 leftoverAmount = IERC20Metadata(debtToken).balanceOf(address(this)) - amountOwed;
+        uint256 balance = IERC20Metadata(debtToken).balanceOf(address(this));
+        uint256 leftoverAmount = balance >= amountOwed ? balance - amountOwed : 0;
         
         if (leftoverAmount > 0) {
             IERC20Metadata(debtToken).forceApprove(address(params.market), leftoverAmount);

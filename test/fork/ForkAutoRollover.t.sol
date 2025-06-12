@@ -15,7 +15,7 @@ import {ActionsBitmap} from "@size/src/factory/libraries/Authorization.sol";
 contract ForkAutoRolloverTest is ForkTestVirtualsUSDC, Addresses {
     // https://basescan.org/tx/0x93cb5935b1d8bf8b11990671aad0008c31ceb1bca5511c900d84ed0944271e40
     address constant BORROWER = 0x0f0B08CE5Cf394C77CA9763366656C629FDba449;
-    address constant LENDER = 0xe136879df65633203E31423082da4F13f5bF8DB1;
+    address constant LENDER = 0x73b875d16d395fe3CA830F8F0F04ADe52706836E;
     uint256 constant DEBT_POSITION_ID = 181;
     address constant POOL_ADDRESSES_PROVIDER = 0xe20fCBdBfFC4Dd138cE8b2E6FBb6CB49777ad64D; // Base mainnet Aave V3
 

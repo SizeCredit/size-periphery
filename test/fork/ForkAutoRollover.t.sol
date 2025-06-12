@@ -8,8 +8,11 @@ import {IPoolAddressesProvider} from "@aave/interfaces/IPoolAddressesProvider.so
 import {DebtPosition} from "@src/market/libraries/LoanLibrary.sol";
 import {console} from "forge-std/console.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {Addresses, CONTRACT} from "script/Addresses.s.sol";
+import {ISizeFactory} from "@src/factory/interfaces/ISizeFactory.sol";
+import {ActionsBitmap} from "@size/src/factory/libraries/Authorization.sol";
 
-contract ForkAutoRolloverTest is ForkTestVirtualsUSDC {
+contract ForkAutoRolloverTest is ForkTestVirtualsUSDC, Addresses {
     // https://basescan.org/tx/0x93cb5935b1d8bf8b11990671aad0008c31ceb1bca5511c900d84ed0944271e40
     address constant BORROWER = 0x0f0B08CE5Cf394C77CA9763366656C629FDba449;
     address constant LENDER = 0xe136879df65633203E31423082da4F13f5bF8DB1;
@@ -36,12 +39,20 @@ contract ForkAutoRolloverTest is ForkTestVirtualsUSDC {
             AutoRollover.initialize.selector,
             address(this),
             IPoolAddressesProvider(POOL_ADDRESSES_PROVIDER),
-            1 hours,
+            48 days,
             1 days,
             365 days
         );
         AutoRollover autoRollover = AutoRollover(address(new ERC1967Proxy(address(autoRolloverImplementation), initData)));
         console.log("AutoRollover proxy deployed at:", address(autoRollover));
+
+        // Authorize AutoRollover contract
+        console.log("Authorizing AutoRollover contract");
+        ActionsBitmap actionsBitmap = autoRollover.getActionsBitmap();
+        vm.prank(BORROWER);
+        ISizeFactory(addresses[block.chainid][CONTRACT.SIZE_FACTORY]).setAuthorization(
+            address(autoRollover), actionsBitmap
+        );
 
         // Fetch debt position
         DebtPosition memory debtPosition = size.getDebtPosition(DEBT_POSITION_ID);

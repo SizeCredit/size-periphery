@@ -17,6 +17,8 @@ import {Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/acces
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {Errors} from "@size/src/market/libraries/Errors.sol";
 import {UpgradeableFlashLoanReceiver} from "./UpgradeableFlashLoanReceiver.sol";
+import {IRequiresAuthorization} from "./IRequiresAuthorization.sol";
+import {ActionsBitmap, Action, Authorization} from "@size/src/factory/libraries/Authorization.sol";
 
 contract AutoRollover is Initializable, Ownable2StepUpgradeable, UpgradeableFlashLoanReceiver {
     using SafeERC20 for IERC20Metadata;
@@ -183,5 +185,11 @@ contract AutoRollover is Initializable, Ownable2StepUpgradeable, UpgradeableFlas
         IERC20Metadata(assets[0]).forceApprove(address(POOL), newFutureValue);
 
         return true;
+    }
+
+    function getActionsBitmap() external pure returns (ActionsBitmap) {
+        Action[] memory actions = new Action[](1);
+        actions[0] = Action.SELL_CREDIT_MARKET;
+        return Authorization.getActionsBitmap(actions);
     }
 }

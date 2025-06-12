@@ -10,8 +10,11 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {DebtPosition} from "@src/market/libraries/LoanLibrary.sol";
 import {console} from "forge-std/console.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {Addresses, CONTRACT} from "script/Addresses.s.sol";
+import {ISizeFactory} from "@src/factory/interfaces/ISizeFactory.sol";
+import {ActionsBitmap} from "@size/src/factory/libraries/Authorization.sol";
 
-contract ForkAutoRepayTest is ForkTestVirtualsUSDC {
+contract ForkAutoRepayTest is ForkTestVirtualsUSDC, Addresses {
     // https://basescan.org/tx/0x93cb5935b1d8bf8b11990671aad0008c31ceb1bca5511c900d84ed0944271e40
     address constant BORROWER = 0x0f0B08CE5Cf394C77CA9763366656C629FDba449;
     uint256 constant DEBT_POSITION_ID = 181;
@@ -46,15 +49,24 @@ contract ForkAutoRepayTest is ForkTestVirtualsUSDC {
             AutoRepay.initialize.selector,
             address(this),
             IPoolAddressesProvider(POOL_ADDRESSES_PROVIDER),
-            1 hours
+            48 days
         );
         AutoRepay autoRepay = AutoRepay(address(new ERC1967Proxy(address(autoRepayImplementation), initData)));
         console.log("AutoRepay proxy deployed at:", address(autoRepay));
+
+        // Authorize AutoRepay contract
+        console.log("Authorizing AutoRepay contract");
+        ActionsBitmap actionsBitmap = autoRepay.getActionsBitmap();
+        vm.prank(BORROWER);
+        ISizeFactory(addresses[block.chainid][CONTRACT.SIZE_FACTORY]).setAuthorization(
+            address(autoRepay), actionsBitmap
+        );
 
         // Fetch debt position
         DebtPosition memory debtPosition = size.getDebtPosition(DEBT_POSITION_ID);
         uint256 collateralAmount = size.getUserView(BORROWER).collateralTokenBalance;
         console.log("Debt position futureValue:", debtPosition.futureValue);
+        collateralAmount = 1234322421747896063633;
         console.log("Collateral amount:", collateralAmount);
 
         // Prepare UniswapV3Params

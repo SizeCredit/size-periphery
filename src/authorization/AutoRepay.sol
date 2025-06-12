@@ -17,6 +17,8 @@ import {SwapParams} from "../liquidator/DexSwap.sol";
 import {IPoolAddressesProvider} from "@aave/interfaces/IPoolAddressesProvider.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {IRequiresAuthorization} from "./IRequiresAuthorization.sol";
+import {ActionsBitmap, Action, Authorization} from "@size/src/factory/libraries/Authorization.sol";
 
 contract AutoRepay is Initializable, Ownable2StepUpgradeable, UpgradeableFlashLoanReceiver, DexSwap {
     using SafeERC20 for IERC20Metadata;
@@ -197,5 +199,12 @@ contract AutoRepay is Initializable, Ownable2StepUpgradeable, UpgradeableFlashLo
                 })
             );
         }
+    }
+
+    function getActionsBitmap() external pure returns (ActionsBitmap) {
+        Action[] memory actions = new Action[](2);
+        actions[0] = Action.DEPOSIT;
+        actions[1] = Action.WITHDRAW;
+        return Authorization.getActionsBitmap(actions);
     }
 }

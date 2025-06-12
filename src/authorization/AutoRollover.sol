@@ -193,11 +193,38 @@ contract AutoRollover is Initializable, Ownable2StepUpgradeable, UpgradeableFlas
         }
 
         OperationParams memory operationParams = abi.decode(params, (OperationParams));
+        uint256 newFutureValue = amounts[0] + premiums[0];
 
+        // Deposit underlying borrow token to receive borrowAToken
+        console.log("Approving market to spend underlying borrow token:", amounts[0]);
+        IERC20Metadata(assets[0]).forceApprove(address(operationParams.market), amounts[0]);
+        console.log("Depositing underlying borrow token to market...");
+        operationParams.market.deposit(
+            DepositParams({
+                token: assets[0],
+                amount: amounts[0],
+                to: address(this)
+            })
+        );
+        console.log("Deposit complete. borrowAToken should now be minted to this contract.");
+
+        console.log("USDC balance before repay:", IERC20Metadata(assets[0]).balanceOf(address(this)));
+        console.log("Calling repay...");
+        try operationParams.market.repay(
+            RepayParams({debtPositionId: operationParams.debtPositionId, borrower: operationParams.onBehalfOf})
+        ) {
+            console.log("repay succeeded");
+        } catch Error(string memory reason) {
+            console.log("repay failed with reason:", reason);
+            revert(reason);
+        } catch (bytes memory lowLevelData) {
+            console.log("repay failed with low level data");
+            revert();
+        }
+        console.log("USDC balance after repay:", IERC20Metadata(assets[0]).balanceOf(address(this)));
         // Check contract balance before sellCreditMarketOnBehalfOf
         console.log("USDC balance before sellCreditMarketOnBehalfOf:", IERC20Metadata(assets[0]).balanceOf(address(this)));
 
-        uint256 newFutureValue = amounts[0] + premiums[0];
         console.log("Calling sellCreditMarketOnBehalfOf...");
         try operationParams.market.sellCreditMarketOnBehalfOf(
             SellCreditMarketOnBehalfOfParams({
@@ -226,21 +253,6 @@ contract AutoRollover is Initializable, Ownable2StepUpgradeable, UpgradeableFlas
         // Check contract balance after sellCreditMarketOnBehalfOf
         console.log("USDC balance after sellCreditMarketOnBehalfOf:", IERC20Metadata(assets[0]).balanceOf(address(this)));
 
-
-        console.log("USDC balance before repay:", IERC20Metadata(assets[0]).balanceOf(address(this)));
-        console.log("Calling repay...");
-        try operationParams.market.repay(
-            RepayParams({debtPositionId: operationParams.debtPositionId, borrower: operationParams.onBehalfOf})
-        ) {
-            console.log("repay succeeded");
-        } catch Error(string memory reason) {
-            console.log("repay failed with reason:", reason);
-            revert(reason);
-        } catch (bytes memory lowLevelData) {
-            console.log("repay failed with low level data");
-            revert();
-        }
-        console.log("USDC balance after repay:", IERC20Metadata(assets[0]).balanceOf(address(this)));
 
 
         console.log("Approving POOL to spend:", newFutureValue);

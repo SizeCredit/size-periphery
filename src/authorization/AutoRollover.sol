@@ -159,9 +159,9 @@ contract AutoRollover is Initializable, Ownable2StepUpgradeable, UpgradeableFlas
         bytes memory params = abi.encode(operationParams);
 
         address[] memory assets = new address[](1);
-        assets[0] = address(data.underlyingCollateralToken);
+        assets[0] = address(data.underlyingBorrowToken);
         uint256[] memory amounts = new uint256[](1);
-        amounts[0] = debtPosition.futureValue * 101 / 100;
+        amounts[0] = debtPosition.futureValue;
         uint256[] memory modes = new uint256[](1);
         modes[0] = 0;
 
@@ -194,23 +194,6 @@ contract AutoRollover is Initializable, Ownable2StepUpgradeable, UpgradeableFlas
 
         OperationParams memory operationParams = abi.decode(params, (OperationParams));
 
-
-        console.log("USDC balance before repay:", IERC20Metadata(assets[0]).balanceOf(address(this)));
-        console.log("Calling repay...");
-        try operationParams.market.repay(
-            RepayParams({debtPositionId: operationParams.debtPositionId, borrower: operationParams.onBehalfOf})
-        ) {
-            console.log("repay succeeded");
-        } catch Error(string memory reason) {
-            console.log("repay failed with reason:", reason);
-            revert(reason);
-        } catch (bytes memory lowLevelData) {
-            console.log("repay failed with low level data");
-            revert();
-        }
-        console.log("USDC balance after repay:", IERC20Metadata(assets[0]).balanceOf(address(this)));
-
-        
         // Check contract balance before sellCreditMarketOnBehalfOf
         console.log("USDC balance before sellCreditMarketOnBehalfOf:", IERC20Metadata(assets[0]).balanceOf(address(this)));
 
@@ -243,7 +226,23 @@ contract AutoRollover is Initializable, Ownable2StepUpgradeable, UpgradeableFlas
         // Check contract balance after sellCreditMarketOnBehalfOf
         console.log("USDC balance after sellCreditMarketOnBehalfOf:", IERC20Metadata(assets[0]).balanceOf(address(this)));
 
-    
+
+        console.log("USDC balance before repay:", IERC20Metadata(assets[0]).balanceOf(address(this)));
+        console.log("Calling repay...");
+        try operationParams.market.repay(
+            RepayParams({debtPositionId: operationParams.debtPositionId, borrower: operationParams.onBehalfOf})
+        ) {
+            console.log("repay succeeded");
+        } catch Error(string memory reason) {
+            console.log("repay failed with reason:", reason);
+            revert(reason);
+        } catch (bytes memory lowLevelData) {
+            console.log("repay failed with low level data");
+            revert();
+        }
+        console.log("USDC balance after repay:", IERC20Metadata(assets[0]).balanceOf(address(this)));
+
+
         console.log("Approving POOL to spend:", newFutureValue);
         IERC20Metadata(assets[0]).forceApprove(address(POOL), newFutureValue);
         console.log("=== EXECUTE OPERATION END ===");

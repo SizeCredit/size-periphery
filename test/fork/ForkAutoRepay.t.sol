@@ -13,6 +13,7 @@ import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.s
 import {Addresses, CONTRACT} from "script/Addresses.s.sol";
 import {ISizeFactory} from "@src/factory/interfaces/ISizeFactory.sol";
 import {ActionsBitmap} from "@size/src/factory/libraries/Authorization.sol";
+import {IPriceFeed} from "@size/src/oracle/IPriceFeed.sol";
 
 contract ForkAutoRepayTest is ForkTestVirtualsUSDC, Addresses {
     // https://basescan.org/tx/0x93cb5935b1d8bf8b11990671aad0008c31ceb1bca5511c900d84ed0944271e40
@@ -64,10 +65,20 @@ contract ForkAutoRepayTest is ForkTestVirtualsUSDC, Addresses {
 
         // Fetch debt position
         DebtPosition memory debtPosition = size.getDebtPosition(DEBT_POSITION_ID);
-        uint256 collateralAmount = size.getUserView(BORROWER).collateralTokenBalance;
         console.log("Debt position futureValue:", debtPosition.futureValue);
-        collateralAmount = 1234322421747896063633;
-        console.log("Collateral amount:", collateralAmount);
+        
+        // Calculate exact collateral amount needed using the Size contract's oracle
+        uint256 collateralAmount = size.debtTokenAmountToCollateralTokenAmount(debtPosition.futureValue);
+        // Increase collateral amount by 10%
+        collateralAmount = collateralAmount * 110 / 100;
+        
+        console.log("Calculated collateral amount needed:", collateralAmount);
+        
+        // Get price feed for additional logging
+        IPriceFeed priceFeedInterface = IPriceFeed(priceFeed);
+        uint256 currentPrice = priceFeedInterface.getPrice();
+        console.log("Current price from oracle:", currentPrice);
+        console.log("Price feed decimals:", priceFeedInterface.decimals());
 
         // Prepare UniswapV3Params
         UniswapV3Params memory uniParams = UniswapV3Params({

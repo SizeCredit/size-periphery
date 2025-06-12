@@ -132,7 +132,7 @@ contract AutoRepay is Initializable, Ownable2StepUpgradeable, UpgradeableFlashLo
         _handleWithdraw(operationParams);
         _handleSwap(operationParams);
         _handleFlashLoanRepayment(assets[0], amounts[0], premiums[0]);
-        _handleLeftoverDebtTokens(operationParams);
+        _handleLeftoverDebtTokens(operationParams, amounts[0] + premiums[0]);
 
         return true;
     }
@@ -181,10 +181,10 @@ contract AutoRepay is Initializable, Ownable2StepUpgradeable, UpgradeableFlashLo
         IERC20Metadata(asset).forceApprove(address(POOL), amountOwed);
     }
 
-    function _handleLeftoverDebtTokens(OperationParams memory params) private {
+    function _handleLeftoverDebtTokens(OperationParams memory params, uint256 amountOwed) private {
         DataView memory data = params.market.data();
         address debtToken = address(data.underlyingBorrowToken);
-        uint256 leftoverAmount = IERC20Metadata(debtToken).balanceOf(address(this));
+        uint256 leftoverAmount = IERC20Metadata(debtToken).balanceOf(address(this)) - amountOwed;
         
         if (leftoverAmount > 0) {
             IERC20Metadata(debtToken).forceApprove(address(params.market), leftoverAmount);

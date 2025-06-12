@@ -3,13 +3,14 @@ pragma solidity 0.8.23;
 
 import {ISize} from "@size/src/market/interfaces/ISize.sol";
 import {DebtPosition, RESERVED_ID} from "@size/src/market/libraries/LoanLibrary.sol";
-import {DataView} from "@size/src/market/SizeViewData.sol";
+import {DataView, UserView} from "@size/src/market/SizeViewData.sol";
 import {PeripheryErrors} from "src/libraries/PeripheryErrors.sol";
 import {RepayParams} from "@size/src/market/libraries/actions/Repay.sol";
 import {
     SellCreditMarketParams,
     SellCreditMarketOnBehalfOfParams
 } from "@size/src/market/libraries/actions/SellCreditMarket.sol";
+import {DepositOnBehalfOfParams, DepositParams} from "@size/src/market/libraries/actions/Deposit.sol";
 import {IPoolAddressesProvider} from "@aave/interfaces/IPoolAddressesProvider.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
@@ -19,6 +20,7 @@ import {Errors} from "@size/src/market/libraries/Errors.sol";
 import {UpgradeableFlashLoanReceiver} from "./UpgradeableFlashLoanReceiver.sol";
 import {IRequiresAuthorization} from "./IRequiresAuthorization.sol";
 import {ActionsBitmap, Action, Authorization} from "@size/src/factory/libraries/Authorization.sol";
+import {console} from "forge-std/console.sol";
 
 contract AutoRollover is Initializable, Ownable2StepUpgradeable, UpgradeableFlashLoanReceiver {
     using SafeERC20 for IERC20Metadata;
@@ -26,7 +28,7 @@ contract AutoRollover is Initializable, Ownable2StepUpgradeable, UpgradeableFlas
     // State variables for configurable parameters
     uint256 public earlyRepaymentBuffer;
     uint256 public minTenor;
-    uint256 public maxTenor;
+    uint256 public maxTenor;    
 
     // Events for parameter updates
     event EarlyRepaymentBufferUpdated(uint256 oldValue, uint256 newValue);
@@ -111,8 +113,28 @@ contract AutoRollover is Initializable, Ownable2StepUpgradeable, UpgradeableFlas
         uint256 maxAPR,
         uint256 deadline
     ) external onlyOwner {
+        console.log("=== ROLLOVER START ===");
+        console.log("Market address:", address(market));
+        console.log("Debt position ID:", debtPositionId);
+        console.log("On behalf of:", onBehalfOf);
+        console.log("Lender:", lender);
+        console.log("Tenor:", tenor);
+        console.log("Max APR:", maxAPR);
+        console.log("Current timestamp:", block.timestamp);
+
         DebtPosition memory debtPosition = market.getDebtPosition(debtPositionId);
+        console.log("Debt position borrower:", debtPosition.borrower);
+        console.log("Debt position futureValue:", debtPosition.futureValue);
+
         DataView memory data = market.data();
+        console.log("Market underlying borrow token:", address(data.underlyingBorrowToken));
+        console.log("Market underlying collateral token:", address(data.underlyingCollateralToken));
+
+        // Check lender balance
+        UserView memory userView = market.getUserView(lender);
+        uint256 lenderBalance = userView.borrowATokenBalance;
+        console.log("Lender balance:", lenderBalance);
+        console.log("Required amount (debt futureValue):", debtPosition.futureValue);
 
         if (debtPosition.dueDate > block.timestamp + earlyRepaymentBuffer) {
             revert PeripheryErrors.AUTO_REPAY_TOO_EARLY(debtPosition.dueDate, block.timestamp);
@@ -121,6 +143,8 @@ contract AutoRollover is Initializable, Ownable2StepUpgradeable, UpgradeableFlas
         if (tenor < minTenor || tenor > maxTenor) {
             revert Errors.TENOR_OUT_OF_RANGE(tenor, minTenor, maxTenor);
         }
+
+        console.log("All validations passed, proceeding with flash loan...");
 
         OperationParams memory operationParams = OperationParams({
             market: market,
@@ -135,13 +159,15 @@ contract AutoRollover is Initializable, Ownable2StepUpgradeable, UpgradeableFlas
         bytes memory params = abi.encode(operationParams);
 
         address[] memory assets = new address[](1);
-        assets[0] = address(data.underlyingBorrowToken);
+        assets[0] = address(data.underlyingCollateralToken);
         uint256[] memory amounts = new uint256[](1);
-        amounts[0] = debtPosition.futureValue;
+        amounts[0] = debtPosition.futureValue * 101 / 100;
         uint256[] memory modes = new uint256[](1);
         modes[0] = 0;
 
         POOL.flashLoan(address(this), assets, amounts, modes, address(this), params, 0);
+        
+        console.log("=== ROLLOVER END ===");
     }
 
     function executeOperation(
@@ -151,6 +177,14 @@ contract AutoRollover is Initializable, Ownable2StepUpgradeable, UpgradeableFlas
         address initiator,
         bytes calldata params
     ) external override returns (bool) {
+        console.log("=== EXECUTE OPERATION START ===");
+        console.log("Msg sender:", msg.sender);
+        console.log("POOL address:", address(POOL));
+        console.log("Initiator:", initiator);
+        console.log("Contract address:", address(this));
+        console.log("USDC balance start:", IERC20Metadata(assets[0]).balanceOf(address(this)));
+        
+
         if (msg.sender != address(POOL)) {
             revert PeripheryErrors.NOT_AAVE_POOL();
         }
@@ -160,9 +194,29 @@ contract AutoRollover is Initializable, Ownable2StepUpgradeable, UpgradeableFlas
 
         OperationParams memory operationParams = abi.decode(params, (OperationParams));
 
-        uint256 newFutureValue = amounts[0] + premiums[0];
 
-        operationParams.market.sellCreditMarketOnBehalfOf(
+        console.log("USDC balance before repay:", IERC20Metadata(assets[0]).balanceOf(address(this)));
+        console.log("Calling repay...");
+        try operationParams.market.repay(
+            RepayParams({debtPositionId: operationParams.debtPositionId, borrower: operationParams.onBehalfOf})
+        ) {
+            console.log("repay succeeded");
+        } catch Error(string memory reason) {
+            console.log("repay failed with reason:", reason);
+            revert(reason);
+        } catch (bytes memory lowLevelData) {
+            console.log("repay failed with low level data");
+            revert();
+        }
+        console.log("USDC balance after repay:", IERC20Metadata(assets[0]).balanceOf(address(this)));
+
+        
+        // Check contract balance before sellCreditMarketOnBehalfOf
+        console.log("USDC balance before sellCreditMarketOnBehalfOf:", IERC20Metadata(assets[0]).balanceOf(address(this)));
+
+        uint256 newFutureValue = amounts[0] + premiums[0];
+        console.log("Calling sellCreditMarketOnBehalfOf...");
+        try operationParams.market.sellCreditMarketOnBehalfOf(
             SellCreditMarketOnBehalfOfParams({
                 params: SellCreditMarketParams({
                     lender: operationParams.lender,
@@ -176,14 +230,23 @@ contract AutoRollover is Initializable, Ownable2StepUpgradeable, UpgradeableFlas
                 onBehalfOf: operationParams.onBehalfOf,
                 recipient: address(this)
             })
-        );
+        ) {
+            console.log("sellCreditMarketOnBehalfOf succeeded");
+        } catch Error(string memory reason) {
+            console.log("sellCreditMarketOnBehalfOf failed with reason:", reason);
+            revert(reason);
+        } catch (bytes memory lowLevelData) {
+            console.log("sellCreditMarketOnBehalfOf failed with low level data");
+            revert();
+        }
 
-        operationParams.market.repay(
-            RepayParams({debtPositionId: operationParams.debtPositionId, borrower: operationParams.onBehalfOf})
-        );
+        // Check contract balance after sellCreditMarketOnBehalfOf
+        console.log("USDC balance after sellCreditMarketOnBehalfOf:", IERC20Metadata(assets[0]).balanceOf(address(this)));
 
+    
+        console.log("Approving POOL to spend:", newFutureValue);
         IERC20Metadata(assets[0]).forceApprove(address(POOL), newFutureValue);
-
+        console.log("=== EXECUTE OPERATION END ===");
         return true;
     }
 

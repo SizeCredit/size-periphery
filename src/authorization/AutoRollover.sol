@@ -256,7 +256,7 @@ contract AutoRollover is Initializable, Ownable2StepUpgradeable, UpgradeableFlas
         operationParams.market.withdraw(
             WithdrawParams({
                 token: assets[0],
-                amount: amounts[0],
+                amount: amounts[0] + premiums[0],
                 to: address(this)
             })
         );

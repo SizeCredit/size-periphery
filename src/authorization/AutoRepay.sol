@@ -38,20 +38,16 @@ contract AutoRepay is Initializable, Ownable2StepUpgradeable, UpgradeableFlashLo
     event EarlyRepaymentBufferUpdated(uint256 oldValue, uint256 newValue);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor(
-        address _oneInchAggregator,
-        address _unoswapRouter,
-        address _uniswapV2Router,
-        address _uniswapV3Router
-    ) DexSwap(_oneInchAggregator, _unoswapRouter, _uniswapV2Router, _uniswapV3Router) {
+    constructor(address _oneInchAggregator, address _unoswapRouter, address _uniswapV2Router, address _uniswapV3Router)
+        DexSwap(_oneInchAggregator, _unoswapRouter, _uniswapV2Router, _uniswapV3Router)
+    {
         _disableInitializers();
     }
 
-    function initialize(
-        address _owner,
-        IPoolAddressesProvider _addressProvider,
-        uint256 _earlyRepaymentBuffer
-    ) public initializer {
+    function initialize(address _owner, IPoolAddressesProvider _addressProvider, uint256 _earlyRepaymentBuffer)
+        public
+        initializer
+    {
         __Ownable2Step_init();
         __FlashLoanReceiver_init(_addressProvider);
         _transferOwnership(_owner);
@@ -141,36 +137,31 @@ contract AutoRepay is Initializable, Ownable2StepUpgradeable, UpgradeableFlashLo
     function _handleDeposit(OperationParams memory params, uint256 amount) private {
         DataView memory data = params.market.data();
         IERC20Metadata(data.underlyingBorrowToken).forceApprove(address(params.market), amount);
-        
+
         params.market.depositOnBehalfOf(
             DepositOnBehalfOfParams({
-                params: DepositParams({
-                    token: address(data.underlyingBorrowToken),
-                    amount: amount,
-                    to: address(this)
-                }),
+                params: DepositParams({token: address(data.underlyingBorrowToken), amount: amount, to: address(this)}),
                 onBehalfOf: address(this)
             })
         );
     }
 
     function _handleRepay(OperationParams memory params) private {
-        params.market.repay(RepayParams({
-            debtPositionId: params.debtPositionId,
-            borrower: params.onBehalfOf
-        }));
+        params.market.repay(RepayParams({debtPositionId: params.debtPositionId, borrower: params.onBehalfOf}));
     }
 
     function _handleWithdraw(OperationParams memory params) private {
         DataView memory data = params.market.data();
-        params.market.withdrawOnBehalfOf(WithdrawOnBehalfOfParams({
-            params: WithdrawParams({
-                token: address(data.underlyingCollateralToken),
-                amount: params.collateralAmount,
-                to: address(this)
-            }),
-            onBehalfOf: params.onBehalfOf
-        }));
+        params.market.withdrawOnBehalfOf(
+            WithdrawOnBehalfOfParams({
+                params: WithdrawParams({
+                    token: address(data.underlyingCollateralToken),
+                    amount: params.collateralAmount,
+                    to: address(this)
+                }),
+                onBehalfOf: params.onBehalfOf
+            })
+        );
     }
 
     function _handleLeftoverDebtTokens(OperationParams memory params, uint256 amountOwed) private {
@@ -178,16 +169,12 @@ contract AutoRepay is Initializable, Ownable2StepUpgradeable, UpgradeableFlashLo
         address debtToken = address(data.underlyingBorrowToken);
         uint256 balance = IERC20Metadata(debtToken).balanceOf(address(this));
         uint256 leftoverAmount = balance >= amountOwed ? balance - amountOwed : 0;
-        
+
         if (leftoverAmount > 0) {
             IERC20Metadata(debtToken).forceApprove(address(params.market), leftoverAmount);
             params.market.depositOnBehalfOf(
                 DepositOnBehalfOfParams({
-                    params: DepositParams({
-                        token: debtToken,
-                        amount: leftoverAmount,
-                        to: params.onBehalfOf
-                    }),
+                    params: DepositParams({token: debtToken, amount: leftoverAmount, to: params.onBehalfOf}),
                     onBehalfOf: address(this)
                 })
             );

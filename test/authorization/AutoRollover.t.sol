@@ -18,7 +18,9 @@ import {console} from "forge-std/console.sol";
 
 // Define events for testing
 event EarlyRepaymentBufferUpdated(uint256 oldValue, uint256 newValue);
+
 event MinTenorUpdated(uint256 oldValue, uint256 newValue);
+
 event MaxTenorUpdated(uint256 oldValue, uint256 newValue);
 
 contract AutoRolloverTest is BaseTest {
@@ -61,7 +63,7 @@ contract AutoRolloverTest is BaseTest {
 
     function test_AutoRollover_setEarlyRepaymentBuffer() public {
         uint256 newBuffer = 2 hours;
-        
+
         // Test unauthorized access
         vm.prank(candy);
         vm.expectRevert(abi.encodeWithSelector(OWNER_ONLY, candy));
@@ -80,7 +82,7 @@ contract AutoRolloverTest is BaseTest {
 
     function test_AutoRollover_setMinTenor() public {
         uint256 newMinTenor = 2 hours;
-        
+
         // Test unauthorized access
         vm.prank(candy);
         vm.expectRevert(abi.encodeWithSelector(OWNER_ONLY, candy));
@@ -99,7 +101,7 @@ contract AutoRolloverTest is BaseTest {
 
     function test_AutoRollover_setMaxTenor() public {
         uint256 newMaxTenor = 14 days;
-        
+
         // Test unauthorized access
         vm.prank(candy);
         vm.expectRevert(abi.encodeWithSelector(OWNER_ONLY, candy));
@@ -239,7 +241,7 @@ contract AutoRolloverTest is BaseTest {
 
     function test_AutoRollover_setEarlyRepaymentBuffer_events() public {
         uint256 newBuffer = 2 hours;
-        
+
         // Test event emission
         vm.prank(james);
         vm.expectEmit(true, true, true, true);
@@ -255,7 +257,7 @@ contract AutoRolloverTest is BaseTest {
 
     function test_AutoRollover_setMinTenor_events() public {
         uint256 newMinTenor = 2 hours;
-        
+
         // Test event emission
         vm.prank(james);
         vm.expectEmit(true, true, true, true);
@@ -271,7 +273,7 @@ contract AutoRolloverTest is BaseTest {
 
     function test_AutoRollover_setMaxTenor_events() public {
         uint256 newMaxTenor = 14 days;
-        
+
         // Test event emission
         vm.prank(james);
         vm.expectEmit(true, true, true, true);
@@ -363,21 +365,21 @@ contract AutoRolloverTest is BaseTest {
 
         // Try rollover with tenor above original maxTenor (should fail)
         vm.warp(block.timestamp + tenor - 30 minutes);
-        uint256 longTenor = 3 * tenor;  // 6 days
+        uint256 longTenor = 3 * tenor; // 6 days
         vm.prank(james);
         vm.expectRevert();
         autoRollover.rollover(size, debtPositionId, bob, alice, longTenor, type(uint256).max, block.timestamp);
 
         // Increase maxTenor to allow longer rollover
-        uint256 newMaxTenor = 4 * tenor;  // 8 days
+        uint256 newMaxTenor = 4 * tenor; // 8 days
         vm.prank(james);
         autoRollover.setMaxTenor(newMaxTenor);
-        
+
         // Verify maxTenor was updated
         assertEq(autoRollover.maxTenor(), newMaxTenor, "Max tenor not updated correctly");
 
         // Try rollover again with a tenor that's within the new range
-        uint256 validTenor = tenor + 1 days;  // 3 days
+        uint256 validTenor = tenor + 1 days; // 3 days
         vm.prank(james);
         autoRollover.rollover(size, debtPositionId, bob, alice, validTenor, type(uint256).max, block.timestamp);
 

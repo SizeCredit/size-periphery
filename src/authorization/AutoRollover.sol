@@ -28,7 +28,7 @@ contract AutoRollover is Initializable, Ownable2StepUpgradeable, UpgradeableFlas
     // State variables for configurable parameters
     uint256 public earlyRepaymentBuffer;
     uint256 public minTenor;
-    uint256 public maxTenor;    
+    uint256 public maxTenor;
 
     // Events for parameter updates
     event EarlyRepaymentBufferUpdated(uint256 oldValue, uint256 newValue);
@@ -170,20 +170,14 @@ contract AutoRollover is Initializable, Ownable2StepUpgradeable, UpgradeableFlas
 
         // Deposit underlying borrow token to receive borrowAToken
         IERC20Metadata(assets[0]).forceApprove(address(operationParams.market), amounts[0]);
-        operationParams.market.deposit(
-            DepositParams({
-                token: assets[0],
-                amount: amounts[0],
-                to: address(this)
-            })
-        );
+        operationParams.market.deposit(DepositParams({token: assets[0], amount: amounts[0], to: address(this)}));
 
         // Repay debt position
         operationParams.market.repay(
             RepayParams({debtPositionId: operationParams.debtPositionId, borrower: operationParams.onBehalfOf})
         );
 
-        // Take new loan 
+        // Take new loan
         operationParams.market.sellCreditMarketOnBehalfOf(
             SellCreditMarketOnBehalfOfParams({
                 params: SellCreditMarketParams({
@@ -202,11 +196,7 @@ contract AutoRollover is Initializable, Ownable2StepUpgradeable, UpgradeableFlas
 
         // Withdraw underlying borrow token to repay flashloan
         operationParams.market.withdraw(
-            WithdrawParams({
-                token: assets[0],
-                amount: amounts[0] + premiums[0],
-                to: address(this)
-            })
+            WithdrawParams({token: assets[0], amount: amounts[0] + premiums[0], to: address(this)})
         );
 
         IERC20Metadata(assets[0]).forceApprove(address(POOL), newFutureValue);

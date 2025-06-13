@@ -47,10 +47,7 @@ contract ForkAutoRepayTest is ForkTestVirtualsUSDC, Addresses {
         // Deploy implementation and proxy (format exactly as in working setup)
         AutoRepay autoRepayImplementation = new AutoRepay(ONE_INCH, UNOSWAP, UNISWAP_V2, UNISWAP_V3_ROUTER);
         bytes memory initData = abi.encodeWithSelector(
-            AutoRepay.initialize.selector,
-            address(this),
-            IPoolAddressesProvider(POOL_ADDRESSES_PROVIDER),
-            48 days
+            AutoRepay.initialize.selector, address(this), IPoolAddressesProvider(POOL_ADDRESSES_PROVIDER), 48 days
         );
         AutoRepay autoRepay = AutoRepay(address(new ERC1967Proxy(address(autoRepayImplementation), initData)));
         console.log("AutoRepay proxy deployed at:", address(autoRepay));
@@ -66,14 +63,14 @@ contract ForkAutoRepayTest is ForkTestVirtualsUSDC, Addresses {
         // Fetch debt position
         DebtPosition memory debtPosition = size.getDebtPosition(DEBT_POSITION_ID);
         console.log("Debt position futureValue:", debtPosition.futureValue);
-        
+
         // Calculate exact collateral amount needed using the Size contract's oracle
         uint256 collateralAmount = size.debtTokenAmountToCollateralTokenAmount(debtPosition.futureValue);
         // Increase collateral amount by 10%
         collateralAmount = collateralAmount * 110 / 100;
-        
+
         console.log("Calculated collateral amount needed:", collateralAmount);
-        
+
         // Get price feed for additional logging
         IPriceFeed priceFeedInterface = IPriceFeed(priceFeed);
         uint256 currentPrice = priceFeedInterface.getPrice();
@@ -89,21 +86,12 @@ contract ForkAutoRepayTest is ForkTestVirtualsUSDC, Addresses {
             amountOutMinimum: 0
         });
         SwapParams[] memory swapParams = new SwapParams[](1);
-        swapParams[0] = SwapParams({
-            method: SwapMethod.UniswapV3,
-            data: abi.encode(uniParams)
-        });
+        swapParams[0] = SwapParams({method: SwapMethod.UniswapV3, data: abi.encode(uniParams)});
 
         // Impersonate bot and call repayWithCollateral
         vm.startPrank(address(this));
         console.log("Calling repayWithCollateral...");
-        autoRepay.repayWithCollateral(
-            size,
-            DEBT_POSITION_ID,
-            BORROWER,
-            collateralAmount,
-            swapParams
-        );
+        autoRepay.repayWithCollateral(size, DEBT_POSITION_ID, BORROWER, collateralAmount, swapParams);
         vm.stopPrank();
         console.log("repayWithCollateral called");
 
@@ -112,4 +100,4 @@ contract ForkAutoRepayTest is ForkTestVirtualsUSDC, Addresses {
         console.log("Debt position futureValue after:", debtPosition.futureValue);
         assertEq(debtPosition.futureValue, 0, "Debt should be repaid");
     }
-} 
+}

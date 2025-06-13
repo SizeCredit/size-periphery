@@ -26,4 +26,4 @@ abstract contract UpgradeableFlashLoanReceiver is Initializable {
         address initiator,
         bytes calldata params
     ) external virtual returns (bool);
-} 
+}

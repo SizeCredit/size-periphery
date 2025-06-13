@@ -31,7 +31,7 @@ contract AutoRepayTest is BaseTest {
 
     function setUp() public override {
         super.setUp();
-        
+
         // Initialize mock contracts
         mockAavePool = new MockAavePool();
         mock1InchAggregator = new Mock1InchAggregator(address(priceFeed));
@@ -49,7 +49,7 @@ contract AutoRepayTest is BaseTest {
             address(mock1InchAggregator),
             address(1), // placeholder for unoswap router
             address(1), // placeholder for uniswapv2 router
-            address(1)  // placeholder for uniswapv3 router
+            address(1) // placeholder for uniswapv3 router
         );
         bytes memory initData = abi.encodeWithSelector(
             AutoRepay.initialize.selector,
@@ -67,7 +67,7 @@ contract AutoRepayTest is BaseTest {
 
     function test_AutoRepay_setEarlyRepaymentBuffer() public {
         uint256 newBuffer = 2 hours;
-        
+
         // Test unauthorized access
         vm.prank(candy);
         vm.expectRevert(abi.encodeWithSelector(OWNER_ONLY, candy));
@@ -88,37 +88,24 @@ contract AutoRepayTest is BaseTest {
         // Test initializing implementation directly
         vm.expectRevert(); // Expect any revert
         autoRepayImplementation.initialize(
-            james,
-            IPoolAddressesProvider(address(mockAavePool)),
-            _initialEarlyRepaymentBuffer
+            james, IPoolAddressesProvider(address(mockAavePool)), _initialEarlyRepaymentBuffer
         );
 
         // Test initializing proxy again
         vm.expectRevert(); // Expect any revert
-        autoRepay.initialize(
-            james,
-            IPoolAddressesProvider(address(mockAavePool)),
-            _initialEarlyRepaymentBuffer
-        );
+        autoRepay.initialize(james, IPoolAddressesProvider(address(mockAavePool)), _initialEarlyRepaymentBuffer);
     }
 
     function test_AutoRepay_initialize_invalidParams() public {
         // Test initializing with zero address provider
-        bytes memory initData = abi.encodeWithSelector(
-            AutoRepay.initialize.selector,
-            james,
-            address(0),
-            _initialEarlyRepaymentBuffer
-        );
+        bytes memory initData =
+            abi.encodeWithSelector(AutoRepay.initialize.selector, james, address(0), _initialEarlyRepaymentBuffer);
         vm.expectRevert(abi.encodeWithSelector(Errors.NULL_ADDRESS.selector));
         new ERC1967Proxy(address(autoRepayImplementation), initData);
 
         // Test initializing with zero early repayment buffer
         initData = abi.encodeWithSelector(
-            AutoRepay.initialize.selector,
-            james,
-            IPoolAddressesProvider(address(mockAavePool)),
-            0
+            AutoRepay.initialize.selector, james, IPoolAddressesProvider(address(mockAavePool)), 0
         );
         vm.expectRevert(abi.encodeWithSelector(Errors.NULL_AMOUNT.selector));
         new ERC1967Proxy(address(autoRepayImplementation), initData);
@@ -140,7 +127,7 @@ contract AutoRepayTest is BaseTest {
 
         debtPositionId = _sellCreditMarket(bob, alice, RESERVED_ID, amount, tenor, false);
         console.log("Debt Position ID:", debtPositionId);
-        
+
         _withdraw(bob, address(usdc), type(uint256).max);
         console.log("After withdraw - WETH Balance (Bob):", weth.balanceOf(bob));
         console.log("After withdraw - USDC Balance (Bob):", usdc.balanceOf(bob));
@@ -170,18 +157,10 @@ contract AutoRepayTest is BaseTest {
         vm.prank(james);
         vm.expectRevert(
             abi.encodeWithSelector(
-                PeripheryErrors.AUTO_REPAY_TOO_EARLY.selector,
-                block.timestamp + tenor,
-                block.timestamp
+                PeripheryErrors.AUTO_REPAY_TOO_EARLY.selector, block.timestamp + tenor, block.timestamp
             )
         );
-        autoRepay.repayWithCollateral(
-            size,
-            debtPositionId,
-            bob,
-            amount,
-            new SwapParams[](0)
-        );
+        autoRepay.repayWithCollateral(size, debtPositionId, bob, amount, new SwapParams[](0));
 
         // Verify loan state unchanged
         Vars memory _after = _state();
@@ -196,13 +175,7 @@ contract AutoRepayTest is BaseTest {
         // Try to repay without authorization
         vm.prank(candy);
         vm.expectRevert(abi.encodeWithSelector(OWNER_ONLY, candy));
-        autoRepay.repayWithCollateral(
-            size,
-            debtPositionId,
-            bob,
-            amount,
-            new SwapParams[](0)
-        );
+        autoRepay.repayWithCollateral(size, debtPositionId, bob, amount, new SwapParams[](0));
     }
 
     function test_AutoRepay_repayWithCollateral_zeroAmount() public {
@@ -213,13 +186,7 @@ contract AutoRepayTest is BaseTest {
         // Try to repay with zero collateral amount
         vm.prank(james);
         vm.expectRevert();
-        autoRepay.repayWithCollateral(
-            size,
-            debtPositionId,
-            bob,
-            0,
-            new SwapParams[](0)
-        );
+        autoRepay.repayWithCollateral(size, debtPositionId, bob, 0, new SwapParams[](0));
     }
 
     function test_AutoRepay_repayWithCollateral_early() public {
@@ -229,16 +196,9 @@ contract AutoRepayTest is BaseTest {
 
         // Setup mock swap params
         SwapParams[] memory swapParams = new SwapParams[](1);
-        OneInchParams memory oneInchParams = OneInchParams({
-            fromToken: address(weth),
-            toToken: address(usdc),
-            minReturn: 0,
-            data: ""
-        });
-        swapParams[0] = SwapParams({
-            method: SwapMethod.OneInch,
-            data: abi.encode(oneInchParams)
-        });
+        OneInchParams memory oneInchParams =
+            OneInchParams({fromToken: address(weth), toToken: address(usdc), minReturn: 0, data: ""});
+        swapParams[0] = SwapParams({method: SwapMethod.OneInch, data: abi.encode(oneInchParams)});
 
         // Log initial state
         console.log("=== Initial State ===");
@@ -248,7 +208,7 @@ contract AutoRepayTest is BaseTest {
         console.log("USDC Balance (Bob):", usdc.balanceOf(bob));
         console.log("WETH Allowance (Bob -> AutoRepay):", weth.allowance(bob, address(autoRepay)));
         console.log("USDC Allowance (Bob -> AutoRepay):", usdc.allowance(bob, address(autoRepay)));
-        
+
         // Get debt position details
         DebtPosition memory debtPosition = size.getDebtPosition(debtPositionId);
         console.log("Debt Position Future Value:", debtPosition.futureValue);
@@ -263,13 +223,7 @@ contract AutoRepayTest is BaseTest {
         // Execute repay
         vm.prank(james);
         console.log("\n=== Executing Repay ===");
-        autoRepay.repayWithCollateral(
-            size,
-            debtPositionId,
-            bob,
-            amount,
-            swapParams
-        );
+        autoRepay.repayWithCollateral(size, debtPositionId, bob, amount, swapParams);
 
         // Log final state
         console.log("\n=== Final State ===");
@@ -293,16 +247,9 @@ contract AutoRepayTest is BaseTest {
 
         // Setup mock swap params
         SwapParams[] memory swapParams = new SwapParams[](1);
-        OneInchParams memory oneInchParams = OneInchParams({
-            fromToken: address(weth),
-            toToken: address(usdc),
-            minReturn: 0,
-            data: ""
-        });
-        swapParams[0] = SwapParams({
-            method: SwapMethod.OneInch,
-            data: abi.encode(oneInchParams)
-        });
+        OneInchParams memory oneInchParams =
+            OneInchParams({fromToken: address(weth), toToken: address(usdc), minReturn: 0, data: ""});
+        swapParams[0] = SwapParams({method: SwapMethod.OneInch, data: abi.encode(oneInchParams)});
 
         // Log initial state
         console.log("=== Initial State ===");
@@ -312,7 +259,7 @@ contract AutoRepayTest is BaseTest {
         console.log("USDC Balance (Bob):", usdc.balanceOf(bob));
         console.log("WETH Allowance (Bob -> AutoRepay):", weth.allowance(bob, address(autoRepay)));
         console.log("USDC Allowance (Bob -> AutoRepay):", usdc.allowance(bob, address(autoRepay)));
-        
+
         // Get debt position details
         DebtPosition memory debtPosition = size.getDebtPosition(debtPositionId);
         console.log("Debt Position Future Value:", debtPosition.futureValue);
@@ -327,13 +274,7 @@ contract AutoRepayTest is BaseTest {
         // Execute repay
         vm.prank(james);
         console.log("\n=== Executing Repay ===");
-        autoRepay.repayWithCollateral(
-            size,
-            debtPositionId,
-            bob,
-            amount,
-            swapParams
-        );
+        autoRepay.repayWithCollateral(size, debtPositionId, bob, amount, swapParams);
 
         // Log final state
         console.log("\n=== Final State ===");
@@ -357,10 +298,8 @@ contract AutoRepayTest is BaseTest {
 
         // Setup mock swap params
         SwapParams[] memory swapParams = new SwapParams[](1);
-        swapParams[0] = SwapParams({
-            method: SwapMethod.GenericRoute,
-            data: abi.encode(address(0), address(0), bytes(""))
-        });
+        swapParams[0] =
+            SwapParams({method: SwapMethod.GenericRoute, data: abi.encode(address(0), address(0), bytes(""))});
 
         // Try to repay with more collateral than available
         vm.prank(james);

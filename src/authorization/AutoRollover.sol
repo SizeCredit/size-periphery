@@ -20,7 +20,6 @@ import {Errors} from "@size/src/market/libraries/Errors.sol";
 import {UpgradeableFlashLoanReceiver} from "./UpgradeableFlashLoanReceiver.sol";
 import {IRequiresAuthorization} from "./IRequiresAuthorization.sol";
 import {ActionsBitmap, Action, Authorization} from "@size/src/factory/libraries/Authorization.sol";
-import {console} from "forge-std/console.sol";
 import {WithdrawParams} from "@size/src/market/libraries/actions/Withdraw.sol";
 
 contract AutoRollover is Initializable, Ownable2StepUpgradeable, UpgradeableFlashLoanReceiver {
@@ -114,28 +113,13 @@ contract AutoRollover is Initializable, Ownable2StepUpgradeable, UpgradeableFlas
         uint256 maxAPR,
         uint256 deadline
     ) external onlyOwner {
-        console.log("=== ROLLOVER START ===");
-        console.log("Market address:", address(market));
-        console.log("Debt position ID:", debtPositionId);
-        console.log("On behalf of:", onBehalfOf);
-        console.log("Lender:", lender);
-        console.log("Tenor:", tenor);
-        console.log("Max APR:", maxAPR);
-        console.log("Current timestamp:", block.timestamp);
-
         DebtPosition memory debtPosition = market.getDebtPosition(debtPositionId);
-        console.log("Debt position borrower:", debtPosition.borrower);
-        console.log("Debt position futureValue:", debtPosition.futureValue);
 
         DataView memory data = market.data();
-        console.log("Market underlying borrow token:", address(data.underlyingBorrowToken));
-        console.log("Market underlying collateral token:", address(data.underlyingCollateralToken));
 
         // Check lender balance
         UserView memory userView = market.getUserView(lender);
         uint256 lenderBalance = userView.borrowATokenBalance;
-        console.log("Lender balance:", lenderBalance);
-        console.log("Required amount (debt futureValue):", debtPosition.futureValue);
 
         if (debtPosition.dueDate > block.timestamp + earlyRepaymentBuffer) {
             revert PeripheryErrors.AUTO_REPAY_TOO_EARLY(debtPosition.dueDate, block.timestamp);
@@ -144,8 +128,6 @@ contract AutoRollover is Initializable, Ownable2StepUpgradeable, UpgradeableFlas
         if (tenor < minTenor || tenor > maxTenor) {
             revert Errors.TENOR_OUT_OF_RANGE(tenor, minTenor, maxTenor);
         }
-
-        console.log("All validations passed, proceeding with flash loan...");
 
         OperationParams memory operationParams = OperationParams({
             market: market,
@@ -167,8 +149,6 @@ contract AutoRollover is Initializable, Ownable2StepUpgradeable, UpgradeableFlas
         modes[0] = 0;
 
         POOL.flashLoan(address(this), assets, amounts, modes, address(this), params, 0);
-        
-        console.log("=== ROLLOVER END ===");
     }
 
     function executeOperation(
@@ -178,14 +158,6 @@ contract AutoRollover is Initializable, Ownable2StepUpgradeable, UpgradeableFlas
         address initiator,
         bytes calldata params
     ) external override returns (bool) {
-        console.log("=== EXECUTE OPERATION START ===");
-        console.log("Msg sender:", msg.sender);
-        console.log("POOL address:", address(POOL));
-        console.log("Initiator:", initiator);
-        console.log("Contract address:", address(this));
-        console.log("USDC balance start:", IERC20Metadata(assets[0]).balanceOf(address(this)));
-        
-
         if (msg.sender != address(POOL)) {
             revert PeripheryErrors.NOT_AAVE_POOL();
         }
@@ -197,9 +169,7 @@ contract AutoRollover is Initializable, Ownable2StepUpgradeable, UpgradeableFlas
         uint256 newFutureValue = amounts[0] + premiums[0];
 
         // Deposit underlying borrow token to receive borrowAToken
-        console.log("Approving market to spend underlying borrow token:", amounts[0]);
         IERC20Metadata(assets[0]).forceApprove(address(operationParams.market), amounts[0]);
-        console.log("Depositing underlying borrow token to market...");
         operationParams.market.deposit(
             DepositParams({
                 token: assets[0],
@@ -207,27 +177,14 @@ contract AutoRollover is Initializable, Ownable2StepUpgradeable, UpgradeableFlas
                 to: address(this)
             })
         );
-        console.log("Deposit complete. borrowAToken should now be minted to this contract.");
 
-        console.log("USDC balance before repay:", IERC20Metadata(assets[0]).balanceOf(address(this)));
-        console.log("Calling repay...");
-        try operationParams.market.repay(
+        // Repay debt position
+        operationParams.market.repay(
             RepayParams({debtPositionId: operationParams.debtPositionId, borrower: operationParams.onBehalfOf})
-        ) {
-            console.log("repay succeeded");
-        } catch Error(string memory reason) {
-            console.log("repay failed with reason:", reason);
-            revert(reason);
-        } catch (bytes memory lowLevelData) {
-            console.log("repay failed with low level data");
-            revert();
-        }
-        console.log("USDC balance after repay:", IERC20Metadata(assets[0]).balanceOf(address(this)));
-        // Check contract balance before sellCreditMarketOnBehalfOf
-        console.log("USDC balance before sellCreditMarketOnBehalfOf:", IERC20Metadata(assets[0]).balanceOf(address(this)));
+        );
 
-        console.log("Calling sellCreditMarketOnBehalfOf...");
-        try operationParams.market.sellCreditMarketOnBehalfOf(
+        // Take new loan 
+        operationParams.market.sellCreditMarketOnBehalfOf(
             SellCreditMarketOnBehalfOfParams({
                 params: SellCreditMarketParams({
                     lender: operationParams.lender,
@@ -241,18 +198,9 @@ contract AutoRollover is Initializable, Ownable2StepUpgradeable, UpgradeableFlas
                 onBehalfOf: operationParams.onBehalfOf,
                 recipient: address(this)
             })
-        ) {
-            console.log("sellCreditMarketOnBehalfOf succeeded");
-        } catch Error(string memory reason) {
-            console.log("sellCreditMarketOnBehalfOf failed with reason:", reason);
-            revert(reason);
-        } catch (bytes memory lowLevelData) {
-            console.log("sellCreditMarketOnBehalfOf failed with low level data");
-            revert();
-        }
+        );
 
         // Withdraw underlying borrow token to repay flashloan
-        console.log("Withdrawing underlying borrow token to repay flashloan...");
         operationParams.market.withdraw(
             WithdrawParams({
                 token: assets[0],
@@ -261,14 +209,7 @@ contract AutoRollover is Initializable, Ownable2StepUpgradeable, UpgradeableFlas
             })
         );
 
-        // Check contract balance after sellCreditMarketOnBehalfOf
-        console.log("USDC balance after sellCreditMarketOnBehalfOf:", IERC20Metadata(assets[0]).balanceOf(address(this)));
-
-
-
-        console.log("Approving POOL to spend:", newFutureValue);
         IERC20Metadata(assets[0]).forceApprove(address(POOL), newFutureValue);
-        console.log("=== EXECUTE OPERATION END ===");
         return true;
     }
 

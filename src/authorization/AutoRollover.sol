@@ -21,6 +21,7 @@ import {UpgradeableFlashLoanReceiver} from "./UpgradeableFlashLoanReceiver.sol";
 import {IRequiresAuthorization} from "./IRequiresAuthorization.sol";
 import {ActionsBitmap, Action, Authorization} from "@size/src/factory/libraries/Authorization.sol";
 import {console} from "forge-std/console.sol";
+import {WithdrawParams} from "@size/src/market/libraries/actions/Withdraw.sol";
 
 contract AutoRollover is Initializable, Ownable2StepUpgradeable, UpgradeableFlashLoanReceiver {
     using SafeERC20 for IERC20Metadata;
@@ -249,6 +250,16 @@ contract AutoRollover is Initializable, Ownable2StepUpgradeable, UpgradeableFlas
             console.log("sellCreditMarketOnBehalfOf failed with low level data");
             revert();
         }
+
+        // Withdraw underlying borrow token to repay flashloan
+        console.log("Withdrawing underlying borrow token to repay flashloan...");
+        operationParams.market.withdraw(
+            WithdrawParams({
+                token: assets[0],
+                amount: amounts[0],
+                to: address(this)
+            })
+        );
 
         // Check contract balance after sellCreditMarketOnBehalfOf
         console.log("USDC balance after sellCreditMarketOnBehalfOf:", IERC20Metadata(assets[0]).balanceOf(address(this)));

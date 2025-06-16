@@ -69,7 +69,7 @@ contract DeployAutoRepay is Script, Addresses {
         address uniswapV3Router
     ) internal {
         string memory root = vm.projectRoot();
-        string memory path = string.concat(root, "/deployments/");
+        string memory path = string.concat(root, "/deployments/autorepay/");
         string memory chainIdStr = vm.toString(block.chainid);
         path = string.concat(path, string.concat(chainIdStr, ".json"));
 

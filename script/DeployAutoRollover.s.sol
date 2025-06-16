@@ -24,7 +24,7 @@ contract DeployAutoRollover is Script, Addresses {
 
         // Prepare initialization data
         // Parameters: owner, addressProvider, earlyRepaymentBuffer, minTenor, maxTenor
-        // Using reasonable defaults: 48 days buffer, 1 day min tenor, 365 days max tenor
+        // Using reasonable defaults: 24 hours buffer, 1 day min tenor, 7 days max tenor
         bytes memory initData = abi.encodeWithSelector(
             AutoRollover.initialize.selector,
             msg.sender, // owner

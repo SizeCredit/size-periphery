@@ -16,7 +16,7 @@ contract DeployAutoRepay is Script, Addresses {
         vm.startBroadcast();
 
         address addressProvider = addresses[block.chainid][CONTRACT.ADDRESS_PROVIDER];
-        address aggregator1inch = addresses[block.chainid][CONTRACT.AGGREGATOR_1INCH];
+      address aggregator1inch = addresses[block.chainid][CONTRACT.AGGREGATOR_1INCH];
         address unoswapRouter = addresses[block.chainid][CONTRACT.UNOSWAP_ROUTER];
         address uniswapV2Router = addresses[block.chainid][CONTRACT.UNISWAP_V2_ROUTER];
         address uniswapV3Router = addresses[block.chainid][CONTRACT.UNISWAP_V3_ROUTER];
@@ -32,7 +32,7 @@ contract DeployAutoRepay is Script, Addresses {
         console.log("Deployed AutoRepay implementation at:", address(autoRepayImplementation));
 
         // Prepare initialization data
-        // Parameters: owner, addressProvider, earlyRepaymentBuffer (48 days = 48 * 24 * 60 * 60 = 4,147,200 seconds)
+        // Parameters: owner, addressProvider, earlyRepaymentBuffer 
         bytes memory initData = abi.encodeWithSelector(
             AutoRepay.initialize.selector,
             msg.sender, // owner

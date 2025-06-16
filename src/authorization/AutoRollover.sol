@@ -117,10 +117,6 @@ contract AutoRollover is Initializable, Ownable2StepUpgradeable, UpgradeableFlas
 
         DataView memory data = market.data();
 
-        // Check lender balance
-        UserView memory userView = market.getUserView(lender);
-        uint256 lenderBalance = userView.borrowATokenBalance;
-
         if (debtPosition.dueDate > block.timestamp + earlyRepaymentBuffer) {
             revert PeripheryErrors.AUTO_REPAY_TOO_EARLY(debtPosition.dueDate, block.timestamp);
         }

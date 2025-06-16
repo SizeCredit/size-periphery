@@ -37,7 +37,7 @@ contract DeployAutoRepay is Script, Addresses {
             AutoRepay.initialize.selector,
             msg.sender, // owner
             addressProvider,
-            24 hours // earlyRepaymentBuffer
+            1 days // earlyRepaymentBuffer
         );
 
         // Deploy proxy contract

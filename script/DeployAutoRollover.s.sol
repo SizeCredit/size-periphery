@@ -29,8 +29,8 @@ contract DeployAutoRollover is Script, Addresses {
             AutoRollover.initialize.selector,
             msg.sender, // owner
             addressProvider,
-            24 hours, // earlyRepaymentBuffer
-            1 days,  // minTenor
+            1 days, // earlyRepaymentBuffer
+            2 days,  // minTenor
             7 days // maxTenor
         );
 

@@ -15,7 +15,7 @@ contract UpdateAutoRolloverEarlyRepaymentBuffer is Script, Addresses {
         // uint256 newBuffer = vm.envUint("NEW_EARLY_REPAYMENT_BUFFER");
         // set new buffer to 7 days in seconds
         uint256 newBuffer = 7 * 24 * 60 * 60;
-        
+
         
         // Get the deployed AutoRollover address from deployment file
         string memory root = vm.projectRoot();
@@ -28,7 +28,7 @@ contract UpdateAutoRolloverEarlyRepaymentBuffer is Script, Addresses {
         // string memory autoRolloverAddressStr = string(autoRolloverAddressBytes);
         // address autoRolloverAddress = vm.parseAddress(autoRolloverAddressStr);
         
-        address autoRolloverAddress = 0x5413eE79FD481E603daB8e595474942e2bD48469;
+        address autoRolloverAddress = 0xA7EF0584ed1eEC3b42D50085A07E47251093ac58;
 
         console.log("Updating AutoRollover early repayment buffer at:", autoRolloverAddress);
         console.log("New early repayment buffer:", newBuffer, "seconds");

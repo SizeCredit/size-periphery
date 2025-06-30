@@ -51,6 +51,7 @@ contract FlashLoanLoopingTest is BaseTest {
         _deposit(alice, usdc, 100e6);
         
         // Lender provides credit limit
+        _deposit(bob, usdc, 100e6);
         _buyCreditLimit(bob, block.timestamp + 365 days, YieldCurveHelper.pointCurve(365 days, 0.03e18));
 
         // User authorizes the FlashLoanLooping contract to act on their behalf
@@ -104,10 +105,11 @@ contract FlashLoanLoopingTest is BaseTest {
         _setPrice(1e18);
         
         // User deposits collateral and USDC
-        _deposit(alice, weth, 100e18);
-        _deposit(alice, usdc, 100e6);
+        _deposit(alice, weth, 1000000000e18);
+        _deposit(alice, usdc, 10000e6);
         
         // Lender provides credit limit
+        _deposit(bob, usdc, 100e6);
         _buyCreditLimit(bob, block.timestamp + 365 days, YieldCurveHelper.pointCurve(365 days, 0.03e18));
 
         // User authorizes the FlashLoanLooping contract
@@ -135,7 +137,7 @@ contract FlashLoanLoopingTest is BaseTest {
             address(size),
             address(weth),
             address(usdc),
-            50e6, // flash loan amount
+            10e6, // flash loan amount
             365 days, // tenor
             0.05e18, // max APR
             bob, // lender
@@ -157,6 +159,7 @@ contract FlashLoanLoopingTest is BaseTest {
         _setPrice(1e18);
         _deposit(alice, weth, 100e18);
         _deposit(alice, usdc, 100e6);
+        _deposit(bob, usdc, 100e6);
         _buyCreditLimit(bob, block.timestamp + 365 days, YieldCurveHelper.pointCurve(365 days, 0.03e18));
 
         // User does NOT authorize the FlashLoanLooping contract
@@ -182,7 +185,7 @@ contract FlashLoanLoopingTest is BaseTest {
             50e6,
             365 days,
             0.05e18,
-            bob,
+            bob, // lender (alice has USDC to lend)
             swapParamsArray,
             address(0)
         );

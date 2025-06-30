@@ -75,7 +75,7 @@ contract FlashLoanLooping is Ownable, FlashLoanReceiverBase, DexSwap {
         bytes memory depositCall = abi.encodeWithSelector(
             ISize.deposit.selector, 
             DepositOnBehalfOfParams({
-                params: DepositParams({token: collateralToken, amount: collateralBalance, to: address(this)}),
+                params: DepositParams({token: collateralToken, amount: collateralBalance, to: onBehalfOf}),
                 onBehalfOf: onBehalfOf
             })
         );
@@ -103,7 +103,7 @@ contract FlashLoanLooping is Ownable, FlashLoanReceiverBase, DexSwap {
             ISize.withdraw.selector,
             WithdrawOnBehalfOfParams({
                 params: WithdrawParams({token: borrowToken, amount: type(uint256).max, to: address(this)}),
-                onBehalfOf: onBehalfOf
+                onBehalfOf: address(this)
             })
         );
 

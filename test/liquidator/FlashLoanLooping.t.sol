@@ -194,10 +194,10 @@ contract FlashLoanLoopingTest is BaseTest {
         actions[0] = Action.DEPOSIT;
         actions[1] = Action.WITHDRAW;
         actions[2] = Action.SELL_CREDIT_MARKET;
-        uint256 expectedBitmap = uint256(Authorization.getActionsBitmap(actions));
+        uint256 expectedBitmap = Authorization.toUint256(Authorization.getActionsBitmap(actions));
         
         assertEq(
-            uint256(flashLoanLooping.getActionsBitmap()),
+            Authorization.toUint256(flashLoanLooping.getActionsBitmap()),
             expectedBitmap,
             "Actions bitmap should match expected value"
         );

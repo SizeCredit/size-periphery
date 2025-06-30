@@ -61,23 +61,17 @@ contract FlashLoanLooping is Ownable, FlashLoanReceiverBase, DexSwap {
         POOL = IPool(IPoolAddressesProvider(_addressProvider).getPool());
     }
 
-    function _executeLoop(
-        address sizeMarket,
+    function _executeLoopMulticall(
+        ISize size,
         address collateralToken,
         address borrowToken,
+        uint256 collateralBalance,
         uint256 flashLoanAmount,
         uint256 tenor,
         uint256 maxAPR,
         address lender,
-        address onBehalfOf,
-        address recipient
-    ) internal returns (uint256 borrowedAmount) {
-        // Deposit collateral
-        uint256 collateralBalance = IERC20(collateralToken).balanceOf(address(this));
-        IERC20(collateralToken).forceApprove(sizeMarket, collateralBalance);
-
-        ISize size = ISize(sizeMarket);
-        
+        address onBehalfOf
+    ) internal {
         bytes memory depositCall = abi.encodeWithSelector(
             ISize.deposit.selector, 
             DepositOnBehalfOfParams({
@@ -121,9 +115,61 @@ contract FlashLoanLooping is Ownable, FlashLoanReceiverBase, DexSwap {
 
         // slither-disable-next-line unused-return
         size.multicall(calls);
+    }
+
+    function _executeLoop(
+        address sizeMarket,
+        address collateralToken,
+        address borrowToken,
+        uint256 flashLoanAmount,
+        uint256 tenor,
+        uint256 maxAPR,
+        address lender,
+        address onBehalfOf,
+        address recipient
+    ) internal returns (uint256 borrowedAmount) {
+        // Deposit collateral
+        uint256 collateralBalance = IERC20(collateralToken).balanceOf(address(this));
+        IERC20(collateralToken).forceApprove(sizeMarket, collateralBalance);
+
+        ISize size = ISize(sizeMarket);
+        
+        // Execute the multicall in a separate function to avoid stack too deep
+        _executeLoopMulticall(
+            size,
+            collateralToken,
+            borrowToken,
+            collateralBalance,
+            flashLoanAmount,
+            tenor,
+            maxAPR,
+            lender,
+            onBehalfOf
+        );
 
         // Return the amount borrowed
         borrowedAmount = IERC20(borrowToken).balanceOf(address(this));
+    }
+
+    function _returnRemainderToUser(
+        address asset,
+        uint256 amountToUser,
+        bool depositProfits,
+        address sizeMarket,
+        address recipient,
+        address onBehalfOf
+    ) internal {
+        if (depositProfits) {
+            IERC20(asset).forceApprove(sizeMarket, amountToUser);
+            ISize(sizeMarket).depositOnBehalfOf(
+                DepositOnBehalfOfParams({
+                    params: DepositParams({token: asset, amount: amountToUser, to: recipient}),
+                    onBehalfOf: onBehalfOf
+                })
+            );
+        } else {
+            IERC20(asset).transfer(recipient, amountToUser);
+        }
     }
 
     function _settleFlashLoan(
@@ -144,17 +190,7 @@ contract FlashLoanLooping is Ownable, FlashLoanReceiverBase, DexSwap {
 
         // Send remainder back to user
         uint256 amountToUser = balance - totalDebt;
-        if (depositProfits) {
-            IERC20(assets[0]).forceApprove(sizeMarket, amountToUser);
-            ISize(sizeMarket).depositOnBehalfOf(
-                DepositOnBehalfOfParams({
-                    params: DepositParams({token: assets[0], amount: amountToUser, to: recipient}),
-                    onBehalfOf: onBehalfOf
-                })
-            );
-        } else {
-            IERC20(assets[0]).transfer(recipient, amountToUser);
-        }
+        _returnRemainderToUser(assets[0], amountToUser, depositProfits, sizeMarket, recipient, onBehalfOf);
 
         // Approve the Pool contract to pull the owed amount
         IERC20(assets[0]).forceApprove(address(POOL), amounts[0] + premiums[0]);

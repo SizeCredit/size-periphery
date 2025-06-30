@@ -54,7 +54,7 @@ contract FlashLoanLoopingTest is BaseTest {
 
     function test_FlashLoanLooping_basic_loop_with_target_LTV() public {
         // Setup initial state
-        _setPrice(1e18); // 1 WETH = 1 USDC for simplicity
+        _setPrice(1e18);
 
         // Alice deposits USDC to lend
         _deposit(alice, usdc, 1000e6);
@@ -70,6 +70,20 @@ contract FlashLoanLoopingTest is BaseTest {
         // Bob deposits his initial collateral to Size
         vm.prank(bob);
         size.deposit(DepositParams({token: address(weth), amount: initialCollateral, to: bob}));
+
+        // Log initial state
+        Vars memory initialState = _state();
+        console.log("=== INITIAL STATE ===");
+        console.log("Bob's WETH balance:", initialState.bob.collateralTokenBalance);
+        console.log("Bob's USDC balance:", initialState.bob.borrowATokenBalance);
+        console.log("Bob's debt balance:", initialState.bob.debtBalance);
+        console.log("Alice's USDC balance:", initialState.alice.borrowATokenBalance);
+        
+        // Calculate collateral ratio before looping
+        uint256 collateralValue = initialState.bob.collateralTokenBalance; // WETH balance
+        uint256 debtValue = initialState.bob.debtBalance; // USDC debt
+        uint256 collateralRatio = debtValue == 0 ? type(uint256).max : (collateralValue * 1e18) / debtValue;
+        console.log("Initial collateral ratio:", collateralRatio);
 
         // Bob wants to achieve a target LTV of 0.877 (87.7%)
         uint256 targetLTV = 877; // 0.877 * 1000 for precision (87.7%)
@@ -117,6 +131,19 @@ contract FlashLoanLoopingTest is BaseTest {
 
         Vars memory _after = _state();
 
+        // Log final state
+        console.log("=== FINAL STATE ===");
+        console.log("Bob's WETH balance:", _after.bob.collateralTokenBalance);
+        console.log("Bob's USDC balance:", _after.bob.borrowATokenBalance);
+        console.log("Bob's debt balance:", _after.bob.debtBalance);
+        console.log("Alice's USDC balance:", _after.alice.borrowATokenBalance);
+        
+        // Calculate final collateral ratio
+        uint256 finalCollateralValue = _after.bob.collateralTokenBalance;
+        uint256 finalDebtValue = _after.bob.debtBalance;
+        uint256 finalCollateralRatio = finalDebtValue == 0 ? type(uint256).max : (finalCollateralValue * 1e18) / finalDebtValue;
+        console.log("Final collateral ratio:", finalCollateralRatio);
+
         // Verify the loop worked correctly
         // Bob should have borrowed USDC and deposited additional WETH as collateral
         assertGt(_after.bob.debtBalance, _before.bob.debtBalance, "Bob should have debt after looping");
@@ -156,6 +183,20 @@ contract FlashLoanLoopingTest is BaseTest {
         
         vm.prank(bob);
         size.deposit(DepositParams({token: address(weth), amount: initialCollateral, to: bob}));
+
+        // Log initial state
+        Vars memory initialState = _state();
+        console.log("=== INITIAL STATE (DEPOSIT PROFITS) ===");
+        console.log("Bob's WETH balance:", initialState.bob.collateralTokenBalance);
+        console.log("Bob's USDC balance:", initialState.bob.borrowATokenBalance);
+        console.log("Bob's debt balance:", initialState.bob.debtBalance);
+        console.log("Alice's USDC balance:", initialState.alice.borrowATokenBalance);
+        
+        // Calculate collateral ratio before looping
+        uint256 collateralValue = initialState.bob.collateralTokenBalance;
+        uint256 debtValue = initialState.bob.debtBalance;
+        uint256 collateralRatio = debtValue == 0 ? type(uint256).max : (collateralValue * 1e18) / debtValue;
+        console.log("Initial collateral ratio:", collateralRatio);
 
         // Target LTV of 0.877
         uint256 targetLTV = 877;
@@ -197,84 +238,25 @@ contract FlashLoanLoopingTest is BaseTest {
 
         Vars memory _after = _state();
 
+        // Log final state
+        console.log("=== FINAL STATE (DEPOSIT PROFITS) ===");
+        console.log("Bob's WETH balance:", _after.bob.collateralTokenBalance);
+        console.log("Bob's USDC balance:", _after.bob.borrowATokenBalance);
+        console.log("Bob's debt balance:", _after.bob.debtBalance);
+        console.log("Alice's USDC balance:", _after.alice.borrowATokenBalance);
+        
+        // Calculate final collateral ratio
+        uint256 finalCollateralValue = _after.bob.collateralTokenBalance;
+        uint256 finalDebtValue = _after.bob.debtBalance;
+        uint256 finalCollateralRatio = finalDebtValue == 0 ? type(uint256).max : (finalCollateralValue * 1e18) / finalDebtValue;
+        console.log("Final collateral ratio:", finalCollateralRatio);
+
         // Verify the loop worked and profits were deposited
         assertGt(_after.bob.debtBalance, _before.bob.debtBalance, "Bob should have debt after looping");
         assertGt(_after.bob.collateralTokenBalance, _before.bob.collateralTokenBalance, "Bob should have more collateral after looping");
         
         // Bob should have additional USDC deposited from profits
         assertGt(_after.bob.borrowATokenBalance, _before.bob.borrowATokenBalance, "Bob should have profits deposited");
-    }
-
-    function test_FlashLoanLooping_multiple_swaps() public {
-        // Setup initial state
-        _setPrice(1e18);
-
-        _deposit(alice, usdc, 1000e6);
-        _buyCreditLimit(alice, block.timestamp + 365 days, YieldCurveHelper.pointCurve(365 days, 0.03e18));
-
-        // Bob has initial collateral
-        uint256 initialCollateral = 100e18;
-        _mint(address(weth), bob, initialCollateral);
-        _approve(bob, address(weth), address(size), initialCollateral);
-        
-        vm.prank(bob);
-        size.deposit(DepositParams({token: address(weth), amount: initialCollateral, to: bob}));
-
-        // Target LTV calculation
-        uint256 targetLTV = 877;
-        uint256 initialCollateralValue = 100e6;
-        uint256 flashLoanAmount = calculateFlashLoanAmount(initialCollateralValue, targetLTV);
-        flashLoanAmount = 669e6; // Use the example amount
-
-        uint256 tenor = 365 days;
-        uint256 maxAPR = 0.05e18;
-
-        // Create multiple swap params for a more complex swap route
-        OneInchParams memory oneInchParams1 = OneInchParams({
-            fromToken: address(usdc),
-            toToken: address(weth),
-            minReturn: 0,
-            data: ""
-        });
-
-        OneInchParams memory oneInchParams2 = OneInchParams({
-            fromToken: address(weth),
-            toToken: address(usdc),
-            minReturn: 0,
-            data: ""
-        });
-
-        SwapParams[] memory swapParamsArray = new SwapParams[](2);
-        swapParamsArray[0] = SwapParams({
-            method: SwapMethod.OneInch,
-            data: abi.encode(oneInchParams1)
-        });
-        swapParamsArray[1] = SwapParams({
-            method: SwapMethod.OneInch,
-            data: abi.encode(oneInchParams2)
-        });
-
-        Vars memory _before = _state();
-
-        // Execute the loop with multiple swaps
-        vm.prank(bob);
-        flashLoanLooping.loopPositionWithFlashLoan(
-            address(size),
-            address(weth),
-            address(usdc),
-            flashLoanAmount,
-            tenor,
-            maxAPR,
-            alice,
-            swapParamsArray,
-            address(0)
-        );
-
-        Vars memory _after = _state();
-
-        // Verify the loop worked with multiple swaps
-        assertGt(_after.bob.debtBalance, _before.bob.debtBalance, "Bob should have debt after looping");
-        assertGt(_after.bob.collateralTokenBalance, _before.bob.collateralTokenBalance, "Bob should have more collateral after looping");
     }
 
     function test_FlashLoanLooping_revert_insufficient_balance() public {

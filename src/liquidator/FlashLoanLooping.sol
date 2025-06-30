@@ -19,6 +19,7 @@ import {WithdrawParams} from "@size/src/market/libraries/actions/Withdraw.sol";
 import {DexSwap, SwapParams} from "src/liquidator/DexSwap.sol";
 
 import {PeripheryErrors} from "src/libraries/PeripheryErrors.sol";
+import {console} from "forge-std/console.sol";
 
 /// @title FlashLoanLooping
 /// @custom:security-contact security@size.credit
@@ -69,6 +70,17 @@ contract FlashLoanLooping is Ownable, FlashLoanReceiverBase, DexSwap {
         address lender,
         address recipient
     ) internal returns (uint256 borrowedAmount) {
+        // Log initial balances
+        uint256 initialCollateralBalance = IERC20(collateralToken).balanceOf(address(this));
+        uint256 initialBorrowBalance = IERC20(borrowToken).balanceOf(address(this));
+        console.log("=== FLASH LOAN EXECUTION ===");
+        console.log("Initial collateral balance:", initialCollateralBalance);
+        console.log("Initial borrow balance:", initialBorrowBalance);
+        console.log("Flash loan amount:", flashLoanAmount);
+        console.log("Tenor:", tenor);
+        console.log("Max APR:", maxAPR);
+        console.log("Lender:", lender);
+        
         // Deposit collateral
         uint256 collateralBalance = IERC20(collateralToken).balanceOf(address(this));
         IERC20(collateralToken).forceApprove(sizeMarket, collateralBalance);
@@ -106,11 +118,15 @@ contract FlashLoanLooping is Ownable, FlashLoanReceiverBase, DexSwap {
         calls[1] = borrowCall;
         calls[2] = withdrawCall;
 
+        console.log("Executing multicall with deposit, borrow, and withdraw...");
+        
         // slither-disable-next-line unused-return
         size.multicall(calls);
 
         // Return the amount borrowed
         borrowedAmount = IERC20(borrowToken).balanceOf(address(this));
+        console.log("Final borrow balance:", borrowedAmount);
+        console.log("Amount borrowed:", borrowedAmount);
     }
 
     function _settleFlashLoan(
@@ -197,8 +213,18 @@ contract FlashLoanLooping is Ownable, FlashLoanReceiverBase, DexSwap {
 
         LoopParams memory loopParams = abi.decode(params, (LoopParams));
 
+        // Log balances before swap
+        console.log("=== BEFORE SWAP ===");
+        console.log("USDC balance before swap:", IERC20(loopParams.borrowToken).balanceOf(address(this)));
+        console.log("WETH balance before swap:", IERC20(loopParams.collateralToken).balanceOf(address(this)));
+
         // Execute swaps to convert flash loaned USDC to collateral
         _swap(loopParams.swapParamsArray);
+
+        // Log balances after swap
+        console.log("=== AFTER SWAP ===");
+        console.log("USDC balance after swap:", IERC20(loopParams.borrowToken).balanceOf(address(this)));
+        console.log("WETH balance after swap:", IERC20(loopParams.collateralToken).balanceOf(address(this)));
 
         // Execute the loop (deposit collateral, borrow USDC)
         _executeLoop(

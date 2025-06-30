@@ -190,11 +190,11 @@ contract FlashLoanLoopingTest is BaseTest {
 
     function test_FlashLoanLooping_getActionsBitmap() public {
         // Test that the contract returns the correct actions bitmap
-        uint256 expectedBitmap = Authorization.getActionsBitmap([
-            Action.DEPOSIT,
-            Action.WITHDRAW,
-            Action.SELL_CREDIT_MARKET
-        ]);
+        Action[] memory actions = new Action[](3);
+        actions[0] = Action.DEPOSIT;
+        actions[1] = Action.WITHDRAW;
+        actions[2] = Action.SELL_CREDIT_MARKET;
+        uint256 expectedBitmap = uint256(Authorization.getActionsBitmap(actions));
         
         assertEq(
             uint256(flashLoanLooping.getActionsBitmap()),

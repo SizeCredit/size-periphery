@@ -13,13 +13,13 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {Errors} from "@size/src/market/libraries/Errors.sol";
 import {RESERVED_ID} from "@size/src/market/libraries/LoanLibrary.sol";
-import {SellCreditMarketParams} from "@size/src/market/libraries/actions/SellCreditMarket.sol";
-import {DepositParams} from "@size/src/market/libraries/actions/Deposit.sol";
-import {WithdrawParams} from "@size/src/market/libraries/actions/Withdraw.sol";
+import {SellCreditMarketParams, SellCreditMarketOnBehalfOfParams} from "@size/src/market/libraries/actions/SellCreditMarket.sol";
+import {DepositOnBehalfOfParams, DepositParams} from "@size/src/market/libraries/actions/Deposit.sol";
+import {WithdrawOnBehalfOfParams, WithdrawParams} from "@size/src/market/libraries/actions/Withdraw.sol";
 import {DexSwap, SwapParams} from "src/liquidator/DexSwap.sol";
 
 import {PeripheryErrors} from "src/libraries/PeripheryErrors.sol";
-import {console} from "forge-std/console.sol";
+import {ActionsBitmap, Action, Authorization} from "@size/src/factory/libraries/Authorization.sol";
 
 /// @title FlashLoanLooping
 /// @custom:security-contact security@size.credit
@@ -36,6 +36,7 @@ contract FlashLoanLooping is Ownable, FlashLoanReceiverBase, DexSwap {
         uint256 tenor;
         uint256 maxAPR;
         address lender;
+        address onBehalfOf;
         address recipient;
         uint256 deadline;
         SwapParams[] swapParamsArray;
@@ -68,19 +69,9 @@ contract FlashLoanLooping is Ownable, FlashLoanReceiverBase, DexSwap {
         uint256 tenor,
         uint256 maxAPR,
         address lender,
+        address onBehalfOf,
         address recipient
     ) internal returns (uint256 borrowedAmount) {
-        // Log initial balances
-        uint256 initialCollateralBalance = IERC20(collateralToken).balanceOf(address(this));
-        uint256 initialBorrowBalance = IERC20(borrowToken).balanceOf(address(this));
-        console.log("=== FLASH LOAN EXECUTION ===");
-        console.log("Initial collateral balance:", initialCollateralBalance);
-        console.log("Initial borrow balance:", initialBorrowBalance);
-        console.log("Flash loan amount:", flashLoanAmount);
-        console.log("Tenor:", tenor);
-        console.log("Max APR:", maxAPR);
-        console.log("Lender:", lender);
-        
         // Deposit collateral
         uint256 collateralBalance = IERC20(collateralToken).balanceOf(address(this));
         IERC20(collateralToken).forceApprove(sizeMarket, collateralBalance);
@@ -88,28 +79,38 @@ contract FlashLoanLooping is Ownable, FlashLoanReceiverBase, DexSwap {
         ISize size = ISize(sizeMarket);
         
         bytes memory depositCall = abi.encodeWithSelector(
-            ISize.deposit.selector, 
-            DepositParams({token: collateralToken, amount: collateralBalance, to: address(this)})
+            ISize.depositOnBehalfOf.selector, 
+            DepositOnBehalfOfParams({
+                params: DepositParams({token: collateralToken, amount: collateralBalance, to: address(this)}),
+                onBehalfOf: onBehalfOf
+            })
         );
 
         // Borrow USDC against the deposited collateral
         bytes memory borrowCall = abi.encodeWithSelector(
-            ISize.sellCreditMarket.selector,
-            SellCreditMarketParams({
-                lender: lender,
-                creditPositionId: RESERVED_ID,
-                amount: flashLoanAmount, 
-                tenor: tenor,
-                deadline: block.timestamp + 1 hours,
-                maxAPR: maxAPR,
-                exactAmountIn: false // We want exact USDC amount out
+            ISize.sellCreditMarketOnBehalfOf.selector,
+            SellCreditMarketOnBehalfOfParams({
+                params: SellCreditMarketParams({
+                    lender: lender,
+                    creditPositionId: RESERVED_ID,
+                    amount: flashLoanAmount, 
+                    tenor: tenor,
+                    deadline: block.timestamp + 1 hours,
+                    maxAPR: maxAPR,
+                    exactAmountIn: false
+                }),
+                onBehalfOf: onBehalfOf,
+                recipient: address(this)
             })
         );
 
         // Withdraw borrowed USDC to repay flash loan
         bytes memory withdrawCall = abi.encodeWithSelector(
-            ISize.withdraw.selector,
-            WithdrawParams({token: borrowToken, amount: type(uint256).max, to: address(this)})
+            ISize.withdrawOnBehalfOf.selector,
+            WithdrawOnBehalfOfParams({
+                params: WithdrawParams({token: borrowToken, amount: type(uint256).max, to: address(this)}),
+                onBehalfOf: onBehalfOf
+            })
         );
 
         // Execute multicall
@@ -118,15 +119,11 @@ contract FlashLoanLooping is Ownable, FlashLoanReceiverBase, DexSwap {
         calls[1] = borrowCall;
         calls[2] = withdrawCall;
 
-        console.log("Executing multicall with deposit, borrow, and withdraw...");
-        
         // slither-disable-next-line unused-return
         size.multicall(calls);
 
         // Return the amount borrowed
         borrowedAmount = IERC20(borrowToken).balanceOf(address(this));
-        console.log("Final borrow balance:", borrowedAmount);
-        console.log("Amount borrowed:", borrowedAmount);
     }
 
     function _settleFlashLoan(
@@ -135,7 +132,8 @@ contract FlashLoanLooping is Ownable, FlashLoanReceiverBase, DexSwap {
         uint256[] calldata premiums,
         address recipient,
         bool depositProfits,
-        address sizeMarket
+        address sizeMarket,
+        address onBehalfOf
     ) internal {
         uint256 totalDebt = amounts[0] + premiums[0];
         uint256 balance = IERC20(assets[0]).balanceOf(address(this));
@@ -148,7 +146,12 @@ contract FlashLoanLooping is Ownable, FlashLoanReceiverBase, DexSwap {
         uint256 amountToUser = balance - totalDebt;
         if (depositProfits) {
             IERC20(assets[0]).forceApprove(sizeMarket, amountToUser);
-            ISize(sizeMarket).deposit(DepositParams({token: assets[0], amount: amountToUser, to: recipient}));
+            ISize(sizeMarket).depositOnBehalfOf(
+                DepositOnBehalfOfParams({
+                    params: DepositParams({token: assets[0], amount: amountToUser, to: recipient}),
+                    onBehalfOf: onBehalfOf
+                })
+            );
         } else {
             IERC20(assets[0]).transfer(recipient, amountToUser);
         }
@@ -179,6 +182,7 @@ contract FlashLoanLooping is Ownable, FlashLoanReceiverBase, DexSwap {
             tenor: tenor,
             maxAPR: maxAPR,
             lender: lender,
+            onBehalfOf: msg.sender,
             recipient: depositProfits ? recipient : msg.sender,
             deadline: block.timestamp + 1 hours,
             swapParamsArray: swapParamsArray,
@@ -213,18 +217,8 @@ contract FlashLoanLooping is Ownable, FlashLoanReceiverBase, DexSwap {
 
         LoopParams memory loopParams = abi.decode(params, (LoopParams));
 
-        // Log balances before swap
-        console.log("=== BEFORE SWAP ===");
-        console.log("USDC balance before swap:", IERC20(loopParams.borrowToken).balanceOf(address(this)));
-        console.log("WETH balance before swap:", IERC20(loopParams.collateralToken).balanceOf(address(this)));
-
         // Execute swaps to convert flash loaned USDC to collateral
         _swap(loopParams.swapParamsArray);
-
-        // Log balances after swap
-        console.log("=== AFTER SWAP ===");
-        console.log("USDC balance after swap:", IERC20(loopParams.borrowToken).balanceOf(address(this)));
-        console.log("WETH balance after swap:", IERC20(loopParams.collateralToken).balanceOf(address(this)));
 
         // Execute the loop (deposit collateral, borrow USDC)
         _executeLoop(
@@ -235,11 +229,12 @@ contract FlashLoanLooping is Ownable, FlashLoanReceiverBase, DexSwap {
             loopParams.tenor,
             loopParams.maxAPR,
             loopParams.lender,
+            loopParams.onBehalfOf,
             loopParams.recipient
         );
 
         // Settle the flash loan
-        _settleFlashLoan(assets, amounts, premiums, loopParams.recipient, loopParams.depositProfits, loopParams.sizeMarket);
+        _settleFlashLoan(assets, amounts, premiums, loopParams.recipient, loopParams.depositProfits, loopParams.sizeMarket, loopParams.onBehalfOf);
 
         return true;
     }
@@ -250,5 +245,13 @@ contract FlashLoanLooping is Ownable, FlashLoanReceiverBase, DexSwap {
 
     function description() external pure returns (string memory) {
         return "FlashLoanLooping (DexSwap takes SwapParams[] as input)";
+    }
+
+    function getActionsBitmap() external pure returns (ActionsBitmap) {
+        Action[] memory actions = new Action[](3);
+        actions[0] = Action.DEPOSIT;
+        actions[1] = Action.WITHDRAW;
+        actions[2] = Action.SELL_CREDIT_MARKET;
+        return Authorization.getActionsBitmap(actions);
     }
 } 

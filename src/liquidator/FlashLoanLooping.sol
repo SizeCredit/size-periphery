@@ -79,7 +79,7 @@ contract FlashLoanLooping is Ownable, FlashLoanReceiverBase, DexSwap {
         ISize size = ISize(sizeMarket);
         
         bytes memory depositCall = abi.encodeWithSelector(
-            ISize.depositOnBehalfOf.selector, 
+            ISize.deposit.selector, 
             DepositOnBehalfOfParams({
                 params: DepositParams({token: collateralToken, amount: collateralBalance, to: address(this)}),
                 onBehalfOf: onBehalfOf
@@ -88,7 +88,7 @@ contract FlashLoanLooping is Ownable, FlashLoanReceiverBase, DexSwap {
 
         // Borrow USDC against the deposited collateral
         bytes memory borrowCall = abi.encodeWithSelector(
-            ISize.sellCreditMarketOnBehalfOf.selector,
+            ISize.sellCreditMarket.selector,
             SellCreditMarketOnBehalfOfParams({
                 params: SellCreditMarketParams({
                     lender: lender,
@@ -106,7 +106,7 @@ contract FlashLoanLooping is Ownable, FlashLoanReceiverBase, DexSwap {
 
         // Withdraw borrowed USDC to repay flash loan
         bytes memory withdrawCall = abi.encodeWithSelector(
-            ISize.withdrawOnBehalfOf.selector,
+            ISize.withdraw.selector,
             WithdrawOnBehalfOfParams({
                 params: WithdrawParams({token: borrowToken, amount: type(uint256).max, to: address(this)}),
                 onBehalfOf: onBehalfOf

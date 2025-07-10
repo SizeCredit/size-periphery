@@ -2,7 +2,7 @@
 pragma solidity 0.8.23;
 
 import {SwapMethod, SwapParams, OneInchParams} from "src/liquidator/DexSwap.sol";
-import {FlashLoanLooping} from "src/liquidator/FlashLoanLooping.sol";
+import {FlashLoanLooping} from "src/zaps/FlashLoanLooping.sol";
 import {Mock1InchAggregator} from "test/mocks/Mock1InchAggregator.sol";
 import {MockAavePool} from "@test/mocks/MockAavePool.sol";
 

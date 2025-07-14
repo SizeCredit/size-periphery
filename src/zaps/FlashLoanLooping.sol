@@ -15,7 +15,6 @@ import {Errors} from "@size/src/market/libraries/Errors.sol";
 import {RESERVED_ID} from "@size/src/market/libraries/LoanLibrary.sol";
 import {SellCreditMarketParams, SellCreditMarketOnBehalfOfParams} from "@size/src/market/libraries/actions/SellCreditMarket.sol";
 import {DepositOnBehalfOfParams, DepositParams} from "@size/src/market/libraries/actions/Deposit.sol";
-import {WithdrawOnBehalfOfParams, WithdrawParams} from "@size/src/market/libraries/actions/Withdraw.sol";
 import {DexSwap, SwapParams} from "src/liquidator/DexSwap.sol";
 
 import {PeripheryErrors} from "src/libraries/PeripheryErrors.sol";
@@ -296,7 +295,6 @@ contract FlashLoanLooping is Ownable, FlashLoanReceiverBase, DexSwap {
     function getActionsBitmap() external pure returns (ActionsBitmap) {
         Action[] memory actions = new Action[](3);
         actions[0] = Action.DEPOSIT;
-        actions[1] = Action.WITHDRAW;
         actions[2] = Action.SELL_CREDIT_MARKET;
         return Authorization.getActionsBitmap(actions);
     }

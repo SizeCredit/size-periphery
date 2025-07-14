@@ -20,6 +20,8 @@ import {DexSwap, SwapParams} from "src/liquidator/DexSwap.sol";
 
 import {PeripheryErrors} from "src/libraries/PeripheryErrors.sol";
 import {ActionsBitmap, Action, Authorization} from "@size/src/factory/libraries/Authorization.sol";
+import {Math, PERCENT} from "@size/src/market/libraries/Math.sol";
+import {DataView} from "@size/src/market/SizeViewData.sol";
 
 /// @title FlashLoanLooping
 /// @custom:security-contact security@size.credit
@@ -28,6 +30,9 @@ import {ActionsBitmap, Action, Authorization} from "@size/src/factory/libraries/
 contract FlashLoanLooping is Ownable, FlashLoanReceiverBase, DexSwap {
     using SafeERC20 for IERC20;
 
+    error InvalidPercent(uint256 percent, uint256 minPercent, uint256 maxPercent);
+    error TargetLeverageNotAchieved(uint256 currentLeveragePercent, uint256 targetLeveragePercent);
+
     struct LoopParams {
         address sizeMarket;
         address collateralToken;
@@ -35,12 +40,19 @@ contract FlashLoanLooping is Ownable, FlashLoanReceiverBase, DexSwap {
         uint256 flashLoanAmount;
         uint256 tenor;
         uint256 maxAPR;
-        address lender;
+        SellCreditMarketParams[] sellCreditMarketParamsArray;
         address onBehalfOf;
         address recipient;
         uint256 deadline;
         SwapParams[] swapParamsArray;
         bool depositProfits;
+        uint256 targetLeveragePercent;
+    }
+
+    struct CurrentLeverage {
+        uint256 totalCollateral;
+        uint256 totalDebt;
+        uint256 currentLeveragePercent;
     }
 
     constructor(
@@ -66,10 +78,7 @@ contract FlashLoanLooping is Ownable, FlashLoanReceiverBase, DexSwap {
         address collateralToken,
         address borrowToken,
         uint256 collateralBalance,
-        uint256 flashLoanAmount,
-        uint256 tenor,
-        uint256 maxAPR,
-        address lender,
+        SellCreditMarketParams[] memory sellCreditMarketParamsArray,
         address onBehalfOf
     ) internal {
         bytes memory depositCall = abi.encodeWithSelector(
@@ -80,38 +89,21 @@ contract FlashLoanLooping is Ownable, FlashLoanReceiverBase, DexSwap {
             })
         );
 
-        // Borrow USDC against the deposited collateral
-        bytes memory borrowCall = abi.encodeWithSelector(
-            ISize.sellCreditMarket.selector,
-            SellCreditMarketOnBehalfOfParams({
-                params: SellCreditMarketParams({
-                    lender: lender,
-                    creditPositionId: RESERVED_ID,
-                    amount: flashLoanAmount, 
-                    tenor: tenor,
-                    deadline: block.timestamp + 1 hours,
-                    maxAPR: maxAPR,
-                    exactAmountIn: false
-                }),
-                onBehalfOf: onBehalfOf,
-                recipient: address(this)
-            })
-        );
-
-        // Withdraw borrowed USDC to repay flash loan
-        bytes memory withdrawCall = abi.encodeWithSelector(
-            ISize.withdraw.selector,
-            WithdrawOnBehalfOfParams({
-                params: WithdrawParams({token: borrowToken, amount: type(uint256).max, to: address(this)}),
-                onBehalfOf: address(this)
-            })
-        );
-
-        // Execute multicall
-        bytes[] memory calls = new bytes[](3);
+        // Execute all sell credit market calls
+        bytes[] memory calls = new bytes[](1 + sellCreditMarketParamsArray.length);
         calls[0] = depositCall;
-        calls[1] = borrowCall;
-        calls[2] = withdrawCall;
+
+        for (uint256 i = 0; i < sellCreditMarketParamsArray.length; i++) {
+            bytes memory borrowCall = abi.encodeWithSelector(
+                ISize.sellCreditMarket.selector,
+                SellCreditMarketOnBehalfOfParams({
+                    params: sellCreditMarketParamsArray[i],
+                    onBehalfOf: onBehalfOf,
+                    recipient: address(this)
+                })
+            );
+            calls[1 + i] = borrowCall;
+        }
 
         // slither-disable-next-line unused-return
         size.multicall(calls);
@@ -121,10 +113,7 @@ contract FlashLoanLooping is Ownable, FlashLoanReceiverBase, DexSwap {
         address sizeMarket,
         address collateralToken,
         address borrowToken,
-        uint256 flashLoanAmount,
-        uint256 tenor,
-        uint256 maxAPR,
-        address lender,
+        SellCreditMarketParams[] memory sellCreditMarketParamsArray,
         address onBehalfOf,
         address recipient
     ) internal returns (uint256 borrowedAmount) {
@@ -140,10 +129,7 @@ contract FlashLoanLooping is Ownable, FlashLoanReceiverBase, DexSwap {
             collateralToken,
             borrowToken,
             collateralBalance,
-            flashLoanAmount,
-            tenor,
-            maxAPR,
-            lender,
+            sellCreditMarketParamsArray,
             onBehalfOf
         );
 
@@ -203,9 +189,10 @@ contract FlashLoanLooping is Ownable, FlashLoanReceiverBase, DexSwap {
         uint256 flashLoanAmount,
         uint256 tenor,
         uint256 maxAPR,
-        address lender,
+        SellCreditMarketParams[] memory sellCreditMarketParamsArray,
         SwapParams[] memory swapParamsArray,
-        address recipient
+        address recipient,
+        uint256 targetLeveragePercent
     ) external {
         ISize size = ISize(sizeMarket);
 
@@ -217,12 +204,13 @@ contract FlashLoanLooping is Ownable, FlashLoanReceiverBase, DexSwap {
             flashLoanAmount: flashLoanAmount,
             tenor: tenor,
             maxAPR: maxAPR,
-            lender: lender,
+            sellCreditMarketParamsArray: sellCreditMarketParamsArray,
             onBehalfOf: msg.sender,
             recipient: depositProfits ? recipient : msg.sender,
             deadline: block.timestamp + 1 hours,
             swapParamsArray: swapParamsArray,
-            depositProfits: depositProfits
+            depositProfits: depositProfits,
+            targetLeveragePercent: targetLeveragePercent
         });
 
         bytes memory params = abi.encode(loopParams);
@@ -256,23 +244,45 @@ contract FlashLoanLooping is Ownable, FlashLoanReceiverBase, DexSwap {
         // Execute swaps to convert flash loaned USDC to collateral
         _swap(loopParams.swapParamsArray);
 
-        // Execute the loop (deposit collateral, borrow USDC)
+        // Execute the loop (deposit collateral, borrow USDC from multiple lenders)
         _executeLoop(
             loopParams.sizeMarket,
             loopParams.collateralToken,
             loopParams.borrowToken,
-            loopParams.flashLoanAmount,
-            loopParams.tenor,
-            loopParams.maxAPR,
-            loopParams.lender,
+            loopParams.sellCreditMarketParamsArray,
             loopParams.onBehalfOf,
             loopParams.recipient
         );
+
+        // Check if target leverage was achieved
+        uint256 currentLeveragePercent = currentLeveragePercent(ISize(loopParams.sizeMarket), loopParams.onBehalfOf);
+        if (currentLeveragePercent < loopParams.targetLeveragePercent) {
+            revert TargetLeverageNotAchieved(currentLeveragePercent, loopParams.targetLeveragePercent);
+        }
 
         // Settle the flash loan
         _settleFlashLoan(assets, amounts, premiums, loopParams.recipient, loopParams.depositProfits, loopParams.sizeMarket, loopParams.onBehalfOf);
 
         return true;
+    }
+
+    function currentLeveragePercent(ISize size, address account) public view returns (uint256) {
+        CurrentLeverage memory currentLeverage = _currentLeverage(size, size.data(), account);
+        return currentLeverage.currentLeveragePercent;
+    }
+
+    function _currentLeverage(ISize size, DataView memory dataView, address account)
+        private
+        view
+        returns (CurrentLeverage memory currentLeverage)
+    {
+        currentLeverage.totalCollateral = dataView.collateralToken.balanceOf(account);
+        currentLeverage.totalDebt = dataView.debtToken.balanceOf(account);
+        currentLeverage.currentLeveragePercent = Math.mulDivDown(
+            currentLeverage.totalCollateral,
+            PERCENT,
+            currentLeverage.totalCollateral - size.debtTokenAmountToCollateralTokenAmount(currentLeverage.totalDebt)
+        );
     }
 
     function recover(address token, address to, uint256 amount) external onlyOwner {

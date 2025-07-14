@@ -49,6 +49,12 @@ contract FlashLoanLoopingTest is BaseTest {
     }
 
     function test_FlashLoanLooping_user_loop_with_authorization() public {
+        console.log("=== test_FlashLoanLooping_user_loop_with_authorization ===");
+        console.log("alice address:", alice);
+        console.log("bob address:", bob);
+        console.log("carol address:", carol);
+        console.log("flashLoanLooping address:", address(flashLoanLooping));
+        console.log("size address:", address(size));
         // Setup initial state
         _setPrice(1e18);
         
@@ -60,6 +66,11 @@ contract FlashLoanLoopingTest is BaseTest {
         _deposit(bob, usdc, 100e6);
         _buyCreditLimit(bob, block.timestamp + 365 days, YieldCurveHelper.pointCurve(365 days, 0.03e18));
 
+        console.log("After initial deposits:");
+        console.log("alice WETH balance:", weth.balanceOf(alice));
+        console.log("alice USDC balance:", usdc.balanceOf(alice));
+        console.log("bob USDC balance:", usdc.balanceOf(bob));
+
         // User authorizes the FlashLoanLooping contract to act on their behalf
         _setAuthorization(alice, address(flashLoanLooping), Authorization.getActionsBitmap(Action.DEPOSIT));
         _setAuthorization(alice, address(flashLoanLooping), Authorization.getActionsBitmap(Action.WITHDRAW));
@@ -68,6 +79,11 @@ contract FlashLoanLoopingTest is BaseTest {
         Vars memory _before = _state();
         uint256 beforeAliceWETH = weth.balanceOf(alice);
         uint256 beforeAliceUSDC = usdc.balanceOf(alice);
+
+        console.log("Before loop operation:");
+        console.log("alice collateral token balance:", _before.alice.collateralTokenBalance);
+        console.log("alice debt balance:", _before.alice.debtBalance);
+        console.log("alice borrowAToken balance:", _before.alice.borrowATokenBalance);
 
         // Create swap parameters to convert USDC to WETH
         OneInchParams memory oneInchParams = OneInchParams({
@@ -95,6 +111,11 @@ contract FlashLoanLoopingTest is BaseTest {
         // Calculate target leverage (e.g., 2x leverage)
         uint256 targetLeveragePercent = 200e16; // 200% = 2x leverage
 
+        console.log("About to call loopPositionWithFlashLoan with:");
+        console.log("targetLeveragePercent:", targetLeveragePercent);
+        console.log("sellCreditMarketParamsArray[0].lender:", sellCreditMarketParamsArray[0].lender);
+        console.log("sellCreditMarketParamsArray[0].amount:", sellCreditMarketParamsArray[0].amount);
+
         // User calls the loop function
         vm.prank(alice);
         flashLoanLooping.loopPositionWithFlashLoan(
@@ -114,6 +135,11 @@ contract FlashLoanLoopingTest is BaseTest {
         uint256 afterAliceWETH = weth.balanceOf(alice);
         uint256 afterAliceUSDC = usdc.balanceOf(alice);
 
+        console.log("After loop operation:");
+        console.log("alice collateral token balance:", _after.alice.collateralTokenBalance);
+        console.log("alice debt balance:", _after.alice.debtBalance);
+        console.log("alice borrowAToken balance:", _after.alice.borrowATokenBalance);
+
         // Verify the loop was successful
         assertGt(_after.alice.debtBalance, _before.alice.debtBalance, "User should have increased debt");
         assertGt(_after.alice.collateralTokenBalance, _before.alice.collateralTokenBalance, "User should have increased collateral");
@@ -127,6 +153,10 @@ contract FlashLoanLoopingTest is BaseTest {
     }
 
     function test_FlashLoanLooping_user_loop_with_deposit_profits() public {
+        console.log("=== test_FlashLoanLooping_user_loop_with_deposit_profits ===");
+        console.log("alice address:", alice);
+        console.log("bob address:", bob);
+        console.log("flashLoanLooping address:", address(flashLoanLooping));
         // Setup initial state
         _setPrice(1e18);
         
@@ -138,6 +168,11 @@ contract FlashLoanLoopingTest is BaseTest {
         _deposit(bob, usdc, 100e6);
         _buyCreditLimit(bob, block.timestamp + 365 days, YieldCurveHelper.pointCurve(365 days, 0.03e18));
 
+        console.log("After initial deposits:");
+        console.log("alice WETH balance:", weth.balanceOf(alice));
+        console.log("alice USDC balance:", usdc.balanceOf(alice));
+        console.log("bob USDC balance:", usdc.balanceOf(bob));
+
         // User authorizes the FlashLoanLooping contract
         _setAuthorization(alice, address(flashLoanLooping), Authorization.getActionsBitmap(Action.DEPOSIT));
         _setAuthorization(alice, address(flashLoanLooping), Authorization.getActionsBitmap(Action.WITHDRAW));
@@ -145,6 +180,11 @@ contract FlashLoanLoopingTest is BaseTest {
 
         Vars memory _before = _state();
         uint256 beforeAliceBorrowAToken = _before.alice.borrowATokenBalance;
+
+        console.log("Before loop operation:");
+        console.log("alice collateral token balance:", _before.alice.collateralTokenBalance);
+        console.log("alice debt balance:", _before.alice.debtBalance);
+        console.log("alice borrowAToken balance:", _before.alice.borrowATokenBalance);
 
         // Create swap parameters
         OneInchParams memory oneInchParams = OneInchParams({
@@ -171,6 +211,11 @@ contract FlashLoanLoopingTest is BaseTest {
 
         uint256 targetLeveragePercent = 150e16; // 150% = 1.5x leverage
 
+        console.log("About to call loopPositionWithFlashLoan with:");
+        console.log("targetLeveragePercent:", targetLeveragePercent);
+        console.log("sellCreditMarketParamsArray[0].lender:", sellCreditMarketParamsArray[0].lender);
+        console.log("sellCreditMarketParamsArray[0].amount:", sellCreditMarketParamsArray[0].amount);
+
         // User calls the loop function with depositProfits = true
         vm.prank(alice);
         flashLoanLooping.loopPositionWithFlashLoan(
@@ -188,6 +233,11 @@ contract FlashLoanLoopingTest is BaseTest {
 
         Vars memory _after = _state();
         uint256 afterAliceBorrowAToken = _after.alice.borrowATokenBalance;
+
+        console.log("After loop operation:");
+        console.log("alice collateral token balance:", _after.alice.collateralTokenBalance);
+        console.log("alice debt balance:", _after.alice.debtBalance);
+        console.log("alice borrowAToken balance:", _after.alice.borrowATokenBalance);
 
         // Verify the loop was successful and profits were deposited
         assertGt(_after.alice.debtBalance, _before.alice.debtBalance, "User should have increased debt");
@@ -306,6 +356,11 @@ contract FlashLoanLoopingTest is BaseTest {
     }
 
     function test_FlashLoanLooping_multiple_lenders() public {
+        console.log("=== test_FlashLoanLooping_multiple_lenders ===");
+        console.log("alice address:", alice);
+        console.log("bob address:", bob);
+        console.log("carol address:", carol);
+        console.log("flashLoanLooping address:", address(flashLoanLooping));
         // Setup initial state
         _setPrice(1e18);
         _deposit(alice, weth, 100e18);
@@ -318,12 +373,23 @@ contract FlashLoanLoopingTest is BaseTest {
         _deposit(carol, usdc, 50e6);
         _buyCreditLimit(carol, block.timestamp + 365 days, YieldCurveHelper.pointCurve(365 days, 0.04e18));
 
+        console.log("After initial deposits:");
+        console.log("alice WETH balance:", weth.balanceOf(alice));
+        console.log("alice USDC balance:", usdc.balanceOf(alice));
+        console.log("bob USDC balance:", usdc.balanceOf(bob));
+        console.log("carol USDC balance:", usdc.balanceOf(carol));
+
         // User authorizes the FlashLoanLooping contract
         _setAuthorization(alice, address(flashLoanLooping), Authorization.getActionsBitmap(Action.DEPOSIT));
         _setAuthorization(alice, address(flashLoanLooping), Authorization.getActionsBitmap(Action.WITHDRAW));
         _setAuthorization(alice, address(flashLoanLooping), Authorization.getActionsBitmap(Action.SELL_CREDIT_MARKET));
 
         Vars memory _before = _state();
+
+        console.log("Before loop operation:");
+        console.log("alice collateral token balance:", _before.alice.collateralTokenBalance);
+        console.log("alice debt balance:", _before.alice.debtBalance);
+        console.log("alice borrowAToken balance:", _before.alice.borrowATokenBalance);
 
         OneInchParams memory oneInchParams = OneInchParams({
             fromToken: address(usdc),
@@ -358,6 +424,13 @@ contract FlashLoanLoopingTest is BaseTest {
 
         uint256 targetLeveragePercent = 200e16; // 200% = 2x leverage
 
+        console.log("About to call loopPositionWithFlashLoan with:");
+        console.log("targetLeveragePercent:", targetLeveragePercent);
+        console.log("sellCreditMarketParamsArray[0].lender:", sellCreditMarketParamsArray[0].lender);
+        console.log("sellCreditMarketParamsArray[0].amount:", sellCreditMarketParamsArray[0].amount);
+        console.log("sellCreditMarketParamsArray[1].lender:", sellCreditMarketParamsArray[1].lender);
+        console.log("sellCreditMarketParamsArray[1].amount:", sellCreditMarketParamsArray[1].amount);
+
         // User calls the loop function with multiple lenders
         vm.prank(alice);
         flashLoanLooping.loopPositionWithFlashLoan(
@@ -374,6 +447,11 @@ contract FlashLoanLoopingTest is BaseTest {
         );
 
         Vars memory _after = _state();
+
+        console.log("After loop operation:");
+        console.log("alice collateral token balance:", _after.alice.collateralTokenBalance);
+        console.log("alice debt balance:", _after.alice.debtBalance);
+        console.log("alice borrowAToken balance:", _after.alice.borrowATokenBalance);
 
         // Verify the loop was successful with multiple lenders
         assertGt(_after.alice.debtBalance, _before.alice.debtBalance, "User should have increased debt");

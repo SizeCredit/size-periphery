@@ -2,7 +2,7 @@
 pragma solidity 0.8.23;
 
 import {ISize} from "@size/src/market/interfaces/ISize.sol";
-
+import {ISizeV1_7} from "@size/src/market/interfaces/v1.7/ISizeV1_7.sol";
 import {FlashLoanReceiverBase} from "@aave/flashloan/base/FlashLoanReceiverBase.sol";
 import {IPool} from "@aave/interfaces/IPool.sol";
 import {IPoolAddressesProvider} from "@aave/interfaces/IPoolAddressesProvider.sol";
@@ -95,7 +95,7 @@ contract FlashLoanLooping is Ownable, FlashLoanReceiverBase, DexSwap {
 
         for (uint256 i = 0; i < sellCreditMarketParamsArray.length; i++) {
             bytes memory borrowCall = abi.encodeWithSelector(
-                ISize.sellCreditMarket.selector,
+                ISizeV1_7.sellCreditMarketOnBehalfOf.selector,
                 SellCreditMarketOnBehalfOfParams({
                     params: sellCreditMarketParamsArray[i],
                     onBehalfOf: onBehalfOf,

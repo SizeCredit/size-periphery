@@ -7,7 +7,6 @@ pragma solidity ^0.8.20;
 
 import "forge-std/Script.sol";
 import "src/zaps/FlashLoanLooping.sol";
-import "@openzeppelin/contracts/utils/Strings.sol";
 import "./Addresses.s.sol";
 
 contract DeployFlashLoanLooping is Script, Addresses {

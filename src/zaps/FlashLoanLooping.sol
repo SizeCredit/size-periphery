@@ -85,7 +85,7 @@ contract FlashLoanLooping is Ownable, FlashLoanReceiverBase, DexSwap {
             ISize.deposit.selector, 
             DepositOnBehalfOfParams({
                 params: DepositParams({token: collateralToken, amount: collateralBalance, to: onBehalfOf}),
-                onBehalfOf: onBehalfOf
+                onBehalfOf: address(this)
             })
         );
 
@@ -96,7 +96,11 @@ contract FlashLoanLooping is Ownable, FlashLoanReceiverBase, DexSwap {
         for (uint256 i = 0; i < sellCreditMarketParamsArray.length; i++) {
             bytes memory borrowCall = abi.encodeWithSelector(
                 ISize.sellCreditMarket.selector,
-                sellCreditMarketParamsArray[i]
+                SellCreditMarketOnBehalfOfParams({
+                    params: sellCreditMarketParamsArray[i],
+                    onBehalfOf: onBehalfOf,
+                    recipient: address(this)
+                })
             );
             calls[1 + i] = borrowCall;
         }
@@ -240,7 +244,7 @@ contract FlashLoanLooping is Ownable, FlashLoanReceiverBase, DexSwap {
         // Execute swaps to convert flash loaned USDC to collateral
         _swap(loopParams.swapParamsArray);
 
-        // Execute the loop (deposit collateral, borrow USDC from multiple lenders)
+        // Execute the loop (deposit collateral, borrow USDC)
         _executeLoop(
             loopParams.sizeMarket,
             loopParams.collateralToken,

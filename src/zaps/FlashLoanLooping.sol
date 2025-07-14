@@ -96,11 +96,7 @@ contract FlashLoanLooping is Ownable, FlashLoanReceiverBase, DexSwap {
         for (uint256 i = 0; i < sellCreditMarketParamsArray.length; i++) {
             bytes memory borrowCall = abi.encodeWithSelector(
                 ISize.sellCreditMarket.selector,
-                SellCreditMarketOnBehalfOfParams({
-                    params: sellCreditMarketParamsArray[i],
-                    onBehalfOf: onBehalfOf,
-                    recipient: address(this)
-                })
+                sellCreditMarketParamsArray[i]
             );
             calls[1 + i] = borrowCall;
         }
@@ -255,9 +251,9 @@ contract FlashLoanLooping is Ownable, FlashLoanReceiverBase, DexSwap {
         );
 
         // Check if target leverage was achieved
-        uint256 currentLeveragePercent = currentLeveragePercent(ISize(loopParams.sizeMarket), loopParams.onBehalfOf);
-        if (currentLeveragePercent < loopParams.targetLeveragePercent) {
-            revert TargetLeverageNotAchieved(currentLeveragePercent, loopParams.targetLeveragePercent);
+        uint256 leveragePercentNow = currentLeveragePercent(ISize(loopParams.sizeMarket), loopParams.onBehalfOf);
+        if (leveragePercentNow < loopParams.targetLeveragePercent) {
+            revert TargetLeverageNotAchieved(leveragePercentNow, loopParams.targetLeveragePercent);
         }
 
         // Settle the flash loan

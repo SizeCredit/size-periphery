@@ -11,6 +11,10 @@ import {BaseTest, Vars} from "@size/test/BaseTest.sol";
 import {DebtPosition} from "@size/src/market/libraries/LoanLibrary.sol";
 import {YieldCurveHelper} from "@test/helpers/libraries/YieldCurveHelper.sol";
 import {Action, Authorization} from "@size/src/factory/libraries/Authorization.sol";
+import {SellCreditMarketParams} from "@size/src/market/libraries/actions/SellCreditMarket.sol";
+import {Math, PERCENT} from "@size/src/market/libraries/Math.sol";
+import {RESERVED_ID} from "@size/src/market/libraries/LoanLibrary.sol";
+import {ISize} from "@size/src/market/interfaces/ISize.sol";
 
 import {console} from "forge-std/console.sol";
 
@@ -18,6 +22,7 @@ contract FlashLoanLoopingTest is BaseTest {
     MockAavePool public mockAavePool;
     Mock1InchAggregator public mock1InchAggregator;
     FlashLoanLooping public flashLoanLooping;
+    address carol;
 
     function setUp() public override {
         super.setUp();
@@ -25,6 +30,7 @@ contract FlashLoanLoopingTest is BaseTest {
         // Initialize mock contracts
         mockAavePool = new MockAavePool();
         mock1InchAggregator = new Mock1InchAggregator(address(priceFeed));
+        carol = makeAddr("carol");
 
         // Fund the mock aggregator and pool with WETH and USDC
         _mint(address(weth), address(mock1InchAggregator), 100_000e18);
@@ -74,6 +80,21 @@ contract FlashLoanLoopingTest is BaseTest {
         SwapParams[] memory swapParamsArray = new SwapParams[](1);
         swapParamsArray[0] = SwapParams({method: SwapMethod.OneInch, data: abi.encode(oneInchParams)});
 
+        // Create sell credit market parameters for the lender
+        SellCreditMarketParams[] memory sellCreditMarketParamsArray = new SellCreditMarketParams[](1);
+        sellCreditMarketParamsArray[0] = SellCreditMarketParams({
+            lender: bob,
+            creditPositionId: RESERVED_ID,
+            amount: 50e6, // amount to borrow
+            tenor: 365 days,
+            deadline: block.timestamp + 1 hours,
+            maxAPR: 0.05e18, // 5% max APR
+            exactAmountIn: false
+        });
+
+        // Calculate target leverage (e.g., 2x leverage)
+        uint256 targetLeveragePercent = 200e16; // 200% = 2x leverage
+
         // User calls the loop function
         vm.prank(alice);
         flashLoanLooping.loopPositionWithFlashLoan(
@@ -83,9 +104,10 @@ contract FlashLoanLoopingTest is BaseTest {
             50e6, // flash loan amount
             365 days, // tenor
             0.05e18, // max APR
-            bob, // lender
+            sellCreditMarketParamsArray,
             swapParamsArray,
-            address(0) // recipient (address(0) means transfer profits to user)
+            address(0), // recipient (address(0) means transfer profits to user)
+            targetLeveragePercent
         );
 
         Vars memory _after = _state();
@@ -98,6 +120,10 @@ contract FlashLoanLoopingTest is BaseTest {
         
         // User should have received some USDC as profit from the loop
         assertGt(afterAliceUSDC, beforeAliceUSDC, "User should have received USDC profit");
+
+        // Verify target leverage was achieved
+        uint256 currentLeverage = flashLoanLooping.currentLeveragePercent(ISize(address(size)), alice);
+        assertGe(currentLeverage, targetLeveragePercent, "Target leverage should be achieved");
     }
 
     function test_FlashLoanLooping_user_loop_with_deposit_profits() public {
@@ -131,6 +157,20 @@ contract FlashLoanLoopingTest is BaseTest {
         SwapParams[] memory swapParamsArray = new SwapParams[](1);
         swapParamsArray[0] = SwapParams({method: SwapMethod.OneInch, data: abi.encode(oneInchParams)});
 
+        // Create sell credit market parameters
+        SellCreditMarketParams[] memory sellCreditMarketParamsArray = new SellCreditMarketParams[](1);
+        sellCreditMarketParamsArray[0] = SellCreditMarketParams({
+            lender: bob,
+            creditPositionId: RESERVED_ID,
+            amount: 10e6, // amount to borrow
+            tenor: 365 days,
+            deadline: block.timestamp + 1 hours,
+            maxAPR: 0.05e18, // 5% max APR
+            exactAmountIn: false
+        });
+
+        uint256 targetLeveragePercent = 150e16; // 150% = 1.5x leverage
+
         // User calls the loop function with depositProfits = true
         vm.prank(alice);
         flashLoanLooping.loopPositionWithFlashLoan(
@@ -140,9 +180,10 @@ contract FlashLoanLoopingTest is BaseTest {
             10e6, // flash loan amount
             365 days, // tenor
             0.05e18, // max APR
-            bob, // lender
+            sellCreditMarketParamsArray,
             swapParamsArray,
-            alice // recipient (deposits profits to user's account)
+            alice, // recipient (deposits profits to user's account)
+            targetLeveragePercent
         );
 
         Vars memory _after = _state();
@@ -152,6 +193,10 @@ contract FlashLoanLoopingTest is BaseTest {
         assertGt(_after.alice.debtBalance, _before.alice.debtBalance, "User should have increased debt");
         assertGt(_after.alice.collateralTokenBalance, _before.alice.collateralTokenBalance, "User should have increased collateral");
         assertGt(afterAliceBorrowAToken, beforeAliceBorrowAToken, "User should have received USDC profit as deposit");
+
+        // Verify target leverage was achieved
+        uint256 currentLeverage = flashLoanLooping.currentLeveragePercent(ISize(address(size)), alice);
+        assertGe(currentLeverage, targetLeveragePercent, "Target leverage should be achieved");
     }
 
     function test_FlashLoanLooping_unauthorized_access_reverts() public {
@@ -175,6 +220,20 @@ contract FlashLoanLoopingTest is BaseTest {
         SwapParams[] memory swapParamsArray = new SwapParams[](1);
         swapParamsArray[0] = SwapParams({method: SwapMethod.OneInch, data: abi.encode(oneInchParams)});
 
+        // Create sell credit market parameters
+        SellCreditMarketParams[] memory sellCreditMarketParamsArray = new SellCreditMarketParams[](1);
+        sellCreditMarketParamsArray[0] = SellCreditMarketParams({
+            lender: bob,
+            creditPositionId: RESERVED_ID,
+            amount: 50e6,
+            tenor: 365 days,
+            deadline: block.timestamp + 1 hours,
+            maxAPR: 0.05e18,
+            exactAmountIn: false
+        });
+
+        uint256 targetLeveragePercent = 200e16; // 200% = 2x leverage
+
         // This should revert due to lack of authorization
         vm.prank(alice);
         vm.expectRevert(); // Expect any revert due to authorization failure
@@ -185,10 +244,144 @@ contract FlashLoanLoopingTest is BaseTest {
             50e6,
             365 days,
             0.05e18,
-            bob, // lender (alice has USDC to lend)
+            sellCreditMarketParamsArray,
             swapParamsArray,
-            address(0)
+            address(0),
+            targetLeveragePercent
         );
+    }
+
+    function test_FlashLoanLooping_target_leverage_not_achieved_reverts() public {
+        // Setup initial state
+        _setPrice(1e18);
+        _deposit(alice, weth, 100e18);
+        _deposit(alice, usdc, 100e6);
+        _deposit(bob, usdc, 100e6);
+        _buyCreditLimit(bob, block.timestamp + 365 days, YieldCurveHelper.pointCurve(365 days, 0.03e18));
+
+        // User authorizes the FlashLoanLooping contract
+        _setAuthorization(alice, address(flashLoanLooping), Authorization.getActionsBitmap(Action.DEPOSIT));
+        _setAuthorization(alice, address(flashLoanLooping), Authorization.getActionsBitmap(Action.WITHDRAW));
+        _setAuthorization(alice, address(flashLoanLooping), Authorization.getActionsBitmap(Action.SELL_CREDIT_MARKET));
+
+        OneInchParams memory oneInchParams = OneInchParams({
+            fromToken: address(usdc),
+            toToken: address(weth),
+            minReturn: 0,
+            data: ""
+        });
+
+        SwapParams[] memory swapParamsArray = new SwapParams[](1);
+        swapParamsArray[0] = SwapParams({method: SwapMethod.OneInch, data: abi.encode(oneInchParams)});
+
+        // Create sell credit market parameters with very small amount (insufficient for target leverage)
+        SellCreditMarketParams[] memory sellCreditMarketParamsArray = new SellCreditMarketParams[](1);
+        sellCreditMarketParamsArray[0] = SellCreditMarketParams({
+            lender: bob,
+            creditPositionId: RESERVED_ID,
+            amount: 1e6, // very small amount
+            tenor: 365 days,
+            deadline: block.timestamp + 1 hours,
+            maxAPR: 0.05e18,
+            exactAmountIn: false
+        });
+
+        uint256 targetLeveragePercent = 500e16; // 500% = 5x leverage (very high, won't be achieved)
+
+        // This should revert because target leverage won't be achieved
+        vm.prank(alice);
+        vm.expectRevert(); // Expect TargetLeverageNotAchieved error
+        flashLoanLooping.loopPositionWithFlashLoan(
+            address(size),
+            address(weth),
+            address(usdc),
+            50e6,
+            365 days,
+            0.05e18,
+            sellCreditMarketParamsArray,
+            swapParamsArray,
+            address(0),
+            targetLeveragePercent
+        );
+    }
+
+    function test_FlashLoanLooping_multiple_lenders() public {
+        // Setup initial state
+        _setPrice(1e18);
+        _deposit(alice, weth, 100e18);
+        _deposit(alice, usdc, 100e6);
+        
+        // Multiple lenders provide credit limits
+        _deposit(bob, usdc, 50e6);
+        _buyCreditLimit(bob, block.timestamp + 365 days, YieldCurveHelper.pointCurve(365 days, 0.03e18));
+        
+        _deposit(carol, usdc, 50e6);
+        _buyCreditLimit(carol, block.timestamp + 365 days, YieldCurveHelper.pointCurve(365 days, 0.04e18));
+
+        // User authorizes the FlashLoanLooping contract
+        _setAuthorization(alice, address(flashLoanLooping), Authorization.getActionsBitmap(Action.DEPOSIT));
+        _setAuthorization(alice, address(flashLoanLooping), Authorization.getActionsBitmap(Action.WITHDRAW));
+        _setAuthorization(alice, address(flashLoanLooping), Authorization.getActionsBitmap(Action.SELL_CREDIT_MARKET));
+
+        Vars memory _before = _state();
+
+        OneInchParams memory oneInchParams = OneInchParams({
+            fromToken: address(usdc),
+            toToken: address(weth),
+            minReturn: 0,
+            data: ""
+        });
+
+        SwapParams[] memory swapParamsArray = new SwapParams[](1);
+        swapParamsArray[0] = SwapParams({method: SwapMethod.OneInch, data: abi.encode(oneInchParams)});
+
+        // Create sell credit market parameters for multiple lenders
+        SellCreditMarketParams[] memory sellCreditMarketParamsArray = new SellCreditMarketParams[](2);
+        sellCreditMarketParamsArray[0] = SellCreditMarketParams({
+            lender: bob,
+            creditPositionId: RESERVED_ID,
+            amount: 25e6, // borrow from bob
+            tenor: 365 days,
+            deadline: block.timestamp + 1 hours,
+            maxAPR: 0.05e18,
+            exactAmountIn: false
+        });
+        sellCreditMarketParamsArray[1] = SellCreditMarketParams({
+            lender: carol,
+            creditPositionId: RESERVED_ID,
+            amount: 25e6, // borrow from carol
+            tenor: 365 days,
+            deadline: block.timestamp + 1 hours,
+            maxAPR: 0.05e18,
+            exactAmountIn: false
+        });
+
+        uint256 targetLeveragePercent = 200e16; // 200% = 2x leverage
+
+        // User calls the loop function with multiple lenders
+        vm.prank(alice);
+        flashLoanLooping.loopPositionWithFlashLoan(
+            address(size),
+            address(weth),
+            address(usdc),
+            50e6, // flash loan amount
+            365 days, // tenor
+            0.05e18, // max APR
+            sellCreditMarketParamsArray,
+            swapParamsArray,
+            address(0), // recipient
+            targetLeveragePercent
+        );
+
+        Vars memory _after = _state();
+
+        // Verify the loop was successful with multiple lenders
+        assertGt(_after.alice.debtBalance, _before.alice.debtBalance, "User should have increased debt");
+        assertGt(_after.alice.collateralTokenBalance, _before.alice.collateralTokenBalance, "User should have increased collateral");
+
+        // Verify target leverage was achieved
+        uint256 currentLeverage = flashLoanLooping.currentLeveragePercent(ISize(address(size)), alice);
+        assertGe(currentLeverage, targetLeveragePercent, "Target leverage should be achieved");
     }
 
     function test_FlashLoanLooping_getActionsBitmap() public {
@@ -214,5 +407,38 @@ contract FlashLoanLoopingTest is BaseTest {
             "FlashLoanLooping (DexSwap takes SwapParams[] as input)",
             "Description should match expected value"
         );
+    }
+
+    function test_FlashLoanLooping_currentLeveragePercent() public {
+        // Setup initial state
+        _setPrice(1e18);
+        _deposit(alice, weth, 100e18);
+        _deposit(alice, usdc, 100e6);
+        
+        // Check initial leverage (should be 100% = no leverage)
+        uint256 initialLeverage = flashLoanLooping.currentLeveragePercent(ISize(address(size)), alice);
+        assertEq(initialLeverage, PERCENT, "Initial leverage should be 100%");
+        
+        // Borrow some USDC to increase leverage
+        _deposit(bob, usdc, 50e6);
+        _buyCreditLimit(bob, block.timestamp + 365 days, YieldCurveHelper.pointCurve(365 days, 0.03e18));
+        
+        // User borrows some USDC
+        vm.prank(alice);
+        size.sellCreditMarket(
+            SellCreditMarketParams({
+                lender: bob,
+                creditPositionId: RESERVED_ID,
+                amount: 20e6,
+                tenor: 365 days,
+                deadline: block.timestamp + 1 hours,
+                maxAPR: 0.05e18,
+                exactAmountIn: false
+            })
+        );
+        
+        // Check leverage after borrowing (should be > 100%)
+        uint256 leveragedLeverage = flashLoanLooping.currentLeveragePercent(ISize(address(size)), alice);
+        assertGt(leveragedLeverage, PERCENT, "Leverage should be greater than 100% after borrowing");
     }
 } 

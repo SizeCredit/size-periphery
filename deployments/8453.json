@@ -1,6 +1,6 @@
 {
   "deployments": {
-    "FlashLoanLooping": "0x6d5A1C916afEE1D8b2b3029490382F8c02f9431d",
+    "FlashLoanLooping": "0xeAB2fC32059bBE7DA7e495cE6aF036Dd27E050CD",
     "addressProvider": "0xe20fCBdBfFC4Dd138cE8b2E6FBb6CB49777ad64D",
     "aggregator1inch": "0x0000000000000000000000000000000000000001",
     "uniswapV2Router": "0x4752ba5DBc23f44D87826276BF6Fd6b1C372aD24",

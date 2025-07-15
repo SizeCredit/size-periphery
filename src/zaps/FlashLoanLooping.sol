@@ -81,6 +81,7 @@ contract FlashLoanLooping is Ownable, FlashLoanReceiverBase, DexSwap {
         SellCreditMarketParams[] memory sellCreditMarketParamsArray,
         address onBehalfOf
     ) internal {
+
         bytes memory depositCall = abi.encodeWithSelector(
             ISize.deposit.selector, 
             DepositOnBehalfOfParams({
@@ -105,6 +106,9 @@ contract FlashLoanLooping is Ownable, FlashLoanReceiverBase, DexSwap {
             calls[1 + i] = borrowCall;
         }
 
+        // slither-disable-next-line unused-return
+        size.multicall(calls);
+
         // Withdraw the USDC to the contract to repay flash loan
         bytes memory withdrawCall = abi.encodeWithSelector(
             ISize.withdraw.selector,
@@ -126,7 +130,8 @@ contract FlashLoanLooping is Ownable, FlashLoanReceiverBase, DexSwap {
         address collateralToken,
         address borrowToken,
         SellCreditMarketParams[] memory sellCreditMarketParamsArray,
-        address onBehalfOf
+        address onBehalfOf,
+        address recipient
     ) internal returns (uint256 borrowedAmount) {
         // Deposit collateral
         uint256 collateralBalance = IERC20(collateralToken).balanceOf(address(this));
@@ -261,7 +266,8 @@ contract FlashLoanLooping is Ownable, FlashLoanReceiverBase, DexSwap {
             loopParams.collateralToken,
             loopParams.borrowToken,
             loopParams.sellCreditMarketParamsArray,
-            loopParams.onBehalfOf
+            loopParams.onBehalfOf,
+            loopParams.recipient
         );
 
         // Check if target leverage was achieved

@@ -164,8 +164,8 @@ contract FlashLoanLoopingTest is BaseTest {
     //     // Setup initial state
     //     _setPrice(1e18);
         
-    //     // User deposits collateral and USDC - REDUCED from 1 billion to 100 WETH
-    //     _deposit(alice, weth, 100e18);
+    //     // User deposits collateral and USDC
+    //     _deposit(alice, weth, 1000000000e18);
     //     _deposit(alice, usdc, 10000e6);
         
     //     // Lender provides credit limit

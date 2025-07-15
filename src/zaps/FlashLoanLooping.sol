@@ -112,8 +112,13 @@ contract FlashLoanLooping is Ownable, FlashLoanReceiverBase, DexSwap {
                 params: WithdrawParams({token: borrowToken, amount: type(uint256).max, to: address(this)}),
                 onBehalfOf: address(this)
             })
+        );
+
+        bytes[] memory withdrawCalls = new bytes[](1);
+        withdrawCalls[0] = withdrawCall;
+
         // slither-disable-next-line unused-return
-        size.multicall(calls);
+        size.multicall(withdrawCalls);
     }
 
     function _executeLoop(
@@ -121,8 +126,7 @@ contract FlashLoanLooping is Ownable, FlashLoanReceiverBase, DexSwap {
         address collateralToken,
         address borrowToken,
         SellCreditMarketParams[] memory sellCreditMarketParamsArray,
-        address onBehalfOf,
-        address recipient
+        address onBehalfOf
     ) internal returns (uint256 borrowedAmount) {
         // Deposit collateral
         uint256 collateralBalance = IERC20(collateralToken).balanceOf(address(this));
@@ -257,8 +261,7 @@ contract FlashLoanLooping is Ownable, FlashLoanReceiverBase, DexSwap {
             loopParams.collateralToken,
             loopParams.borrowToken,
             loopParams.sellCreditMarketParamsArray,
-            loopParams.onBehalfOf,
-            loopParams.recipient
+            loopParams.onBehalfOf
         );
 
         // Check if target leverage was achieved

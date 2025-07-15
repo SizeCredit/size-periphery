@@ -15,6 +15,7 @@ import {Errors} from "@size/src/market/libraries/Errors.sol";
 import {RESERVED_ID} from "@size/src/market/libraries/LoanLibrary.sol";
 import {SellCreditMarketParams, SellCreditMarketOnBehalfOfParams} from "@size/src/market/libraries/actions/SellCreditMarket.sol";
 import {DepositOnBehalfOfParams, DepositParams} from "@size/src/market/libraries/actions/Deposit.sol";
+import {WithdrawOnBehalfOfParams, WithdrawParams} from "@size/src/market/libraries/actions/Withdraw.sol";
 import {DexSwap, SwapParams} from "src/liquidator/DexSwap.sol";
 
 import {PeripheryErrors} from "src/libraries/PeripheryErrors.sol";
@@ -104,6 +105,13 @@ contract FlashLoanLooping is Ownable, FlashLoanReceiverBase, DexSwap {
             calls[1 + i] = borrowCall;
         }
 
+        // Withdraw the USDC to the contract to repay flash loan
+        bytes memory withdrawCall = abi.encodeWithSelector(
+            ISize.withdraw.selector,
+            WithdrawOnBehalfOfParams({
+                params: WithdrawParams({token: borrowToken, amount: type(uint256).max, to: address(this)}),
+                onBehalfOf: address(this)
+            })
         // slither-disable-next-line unused-return
         size.multicall(calls);
     }
@@ -293,9 +301,9 @@ contract FlashLoanLooping is Ownable, FlashLoanReceiverBase, DexSwap {
     }
 
     function getActionsBitmap() external pure returns (ActionsBitmap) {
-        Action[] memory actions = new Action[](3);
+        Action[] memory actions = new Action[](2);
         actions[0] = Action.DEPOSIT;
-        actions[2] = Action.SELL_CREDIT_MARKET;
+        actions[1] = Action.SELL_CREDIT_MARKET;
         return Authorization.getActionsBitmap(actions);
     }
 } 

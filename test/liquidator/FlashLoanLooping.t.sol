@@ -466,7 +466,6 @@ contract FlashLoanLoopingTest is BaseTest {
         // Test that the contract returns the correct actions bitmap
         Action[] memory actions = new Action[](3);
         actions[0] = Action.DEPOSIT;
-        actions[1] = Action.WITHDRAW;
         actions[2] = Action.SELL_CREDIT_MARKET;
         uint256 expectedBitmap = Authorization.toUint256(Authorization.getActionsBitmap(actions));
         

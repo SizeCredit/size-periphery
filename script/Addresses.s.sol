@@ -48,7 +48,7 @@ contract Addresses {
         // https://docs.uniswap.org/contracts/v3/reference/deployments/
         addresses[1][CONTRACT.UNISWAP_V3_ROUTER] = 0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45;
         addresses[8453][CONTRACT.UNISWAP_V3_ROUTER] = 0x2626664c2603336E57B271c5C0b26F421741e481;
-        addresses[84532][CONTRACT.UNISWAP_V2_ROUTER] = 0x94cC0AaC535CCDB3C01d6787D6413C739ae12bc4;
+        addresses[84532][CONTRACT.UNISWAP_V3_ROUTER] = 0x94cC0AaC535CCDB3C01d6787D6413C739ae12bc4;
 
         // https://docs.size.credit/
         addresses[1][CONTRACT.SIZE_FACTORY] = 0x3A9C05c3Da48E6E26f39928653258D7D4Eb594C1;

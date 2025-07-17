@@ -16,7 +16,7 @@ contract DeployAutoRepay is Script, Addresses {
         vm.startBroadcast();
 
         address addressProvider = addresses[block.chainid][CONTRACT.ADDRESS_PROVIDER];
-      address aggregator1inch = addresses[block.chainid][CONTRACT.AGGREGATOR_1INCH];
+        address aggregator1inch = addresses[block.chainid][CONTRACT.AGGREGATOR_1INCH];
         address unoswapRouter = addresses[block.chainid][CONTRACT.UNOSWAP_ROUTER];
         address uniswapV2Router = addresses[block.chainid][CONTRACT.UNISWAP_V2_ROUTER];
         address uniswapV3Router = addresses[block.chainid][CONTRACT.UNISWAP_V3_ROUTER];

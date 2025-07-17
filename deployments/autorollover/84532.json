@@ -1,0 +1,7 @@
+{
+  "deployments": {
+    "AutoRollover": "0xF711dFE3F002e1465FD18D553b43a903DE10EeA4",
+    "AutoRolloverImplementation": "0x7cD0C96E0557F31f375e8E8B38DA19bD086a896F",
+    "addressProvider": "0x6f7E694fe5250Ce638fFE95524760422E6e41997"
+  }
+}

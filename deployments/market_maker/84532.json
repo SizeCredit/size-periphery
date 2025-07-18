@@ -1,0 +1,10 @@
+{
+  "MarketMakerManagerFactory": "0x36b2f24de278abA3DfD736bDB5061457D31C099e",
+  "bot": "0xDe5C38699a7057a33524F96e62Bb1987C2568816",
+  "deployments": {
+    "MarketMakerManagerFactory": "0x36b2f24de278abA3DfD736bDB5061457D31C099e",
+    "bot": "0xDe5C38699a7057a33524F96e62Bb1987C2568816",
+    "governance": "0x462B545e8BBb6f9E5860928748Bfe9eCC712c3a7"
+  },
+  "governance": "0x462B545e8BBb6f9E5860928748Bfe9eCC712c3a7"
+}

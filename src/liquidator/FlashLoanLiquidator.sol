@@ -26,6 +26,8 @@ struct ReplacementParams {
     uint256 minAPR;
     uint256 deadline;
     address replacementBorrower;
+    uint256 collectionId;
+    address rateProvider;
 }
 
 struct OperationParams {
@@ -95,7 +97,9 @@ contract FlashLoanLiquidator is Ownable, FlashLoanReceiverBase, DexSwap {
                 borrower: replacementParams.replacementBorrower,
                 minimumCollateralProfit: minimumCollateralProfit,
                 deadline: replacementParams.deadline,
-                minAPR: replacementParams.minAPR
+                minAPR: replacementParams.minAPR,
+                collectionId: replacementParams.collectionId,
+                rateProvider: replacementParams.rateProvider
             })
         );
 
@@ -218,7 +222,7 @@ contract FlashLoanLiquidator is Ownable, FlashLoanReceiverBase, DexSwap {
             depositProfits: depositProfits,
             swapParamsArray: swapParamsArray,
             useReplacement: false,
-            replacementParams: ReplacementParams({minAPR: 0, deadline: 0, replacementBorrower: address(0)}),
+            replacementParams: ReplacementParams({minAPR: 0, deadline: 0, replacementBorrower: address(0), collectionId: type(uint256).max, rateProvider: address(0)}),
             debtAmount: debtAmount
         });
 

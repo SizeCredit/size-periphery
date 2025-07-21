@@ -147,9 +147,15 @@ contract FlashLoanLiquidatorTest is BaseTest {
         SwapParams[] memory swapParamsArray = new SwapParams[](1);
         swapParamsArray[0] = SwapParams({method: SwapMethod.OneInch, data: abi.encode(oneInchParams)});
 
-        // Create ReplacementParams
+        // Create ReplacementParams with new collectionId and rateProvider parameters
         ReplacementParams memory replacementParams =
-            ReplacementParams({minAPR: 0.03e18, deadline: block.timestamp + 1 days, replacementBorrower: candy});
+            ReplacementParams({
+                minAPR: 0.03e18, 
+                deadline: block.timestamp + 1 days, 
+                replacementBorrower: candy,
+                collectionId: type(uint256).max, // RESERVED_ID
+                rateProvider: address(0)
+            });
 
         // Call the liquidatePositionWithFlashLoanReplacement function
         vm.prank(liquidator);

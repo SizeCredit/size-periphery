@@ -109,7 +109,9 @@ contract FlashLoanLoopingTest is BaseTest {
             tenor: 365 days,
             deadline: block.timestamp + 1 hours,
             maxAPR: 0.05e18, // 5% max APR
-            exactAmountIn: false
+            exactAmountIn: false,
+            collectionId: type(uint256).max, // RESERVED_ID
+            rateProvider: address(0)
         });
 
         // Calculate target leverage (e.g., 2x leverage)
@@ -213,7 +215,9 @@ contract FlashLoanLoopingTest is BaseTest {
     //         tenor: 365 days,
     //         deadline: block.timestamp + 1 hours,
     //         maxAPR: 0.05e18, // 5% max APR
-    //         exactAmountIn: false
+    //         exactAmountIn: false,
+    //         collectionId: type(uint256).max, // RESERVED_ID
+    //         rateProvider: address(0)
     //     });
 
     //     uint256 targetLeveragePercent = 150e16; // 150% = 1.5x leverage
@@ -288,7 +292,9 @@ contract FlashLoanLoopingTest is BaseTest {
             tenor: 365 days,
             deadline: block.timestamp + 1 hours,
             maxAPR: 0.05e18,
-            exactAmountIn: false
+            exactAmountIn: false,
+            collectionId: type(uint256).max, // RESERVED_ID
+            rateProvider: address(0)
         });
 
         uint256 targetLeveragePercent = 200e16; // 200% = 2x leverage
@@ -342,7 +348,9 @@ contract FlashLoanLoopingTest is BaseTest {
             tenor: 365 days,
             deadline: block.timestamp + 1 hours,
             maxAPR: 0.05e18,
-            exactAmountIn: false
+            exactAmountIn: false,
+            collectionId: type(uint256).max, // RESERVED_ID
+            rateProvider: address(0)
         });
 
         uint256 targetLeveragePercent = 500e16; // 500% = 5x leverage (very high, won't be achieved)
@@ -423,7 +431,9 @@ contract FlashLoanLoopingTest is BaseTest {
             tenor: 365 days,
             deadline: block.timestamp + 1 hours,
             maxAPR: 0.05e18,
-            exactAmountIn: false
+            exactAmountIn: false,
+            collectionId: type(uint256).max, // RESERVED_ID
+            rateProvider: address(0)
         });
         sellCreditMarketParamsArray[1] = SellCreditMarketParams({
             lender: carol,
@@ -432,7 +442,9 @@ contract FlashLoanLoopingTest is BaseTest {
             tenor: 365 days,
             deadline: block.timestamp + 1 hours,
             maxAPR: 0.05e18,
-            exactAmountIn: false
+            exactAmountIn: false,
+            collectionId: type(uint256).max, // RESERVED_ID
+            rateProvider: address(0)
         });
 
         uint256 targetLeveragePercent = 200e16; // 200% = 2x leverage
@@ -525,7 +537,9 @@ contract FlashLoanLoopingTest is BaseTest {
                 tenor: 365 days,
                 deadline: block.timestamp + 1 hours,
                 maxAPR: 0.05e18,
-                exactAmountIn: false
+                exactAmountIn: false,
+                collectionId: type(uint256).max, // RESERVED_ID
+                rateProvider: address(0)
             })
         );
         

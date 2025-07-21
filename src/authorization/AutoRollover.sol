@@ -102,6 +102,8 @@ contract AutoRollover is Initializable, Ownable2StepUpgradeable, UpgradeableFlas
         uint256 tenor;
         uint256 maxAPR;
         uint256 deadline;
+        uint256 collectionId;
+        address rateProvider;
     }
 
     function rollover(
@@ -111,7 +113,9 @@ contract AutoRollover is Initializable, Ownable2StepUpgradeable, UpgradeableFlas
         address lender,
         uint256 tenor,
         uint256 maxAPR,
-        uint256 deadline
+        uint256 deadline,
+        uint256 collectionId,
+        address rateProvider
     ) external onlyOwner {
         DebtPosition memory debtPosition = market.getDebtPosition(debtPositionId);
 
@@ -132,7 +136,9 @@ contract AutoRollover is Initializable, Ownable2StepUpgradeable, UpgradeableFlas
             lender: lender,
             tenor: tenor,
             maxAPR: maxAPR,
-            deadline: deadline
+            deadline: deadline,
+            collectionId: collectionId,
+            rateProvider: rateProvider
         });
 
         bytes memory params = abi.encode(operationParams);
@@ -183,7 +189,9 @@ contract AutoRollover is Initializable, Ownable2StepUpgradeable, UpgradeableFlas
                     tenor: operationParams.tenor,
                     maxAPR: operationParams.maxAPR,
                     deadline: operationParams.deadline,
-                    exactAmountIn: false
+                    exactAmountIn: false,
+                    collectionId: operationParams.collectionId,
+                    rateProvider: operationParams.rateProvider
                 }),
                 onBehalfOf: operationParams.onBehalfOf,
                 recipient: address(this)

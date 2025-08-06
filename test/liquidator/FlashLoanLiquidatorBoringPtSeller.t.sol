@@ -179,7 +179,7 @@ contract FlashLoanLiquidatorBoringPtSellerTest is BaseTest, Addresses {
 
         assertLt(size.collateralRatio(borrower), size.riskConfig().crLiquidation);
 
-        uint256 flashLoanLiquidatorBalanceBefore = size.getUserView(bot).borrowATokenBalance;
+        uint256 flashLoanLiquidatorBalanceBefore = size.getUserView(bot).borrowTokenBalance;
 
         FlashLoanLiquidateTestParams memory params = FlashLoanLiquidateTestParams({
             debtPositionId: debtPositionId,
@@ -190,7 +190,7 @@ contract FlashLoanLiquidatorBoringPtSellerTest is BaseTest, Addresses {
         });
         _flashLoanLiquidate(bot, params);
 
-        uint256 flashLoanLiquidatorBalanceAfter = size.getUserView(bot).borrowATokenBalance;
+        uint256 flashLoanLiquidatorBalanceAfter = size.getUserView(bot).borrowTokenBalance;
 
         assertGt(flashLoanLiquidatorBalanceAfter, flashLoanLiquidatorBalanceBefore);
     }

@@ -16,41 +16,40 @@ contract UpdateAutoRolloverEarlyRepaymentBuffer is Script, Addresses {
         // set new buffer to 1 day in seconds
         uint256 newBuffer = 1 * 24 * 60 * 60;
 
-        
         // Get the deployed AutoRollover address from deployment file
         string memory root = vm.projectRoot();
         string memory path = string.concat(root, "/deployments/");
         string memory chainIdStr = vm.toString(block.chainid);
         path = string.concat(path, string.concat(chainIdStr, ".json"));
-        
+
         // string memory deploymentData = vm.readFile(path);
         // bytes memory autoRolloverAddressBytes = vm.parseJson(deploymentData, ".deployments.AutoRollover");
         // string memory autoRolloverAddressStr = string(autoRolloverAddressBytes);
         // address autoRolloverAddress = vm.parseAddress(autoRolloverAddressStr);
-        
+
         address autoRolloverAddress = 0x5413eE79FD481E603daB8e595474942e2bD48469;
 
         console.log("Updating AutoRollover early repayment buffer at:", autoRolloverAddress);
         console.log("New early repayment buffer:", newBuffer, "seconds");
-        
+
         vm.startBroadcast();
-        
+
         // Get the AutoRollover contract instance
         AutoRollover autoRollover = AutoRollover(autoRolloverAddress);
-        
+
         // Get current value
         uint256 currentBuffer = autoRollover.earlyRepaymentBuffer();
         console.log("Current early repayment buffer:", currentBuffer, "seconds");
-        
+
         // Update the early repayment buffer
         autoRollover.setEarlyRepaymentBuffer(newBuffer);
-        
+
         // Verify the update
         uint256 updatedBuffer = autoRollover.earlyRepaymentBuffer();
         console.log("Updated early repayment buffer:", updatedBuffer, "seconds");
-        
+
         vm.stopBroadcast();
-        
+
         console.log("Early repayment buffer updated successfully!");
     }
-} 
+}

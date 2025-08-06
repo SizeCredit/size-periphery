@@ -5,6 +5,7 @@ import {SwapMethod, BoringPtSellerParams, SwapParams, OneInchParams} from "src/l
 import {FlashLoanLiquidator, ReplacementParams} from "src/liquidator/FlashLoanLiquidator.sol";
 import {Mock1InchAggregator} from "test/mocks/Mock1InchAggregator.sol";
 import {MockAavePool} from "@test/mocks/MockAavePool.sol";
+import {RESERVED_ID} from "@size/src/market/libraries/LoanLibrary.sol";
 
 import {BaseTest, Vars} from "@size/test/BaseTest.sol";
 
@@ -50,7 +51,7 @@ contract FlashLoanLiquidatorTest is BaseTest {
 
         _buyCreditLimit(alice, block.timestamp + 365 days, YieldCurveHelper.pointCurve(365 days, 0.03e18));
         uint256 amount = 15e6;
-        uint256 debtPositionId = _sellCreditMarket(bob, alice, amount, 365 days, false);
+        uint256 debtPositionId = _sellCreditMarket(bob, alice, RESERVED_ID, amount, 365 days, false);
         DebtPosition memory debtPosition = size.getDebtPosition(debtPositionId);
         uint256 debt = debtPosition.futureValue;
 
@@ -86,7 +87,7 @@ contract FlashLoanLiquidatorTest is BaseTest {
         uint256 afterLiquidatorUSDC = usdc.balanceOf(liquidator);
 
         assertEq(_after.bob.debtBalance, _before.bob.debtBalance - debt, 0);
-        assertEq(_after.liquidator.borrowATokenBalance, _before.liquidator.borrowATokenBalance, 0);
+        assertEq(_after.liquidator.borrowTokenBalance, _before.liquidator.borrowTokenBalance, 0);
         assertEq(_after.liquidator.collateralTokenBalance, _before.liquidator.collateralTokenBalance, 0);
         assertGt(
             _after.feeRecipient.collateralTokenBalance,
@@ -132,7 +133,7 @@ contract FlashLoanLiquidatorTest is BaseTest {
         _deposit(bob, usdc, 100e6);
         _buyCreditLimit(alice, block.timestamp + 365 days, YieldCurveHelper.pointCurve(365 days, 0.03e18));
         uint256 amount = 15e6;
-        uint256 debtPositionId = _sellCreditMarket(bob, alice, amount, 365 days, false);
+        uint256 debtPositionId = _sellCreditMarket(bob, alice, RESERVED_ID, amount, 365 days, false);
         _setPrice(0.2e18); // Set a price that makes the position undercollateralized
 
         // Setup replacement borrower
@@ -148,14 +149,13 @@ contract FlashLoanLiquidatorTest is BaseTest {
         swapParamsArray[0] = SwapParams({method: SwapMethod.OneInch, data: abi.encode(oneInchParams)});
 
         // Create ReplacementParams with new collectionId and rateProvider parameters
-        ReplacementParams memory replacementParams =
-            ReplacementParams({
-                minAPR: 0.03e18, 
-                deadline: block.timestamp + 1 days, 
-                replacementBorrower: candy,
-                collectionId: type(uint256).max, // RESERVED_ID
-                rateProvider: address(0)
-            });
+        ReplacementParams memory replacementParams = ReplacementParams({
+            minAPR: 0.03e18,
+            deadline: block.timestamp + 1 days,
+            replacementBorrower: candy,
+            collectionId: type(uint256).max, // RESERVED_ID
+            rateProvider: address(0)
+        });
 
         // Call the liquidatePositionWithFlashLoanReplacement function
         vm.prank(liquidator);
@@ -215,7 +215,7 @@ contract FlashLoanLiquidatorTest is BaseTest {
 
         _buyCreditLimit(alice, block.timestamp + 365 days, YieldCurveHelper.pointCurve(365 days, 0.03e18));
         uint256 amount = 15e6;
-        uint256 debtPositionId = _sellCreditMarket(bob, alice, amount, 365 days, false);
+        uint256 debtPositionId = _sellCreditMarket(bob, alice, RESERVED_ID, amount, 365 days, false);
         DebtPosition memory debtPosition = size.getDebtPosition(debtPositionId);
         uint256 debt = debtPosition.futureValue;
 
@@ -248,7 +248,7 @@ contract FlashLoanLiquidatorTest is BaseTest {
         );
 
         Vars memory _after = _state();
-        uint256 afterLiquidatorUSDC = _after.liquidator.borrowATokenBalance;
+        uint256 afterLiquidatorUSDC = _after.liquidator.borrowTokenBalance;
 
         assertEq(_after.bob.debtBalance, _before.bob.debtBalance - debt, 0);
         // assertEq(_after.liquidator.borrowATokenBalance, _before.liquidator.borrowATokenBalance, 0);
@@ -293,7 +293,7 @@ contract FlashLoanLiquidatorTest is BaseTest {
 
         _buyCreditLimit(alice, block.timestamp + 365 days, YieldCurveHelper.pointCurve(365 days, 0.03e18));
         uint256 amount = 15e6;
-        uint256 debtPositionId = _sellCreditMarket(bob, alice, amount, 365 days, false);
+        uint256 debtPositionId = _sellCreditMarket(bob, alice, RESERVED_ID, amount, 365 days, false);
         DebtPosition memory debtPosition = size.getDebtPosition(debtPositionId);
         uint256 debt = debtPosition.futureValue;
 
@@ -331,7 +331,7 @@ contract FlashLoanLiquidatorTest is BaseTest {
         );
 
         Vars memory _after = _state();
-        uint256 afterLiquidatorUSDC = _after.liquidator.borrowATokenBalance;
+        uint256 afterLiquidatorUSDC = _after.liquidator.borrowTokenBalance;
 
         assertEq(_after.bob.debtBalance, _before.bob.debtBalance - debt, 0);
         // assertEq(_after.liquidator.borrowATokenBalance, _before.liquidator.borrowATokenBalance, 0);

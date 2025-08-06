@@ -52,7 +52,7 @@ contract LeverageUpTest is BaseTest, Addresses {
         vm.label(address(size.data().underlyingCollateralToken), "UnderlyingCollateralToken");
         vm.label(address(size.data().underlyingBorrowToken), "UnderlyingBorrowToken");
         vm.label(address(size.data().collateralToken), "CollateralToken");
-        vm.label(address(size.data().borrowAToken), "BorrowAToken");
+        vm.label(address(size.data().borrowTokenVault), "BorrowTokenVault");
         vm.label(address(size.data().debtToken), "DebtToken");
     }
 
@@ -66,7 +66,7 @@ contract LeverageUpTest is BaseTest, Addresses {
     ) internal {
         SellCreditMarketParams[] memory sellCreditMarketParamsArray = new SellCreditMarketParams[](1);
         uint256 tenor = IPMarket(pendleMarket).expiry() - block.timestamp;
-        uint256 apr = size.getLoanOfferAPR(lender_, tenor);
+        uint256 apr = size.getLoanOfferAPR(lender_, RESERVED_ID, address(0), tenor);
         sellCreditMarketParamsArray[0] = SellCreditMarketParams({
             lender: lender_,
             creditPositionId: RESERVED_ID,
@@ -74,7 +74,9 @@ contract LeverageUpTest is BaseTest, Addresses {
             tenor: tenor,
             deadline: block.timestamp,
             maxAPR: apr,
-            exactAmountIn: false
+            exactAmountIn: false,
+            collectionId: RESERVED_ID,
+            rateProvider: address(0)
         });
 
         address tokenOut = leverageUp.getPtSellerTokenOut(pendleMarket, false);

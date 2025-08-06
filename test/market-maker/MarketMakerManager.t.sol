@@ -106,14 +106,14 @@ contract MarketMakerManagerTest is BaseTest {
         usdc.mint(mm, amount);
         vm.prank(mm);
 
-        uint256 balanceBefore = size.getUserView(address(marketMakerManager)).borrowATokenBalance;
+        uint256 balanceBefore = size.getUserView(address(marketMakerManager)).borrowTokenBalance;
 
         vm.prank(mm);
         usdc.approve(address(marketMakerManager), amount);
         vm.prank(mm);
         marketMakerManager.deposit(size, usdc, amount);
 
-        uint256 balanceAfter = size.getUserView(address(marketMakerManager)).borrowATokenBalance;
+        uint256 balanceAfter = size.getUserView(address(marketMakerManager)).borrowTokenBalance;
         assertEq(balanceAfter, balanceBefore + amount);
     }
 
@@ -122,14 +122,14 @@ contract MarketMakerManagerTest is BaseTest {
         usdc.mint(mm, amount);
         vm.prank(mm);
 
-        uint256 balanceBefore = size.getUserView(address(marketMakerManager)).borrowATokenBalance;
+        uint256 balanceBefore = size.getUserView(address(marketMakerManager)).borrowTokenBalance;
 
         vm.prank(mm);
         usdc.transfer(address(marketMakerManager), amount);
         vm.prank(bot);
         marketMakerManager.depositDirect(size, usdc, amount);
 
-        uint256 balanceAfter = size.getUserView(address(marketMakerManager)).borrowATokenBalance;
+        uint256 balanceAfter = size.getUserView(address(marketMakerManager)).borrowTokenBalance;
         assertEq(balanceAfter, balanceBefore + amount);
     }
 
@@ -154,7 +154,7 @@ contract MarketMakerManagerTest is BaseTest {
         marketMakerManager.withdraw(size, usdc, amount2);
 
         uint256 balanceAfter = usdc.balanceOf(mm);
-        uint256 balanceAfterSize = size.getUserView(address(marketMakerManager)).borrowATokenBalance;
+        uint256 balanceAfterSize = size.getUserView(address(marketMakerManager)).borrowTokenBalance;
         assertEq(balanceAfter, balanceBefore + amount2);
         assertEq(balanceAfterSize, amount - amount2, balanceAfterSize);
     }
@@ -175,7 +175,7 @@ contract MarketMakerManagerTest is BaseTest {
         marketMakerManager.withdraw(size, usdc, amount2);
 
         uint256 balanceAfter = usdc.balanceOf(mm);
-        uint256 balanceAfterSize = size.getUserView(address(marketMakerManager)).borrowATokenBalance;
+        uint256 balanceAfterSize = size.getUserView(address(marketMakerManager)).borrowTokenBalance;
         assertEq(balanceAfter, balanceBefore + amount2);
         assertEq(balanceAfterSize, amount - amount2, balanceAfterSize);
     }
@@ -485,7 +485,7 @@ contract MarketMakerManagerTest is BaseTest {
     }
 
     function test_MarketMakerManager_emergencyWithdraw_single_token_borrow_token() public {
-        d.borrowATokenV1_5 = address(sizeFactory.createBorrowATokenV1_5(variablePool, IERC20Metadata(address(weth))));
+        d.borrowTokenVault = address(sizeFactory.createBorrowTokenVault(variablePool, IERC20Metadata(address(weth))));
         d.underlyingBorrowToken = address(weth);
         sizeFactory.createMarket(f, r, o, d);
 

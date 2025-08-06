@@ -229,7 +229,7 @@ contract AutoRepayTest is BaseTest {
         console.log("\n=== Final State ===");
         Vars memory _after = _state();
         console.log("Bob's Debt Balance:", _after.bob.debtBalance);
-        console.log("Bob's Borrow AToken Balance:", _after.bob.borrowATokenBalance);
+        console.log("Bob's Borrow Token Balance:", _after.bob.borrowTokenBalance);
         console.log("Bob's Collateral Balance:", _after.bob.collateralTokenBalance);
         console.log("WETH Balance (Bob):", weth.balanceOf(bob));
         console.log("USDC Balance (Bob):", usdc.balanceOf(bob));
@@ -280,7 +280,7 @@ contract AutoRepayTest is BaseTest {
         console.log("\n=== Final State ===");
         Vars memory _after = _state();
         console.log("Bob's Debt Balance:", _after.bob.debtBalance);
-        console.log("Bob's Borrow AToken Balance:", _after.bob.borrowATokenBalance);
+        console.log("Bob's Borrow Token Balance:", _after.bob.borrowTokenBalance);
         console.log("Bob's Collateral Balance:", _after.bob.collateralTokenBalance);
         console.log("WETH Balance (Bob):", weth.balanceOf(bob));
         console.log("USDC Balance (Bob):", usdc.balanceOf(bob));

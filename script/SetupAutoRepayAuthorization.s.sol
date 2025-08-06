@@ -18,36 +18,36 @@ contract SetupAutoRepayAuthorization is Script, Addresses {
         string memory path = string.concat(root, "/deployments/");
         string memory chainIdStr = vm.toString(block.chainid);
         path = string.concat(path, string.concat(chainIdStr, ".json"));
-        
+
         string memory deploymentData = vm.readFile(path);
         bytes memory autoRepayAddressBytes = vm.parseJson(deploymentData, ".deployments.AutoRepay");
         string memory autoRepayAddressStr = string(autoRepayAddressBytes);
         address autoRepayAddress = vm.parseAddress(autoRepayAddressStr);
-        
+
         console.log("Setting up authorization for AutoRepay at:", autoRepayAddress);
-        
+
         vm.startBroadcast();
-        
+
         // Get the AutoRepay contract instance
         AutoRepay autoRepay = AutoRepay(autoRepayAddress);
-        
+
         // Get the actions bitmap that AutoRepay requires
         ActionsBitmap actionsBitmap = autoRepay.getActionsBitmap();
-        
+
         console.log("AutoRepay requires actions bitmap - DEPOSIT and WITHDRAW permissions");
-        
+
         // Get the Size Factory address
         address sizeFactoryAddress = addresses[block.chainid][CONTRACT.SIZE_FACTORY];
         ISizeFactory sizeFactory = ISizeFactory(sizeFactoryAddress);
-        
+
         console.log("Size Factory address:", sizeFactoryAddress);
-        
+
         // Set authorization for the AutoRepay contract
         // Note: This should be called by the borrower or authorized party
         sizeFactory.setAuthorization(autoRepayAddress, actionsBitmap);
-        
+
         console.log("Authorization set successfully for AutoRepay");
-        
+
         vm.stopBroadcast();
     }
-} 
+}

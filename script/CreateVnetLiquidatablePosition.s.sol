@@ -104,7 +104,9 @@ contract CreateVnetLiquidatablePosition is Script, Addresses {
                         tenor: _tenor,
                         exactAmountIn: _exactAmountIn,
                         deadline: block.timestamp + 1 days,
-                        maxAPR: type(uint256).max
+                        maxAPR: type(uint256).max,
+                        collectionId: type(uint256).max,
+                        rateProvider: address(0)
                     })
                 )
             )

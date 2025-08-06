@@ -107,13 +107,13 @@ contract LeverageUp is DexSwap, IRequiresAuthorization {
                 borrowPercent
             );
 
-            uint256 borrowATokenAmount = dataView.borrowAToken.balanceOf(address(this));
-            if (borrowATokenAmount == 0) break;
+            uint256 borrowTokenAmount = dataView.borrowTokenVault.balanceOf(address(this));
+            if (borrowTokenAmount == 0) break;
 
             size.withdraw(
                 WithdrawParams({
                     token: address(dataView.underlyingBorrowToken),
-                    amount: borrowATokenAmount,
+                    amount: borrowTokenAmount,
                     to: address(this)
                 })
             );
@@ -175,13 +175,13 @@ contract LeverageUp is DexSwap, IRequiresAuthorization {
             riskConfig.crOpening * 10 ** dataView.collateralToken.decimals()
         ) - currentLeverage.totalDebt;
         for (uint256 j = 0; j < sellCreditMarketParamsArray.length; j++) {
-            uint256 lenderCashBalance = dataView.borrowAToken.balanceOf(sellCreditMarketParamsArray[j].lender);
+            uint256 lenderCashBalance = dataView.borrowTokenVault.balanceOf(sellCreditMarketParamsArray[j].lender);
             sellCreditMarketParamsArray[j].amount =
                 Math.mulDivDown(Math.min(lenderCashBalance, maxBorrowAmount), borrowPercent, PERCENT); // quick fix to account for swap fees
 
             if (
                 size.getSellCreditMarketSwapData(sellCreditMarketParamsArray[j]).creditAmountIn
-                    < riskConfig.minimumCreditBorrowAToken
+                    < riskConfig.minimumCreditBorrowToken
             ) {
                 continue;
             }

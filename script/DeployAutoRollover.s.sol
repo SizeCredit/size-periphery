@@ -30,7 +30,7 @@ contract DeployAutoRollover is Script, Addresses {
             msg.sender, // owner
             addressProvider,
             1 days, // earlyRepaymentBuffer
-            2 days,  // minTenor
+            2 days, // minTenor
             7 days // maxTenor
         );
 
@@ -40,20 +40,14 @@ contract DeployAutoRollover is Script, Addresses {
 
         console.log("Deployed AutoRollover proxy at:", address(autoRollover));
 
-        exportDeploymentDetails(
-            autoRollover,
-            address(autoRolloverImplementation),
-            addressProvider
-        );
+        exportDeploymentDetails(autoRollover, address(autoRolloverImplementation), addressProvider);
 
         vm.stopBroadcast();
     }
 
-    function exportDeploymentDetails(
-        AutoRollover autoRollover,
-        address implementation,
-        address addressProvider
-    ) internal {
+    function exportDeploymentDetails(AutoRollover autoRollover, address implementation, address addressProvider)
+        internal
+    {
         string memory root = vm.projectRoot();
         string memory path = string.concat(root, "/deployments/autorollover/");
         string memory chainIdStr = vm.toString(block.chainid);
@@ -66,11 +60,11 @@ contract DeployAutoRollover is Script, Addresses {
         deploymentsObject = vm.serializeAddress(".deployments", "AutoRollover", address(autoRollover));
         deploymentsObject = vm.serializeAddress(".deployments", "AutoRolloverImplementation", implementation);
         deploymentsObject = vm.serializeAddress(".deployments", "addressProvider", addressProvider);
-        
+
         // Combine serialized data
         finalObject = vm.serializeString(".", "deployments", deploymentsObject);
 
         // Write to JSON
         vm.writeJson(finalObject, path);
     }
-} 
+}

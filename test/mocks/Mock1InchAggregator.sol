@@ -27,14 +27,20 @@ contract Mock1InchAggregator {
 
         // Calculate the amount of toToken to return based on the price feed
         uint256 price = priceFeed.getPrice();
-        
+
         // Handle different token decimal combinations
         uint256 toTokenAmount;
-        if (fromToken == address(0xF62849F9A0B5Bf2913b396098F7c7019b51A820a) && toToken == address(0x2e234DAe75C793f67A35089C9d99245E1C58470b)) {
+        if (
+            fromToken == address(0xF62849F9A0B5Bf2913b396098F7c7019b51A820a)
+                && toToken == address(0x2e234DAe75C793f67A35089C9d99245E1C58470b)
+        ) {
             // USDC (6 decimals) to WETH (18 decimals)
             // Price is WETH/USDC, so USDC amount * price = WETH amount
             toTokenAmount = (amount * price) / 1e18;
-        } else if (fromToken == address(0x2e234DAe75C793f67A35089C9d99245E1C58470b) && toToken == address(0xF62849F9A0B5Bf2913b396098F7c7019b51A820a)) {
+        } else if (
+            fromToken == address(0x2e234DAe75C793f67A35089C9d99245E1C58470b)
+                && toToken == address(0xF62849F9A0B5Bf2913b396098F7c7019b51A820a)
+        ) {
             // WETH (18 decimals) to USDC (6 decimals)
             // Price is WETH/USDC, so WETH amount * price = USDC amount
             toTokenAmount = (amount * price) / 1e18;

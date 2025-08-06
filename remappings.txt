@@ -1,7 +1,8 @@
 @openzeppelin/contracts=lib/size-solidity/lib/openzeppelin-contracts/contracts
 @openzeppelin/contracts-upgradeable=lib/size-solidity/lib/openzeppelin-contracts-upgradeable/contracts
 @chainlink=lib/size-solidity/lib/chainlink
-@solady=lib/size-solidity/lib/solady/src
+@solady=lib/size-solidity/lib/solady
+solmate=lib/size-solidity/lib/ERC-7540-Reference/lib/solmate/src
 @aave=lib/size-solidity/lib/aave-v3-core/contracts
 @size=lib/size-solidity/
 @src=lib/size-solidity/src

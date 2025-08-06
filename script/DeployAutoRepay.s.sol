@@ -22,17 +22,13 @@ contract DeployAutoRepay is Script, Addresses {
         address uniswapV3Router = addresses[block.chainid][CONTRACT.UNISWAP_V3_ROUTER];
 
         // Deploy implementation contract
-        AutoRepay autoRepayImplementation = new AutoRepay(
-            aggregator1inch,
-            unoswapRouter,
-            uniswapV2Router,
-            uniswapV3Router
-        );
+        AutoRepay autoRepayImplementation =
+            new AutoRepay(aggregator1inch, unoswapRouter, uniswapV2Router, uniswapV3Router);
 
         console.log("Deployed AutoRepay implementation at:", address(autoRepayImplementation));
 
         // Prepare initialization data
-        // Parameters: owner, addressProvider, earlyRepaymentBuffer 
+        // Parameters: owner, addressProvider, earlyRepaymentBuffer
         bytes memory initData = abi.encodeWithSelector(
             AutoRepay.initialize.selector,
             msg.sender, // owner
@@ -84,11 +80,11 @@ contract DeployAutoRepay is Script, Addresses {
         deploymentsObject = vm.serializeAddress(".deployments", "unoswapRouter", unoswapRouter);
         deploymentsObject = vm.serializeAddress(".deployments", "uniswapV2Router", uniswapV2Router);
         deploymentsObject = vm.serializeAddress(".deployments", "uniswapV3Router", uniswapV3Router);
-        
+
         // Combine serialized data
         finalObject = vm.serializeString(".", "deployments", deploymentsObject);
 
         // Write to JSON
         vm.writeJson(finalObject, path);
     }
-} 
+}

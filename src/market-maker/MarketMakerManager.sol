@@ -24,7 +24,6 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {YieldCurvesValidationLibrary} from "src/libraries/YieldCurvesValidationLibrary.sol";
 import {MarketMakerManagerFactory} from "src/market-maker/MarketMakerManagerFactory.sol";
-import {AutoCopyCollection} from "src/authorization/AutoCopyCollection.sol";
 
 contract MarketMakerManager is Initializable, Ownable2StepUpgradeable {
     using SafeERC20 for IERC20Metadata;
@@ -146,26 +145,6 @@ contract MarketMakerManager is Initializable, Ownable2StepUpgradeable {
         size.sellCreditLimit(params);
     }
 
-    /// @notice Add a market to the collection
-    /// @param autoCopyCollection The AutoCopyCollection contract
-    /// @param market The market to add
-    function addToCollection(AutoCopyCollection autoCopyCollection, ISize market)
-        external
-        onlyBotWhenNotPausedOrOwner
-    {
-        autoCopyCollection.addToCollection(market);
-    }
-
-    /// @notice Remove a market from the collection
-    /// @param autoCopyCollection The AutoCopyCollection contract
-    /// @param market The market to remove
-    function removeFromCollection(AutoCopyCollection autoCopyCollection, ISize market)
-        external
-        onlyBotWhenNotPausedOrOwner
-    {
-        autoCopyCollection.removeFromCollection(market);
-    }
-
     /*//////////////////////////////////////////////////////////////
                             EMERGENCY WITHDRAWER/OWNER FUNCTIONS
     //////////////////////////////////////////////////////////////*/
@@ -277,17 +256,13 @@ contract MarketMakerManager is Initializable, Ownable2StepUpgradeable {
     /// @param data The data of the market
     /// @param userView The user view of the market
     function _tryWithdrawBorrowToken(ISize size, DataView memory data, UserView memory userView) private {
-        uint256 borrowATokenBalance = userView.borrowATokenBalance;
-        if (borrowATokenBalance > 0) {
+        uint256 borrowTokenBalance = userView.borrowTokenBalance;
+        if (borrowTokenBalance > 0) {
             _tryCall(
                 address(size),
                 abi.encodeCall(
                     ISize.withdraw,
-                    WithdrawParams({
-                        token: address(data.underlyingBorrowToken),
-                        amount: borrowATokenBalance,
-                        to: owner()
-                    })
+                    WithdrawParams({token: address(data.underlyingBorrowToken), amount: borrowTokenBalance, to: owner()})
                 )
             );
         }

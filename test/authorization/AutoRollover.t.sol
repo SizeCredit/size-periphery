@@ -169,7 +169,17 @@ contract AutoRolloverTest is BaseTest {
 
         vm.prank(candy);
         vm.expectRevert(abi.encodeWithSelector(OWNER_ONLY, candy));
-        autoRollover.rollover(size, debtPositionId, bob, alice, rollover, type(uint256).max, block.timestamp, type(uint256).max, address(0));
+        autoRollover.rollover(
+            size,
+            debtPositionId,
+            bob,
+            alice,
+            rollover,
+            type(uint256).max,
+            block.timestamp,
+            type(uint256).max,
+            address(0)
+        );
 
         bool shouldRevert = dueDate > block.timestamp + autoRollover.earlyRepaymentBuffer();
 
@@ -179,13 +189,23 @@ contract AutoRolloverTest is BaseTest {
             );
         }
         vm.prank(james);
-        autoRollover.rollover(size, debtPositionId, bob, alice, rollover, type(uint256).max, block.timestamp, type(uint256).max, address(0));
+        autoRollover.rollover(
+            size,
+            debtPositionId,
+            bob,
+            alice,
+            rollover,
+            type(uint256).max,
+            block.timestamp,
+            type(uint256).max,
+            address(0)
+        );
 
         if (!shouldRevert) {
             Vars memory _after = _state();
 
             assertGt(_after.bob.debtBalance, _before.bob.debtBalance);
-            assertEq(_after.bob.borrowATokenBalance, 0);
+            assertEq(_after.bob.borrowTokenBalance, 0);
         }
     }
 
@@ -333,7 +353,17 @@ contract AutoRolloverTest is BaseTest {
         // Try rollover with original buffer (should fail)
         vm.prank(james);
         vm.expectRevert(); // Expect any revert
-        autoRollover.rollover(size, debtPositionId, bob, alice, 2 * tenor, type(uint256).max, block.timestamp, type(uint256).max, address(0));
+        autoRollover.rollover(
+            size,
+            debtPositionId,
+            bob,
+            alice,
+            2 * tenor,
+            type(uint256).max,
+            block.timestamp,
+            type(uint256).max,
+            address(0)
+        );
 
         // Increase buffer to allow earlier rollover
         vm.prank(james);
@@ -341,12 +371,22 @@ contract AutoRolloverTest is BaseTest {
 
         // Try rollover again (should succeed)
         vm.prank(james);
-        autoRollover.rollover(size, debtPositionId, bob, alice, 2 * tenor, type(uint256).max, block.timestamp, type(uint256).max, address(0));
+        autoRollover.rollover(
+            size,
+            debtPositionId,
+            bob,
+            alice,
+            2 * tenor,
+            type(uint256).max,
+            block.timestamp,
+            type(uint256).max,
+            address(0)
+        );
 
         // Verify loan was rolled over
         Vars memory _after = _state();
         assertGt(_after.bob.debtBalance, 0);
-        assertEq(_after.bob.borrowATokenBalance, 0);
+        assertEq(_after.bob.borrowTokenBalance, 0);
     }
 
     function test_AutoRollover_rollover_afterMaxTenorChange() public {
@@ -368,7 +408,17 @@ contract AutoRolloverTest is BaseTest {
         uint256 longTenor = 3 * tenor; // 6 days
         vm.prank(james);
         vm.expectRevert();
-        autoRollover.rollover(size, debtPositionId, bob, alice, longTenor, type(uint256).max, block.timestamp, type(uint256).max, address(0));
+        autoRollover.rollover(
+            size,
+            debtPositionId,
+            bob,
+            alice,
+            longTenor,
+            type(uint256).max,
+            block.timestamp,
+            type(uint256).max,
+            address(0)
+        );
 
         // Increase maxTenor to allow longer rollover
         uint256 newMaxTenor = 4 * tenor; // 8 days
@@ -381,11 +431,21 @@ contract AutoRolloverTest is BaseTest {
         // Try rollover again with a tenor that's within the new range
         uint256 validTenor = tenor + 1 days; // 3 days
         vm.prank(james);
-        autoRollover.rollover(size, debtPositionId, bob, alice, validTenor, type(uint256).max, block.timestamp, type(uint256).max, address(0));
+        autoRollover.rollover(
+            size,
+            debtPositionId,
+            bob,
+            alice,
+            validTenor,
+            type(uint256).max,
+            block.timestamp,
+            type(uint256).max,
+            address(0)
+        );
 
         // Verify loan was rolled over
         Vars memory _after = _state();
         assertGt(_after.bob.debtBalance, 0);
-        assertEq(_after.bob.borrowATokenBalance, 0);
+        assertEq(_after.bob.borrowTokenBalance, 0);
     }
 }

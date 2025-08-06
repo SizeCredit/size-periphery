@@ -68,7 +68,9 @@ contract ForkAutoRolloverTest is ForkTestVirtualsUSDC, Addresses {
         // Impersonate owner and call rollover
         vm.startPrank(address(this));
         console.log("Calling rollover...");
-        autoRollover.rollover(size, DEBT_POSITION_ID, BORROWER, LENDER, tenor, maxAPR, deadline, type(uint256).max, address(0));
+        autoRollover.rollover(
+            size, DEBT_POSITION_ID, BORROWER, LENDER, tenor, maxAPR, deadline, type(uint256).max, address(0)
+        );
         vm.stopPrank();
         console.log("rollover called");
 

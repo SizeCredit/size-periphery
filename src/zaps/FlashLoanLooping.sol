@@ -13,7 +13,10 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {Errors} from "@size/src/market/libraries/Errors.sol";
 import {RESERVED_ID} from "@size/src/market/libraries/LoanLibrary.sol";
-import {SellCreditMarketParams, SellCreditMarketOnBehalfOfParams} from "@size/src/market/libraries/actions/SellCreditMarket.sol";
+import {
+    SellCreditMarketParams,
+    SellCreditMarketOnBehalfOfParams
+} from "@size/src/market/libraries/actions/SellCreditMarket.sol";
 import {DepositOnBehalfOfParams, DepositParams} from "@size/src/market/libraries/actions/Deposit.sol";
 import {WithdrawOnBehalfOfParams, WithdrawParams} from "@size/src/market/libraries/actions/Withdraw.sol";
 import {DexSwap, SwapParams} from "src/liquidator/DexSwap.sol";
@@ -81,9 +84,8 @@ contract FlashLoanLooping is Ownable, FlashLoanReceiverBase, DexSwap {
         SellCreditMarketParams[] memory sellCreditMarketParamsArray,
         address onBehalfOf
     ) internal {
-
         bytes memory depositCall = abi.encodeWithSelector(
-            ISize.deposit.selector, 
+            ISize.deposit.selector,
             DepositOnBehalfOfParams({
                 params: DepositParams({token: collateralToken, amount: collateralBalance, to: onBehalfOf}),
                 onBehalfOf: address(this)
@@ -131,22 +133,17 @@ contract FlashLoanLooping is Ownable, FlashLoanReceiverBase, DexSwap {
         address borrowToken,
         SellCreditMarketParams[] memory sellCreditMarketParamsArray,
         address onBehalfOf,
-        address recipient
+        address /* recipient */
     ) internal returns (uint256 borrowedAmount) {
         // Deposit collateral
         uint256 collateralBalance = IERC20(collateralToken).balanceOf(address(this));
         IERC20(collateralToken).forceApprove(sizeMarket, collateralBalance);
 
         ISize size = ISize(sizeMarket);
-        
+
         // Execute the multicall in a separate function to avoid stack too deep
         _executeLoopMulticall(
-            size,
-            collateralToken,
-            borrowToken,
-            collateralBalance,
-            sellCreditMarketParamsArray,
-            onBehalfOf
+            size, collateralToken, borrowToken, collateralBalance, sellCreditMarketParamsArray, onBehalfOf
         );
 
         // Return the amount borrowed
@@ -210,8 +207,6 @@ contract FlashLoanLooping is Ownable, FlashLoanReceiverBase, DexSwap {
         address recipient,
         uint256 targetLeveragePercent
     ) external {
-        ISize size = ISize(sizeMarket);
-
         bool depositProfits = recipient != address(0);
         LoopParams memory loopParams = LoopParams({
             sizeMarket: sizeMarket,
@@ -277,7 +272,15 @@ contract FlashLoanLooping is Ownable, FlashLoanReceiverBase, DexSwap {
         }
 
         // Settle the flash loan
-        _settleFlashLoan(assets, amounts, premiums, loopParams.recipient, loopParams.depositProfits, loopParams.sizeMarket, loopParams.onBehalfOf);
+        _settleFlashLoan(
+            assets,
+            amounts,
+            premiums,
+            loopParams.recipient,
+            loopParams.depositProfits,
+            loopParams.sizeMarket,
+            loopParams.onBehalfOf
+        );
 
         return true;
     }
@@ -315,4 +318,4 @@ contract FlashLoanLooping is Ownable, FlashLoanReceiverBase, DexSwap {
         actions[1] = Action.SELL_CREDIT_MARKET;
         return Authorization.getActionsBitmap(actions);
     }
-} 
+}

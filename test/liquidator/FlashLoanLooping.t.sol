@@ -26,7 +26,7 @@ contract FlashLoanLoopingTest is BaseTest {
 
     function setUp() public override {
         super.setUp();
-        
+
         // Initialize mock contracts
         mockAavePool = new MockAavePool();
         mock1InchAggregator = new Mock1InchAggregator(address(priceFeed));
@@ -58,11 +58,11 @@ contract FlashLoanLoopingTest is BaseTest {
         console.log("mockAavePool address:", address(mockAavePool));
         // Setup initial state
         _setPrice(1e18);
-        
+
         // User deposits collateral and USDC
         _deposit(alice, weth, 100e18);
         _deposit(alice, usdc, 100e6);
-        
+
         // Lender provides credit limit
         _deposit(bob, usdc, 100e6);
         _buyCreditLimit(bob, block.timestamp + 365 days, YieldCurveHelper.pointCurve(365 days, 0.03e18));
@@ -83,19 +83,17 @@ contract FlashLoanLoopingTest is BaseTest {
         uint256 beforeAliceUSDC = usdc.balanceOf(alice);
 
         console.log("Before loop operation:");
+        console.log("alice WETH balance:", beforeAliceWETH);
+        console.log("alice USDC balance:", beforeAliceUSDC);
         console.log("alice collateral token balance:", _before.alice.collateralTokenBalance);
         console.log("alice debt balance:", _before.alice.debtBalance);
-        console.log("alice borrowAToken balance:", _before.alice.borrowATokenBalance);
+        console.log("alice borrowToken balance:", _before.alice.borrowTokenBalance);
         console.log("flashLoanLooping USDC balance:", usdc.balanceOf(address(flashLoanLooping)));
         console.log("flashLoanLooping WETH balance:", weth.balanceOf(address(flashLoanLooping)));
 
         // Create swap parameters to convert USDC to WETH
-        OneInchParams memory oneInchParams = OneInchParams({
-            fromToken: address(usdc),
-            toToken: address(weth),
-            minReturn: 0,
-            data: ""
-        });
+        OneInchParams memory oneInchParams =
+            OneInchParams({fromToken: address(usdc), toToken: address(weth), minReturn: 0, data: ""});
 
         SwapParams[] memory swapParamsArray = new SwapParams[](1);
         swapParamsArray[0] = SwapParams({method: SwapMethod.OneInch, data: abi.encode(oneInchParams)});
@@ -142,16 +140,22 @@ contract FlashLoanLoopingTest is BaseTest {
         uint256 afterAliceUSDC = usdc.balanceOf(alice);
 
         console.log("After loop operation:");
+        console.log("alice WETH balance:", afterAliceWETH);
+        console.log("alice USDC balance:", afterAliceUSDC);
         console.log("alice collateral token balance:", _after.alice.collateralTokenBalance);
         console.log("alice debt balance:", _after.alice.debtBalance);
-        console.log("alice borrowAToken balance:", _after.alice.borrowATokenBalance);
+        console.log("alice borrowToken balance:", _after.alice.borrowTokenBalance);
         console.log("flashLoanLooping USDC balance:", usdc.balanceOf(address(flashLoanLooping)));
         console.log("flashLoanLooping WETH balance:", weth.balanceOf(address(flashLoanLooping)));
 
         // Verify the loop was successful
         assertGt(_after.alice.debtBalance, _before.alice.debtBalance, "User should have increased debt");
-        assertGt(_after.alice.collateralTokenBalance, _before.alice.collateralTokenBalance, "User should have increased collateral");
-        
+        assertGt(
+            _after.alice.collateralTokenBalance,
+            _before.alice.collateralTokenBalance,
+            "User should have increased collateral"
+        );
+
         // Verify target leverage was achieved
         uint256 currentLeverage = flashLoanLooping.currentLeveragePercent(ISize(address(size)), alice);
         assertGe(currentLeverage, targetLeveragePercent, "Target leverage should be achieved");
@@ -165,11 +169,11 @@ contract FlashLoanLoopingTest is BaseTest {
     //     console.log("mockAavePool address:", address(mockAavePool));
     //     // Setup initial state
     //     _setPrice(1e18);
-        
+
     //     // User deposits collateral and USDC
     //     _deposit(alice, weth, 1000000000e18);
     //     _deposit(alice, usdc, 10000e6);
-        
+
     //     // Lender provides credit limit
     //     _deposit(bob, usdc, 100e6);
     //     _buyCreditLimit(bob, block.timestamp + 365 days, YieldCurveHelper.pointCurve(365 days, 0.03e18));
@@ -273,12 +277,8 @@ contract FlashLoanLoopingTest is BaseTest {
         // User does NOT authorize the FlashLoanLooping contract
         // This should cause the transaction to revert
 
-        OneInchParams memory oneInchParams = OneInchParams({
-            fromToken: address(usdc),
-            toToken: address(weth),
-            minReturn: 0,
-            data: ""
-        });
+        OneInchParams memory oneInchParams =
+            OneInchParams({fromToken: address(usdc), toToken: address(weth), minReturn: 0, data: ""});
 
         SwapParams[] memory swapParamsArray = new SwapParams[](1);
         swapParamsArray[0] = SwapParams({method: SwapMethod.OneInch, data: abi.encode(oneInchParams)});
@@ -329,12 +329,8 @@ contract FlashLoanLoopingTest is BaseTest {
         _setAuthorization(alice, address(flashLoanLooping), Authorization.getActionsBitmap(Action.WITHDRAW));
         _setAuthorization(alice, address(flashLoanLooping), Authorization.getActionsBitmap(Action.SELL_CREDIT_MARKET));
 
-        OneInchParams memory oneInchParams = OneInchParams({
-            fromToken: address(usdc),
-            toToken: address(weth),
-            minReturn: 0,
-            data: ""
-        });
+        OneInchParams memory oneInchParams =
+            OneInchParams({fromToken: address(usdc), toToken: address(weth), minReturn: 0, data: ""});
 
         SwapParams[] memory swapParamsArray = new SwapParams[](1);
         swapParamsArray[0] = SwapParams({method: SwapMethod.OneInch, data: abi.encode(oneInchParams)});
@@ -383,11 +379,11 @@ contract FlashLoanLoopingTest is BaseTest {
         _setPrice(1e18);
         _deposit(alice, weth, 100e18);
         _deposit(alice, usdc, 100e6);
-        
+
         // Multiple lenders provide credit limits
         _deposit(bob, usdc, 50e6);
         _buyCreditLimit(bob, block.timestamp + 365 days, YieldCurveHelper.pointCurve(365 days, 0.03e18));
-        
+
         _deposit(carol, usdc, 50e6);
         _buyCreditLimit(carol, block.timestamp + 365 days, YieldCurveHelper.pointCurve(365 days, 0.04e18));
 
@@ -408,16 +404,12 @@ contract FlashLoanLoopingTest is BaseTest {
         console.log("Before loop operation:");
         console.log("alice collateral token balance:", _before.alice.collateralTokenBalance);
         console.log("alice debt balance:", _before.alice.debtBalance);
-        console.log("alice borrowAToken balance:", _before.alice.borrowATokenBalance);
+        console.log("alice borrowToken balance:", _before.alice.borrowTokenBalance);
         console.log("flashLoanLooping USDC balance:", usdc.balanceOf(address(flashLoanLooping)));
         console.log("flashLoanLooping WETH balance:", weth.balanceOf(address(flashLoanLooping)));
 
-        OneInchParams memory oneInchParams = OneInchParams({
-            fromToken: address(usdc),
-            toToken: address(weth),
-            minReturn: 0,
-            data: ""
-        });
+        OneInchParams memory oneInchParams =
+            OneInchParams({fromToken: address(usdc), toToken: address(weth), minReturn: 0, data: ""});
 
         SwapParams[] memory swapParamsArray = new SwapParams[](1);
         swapParamsArray[0] = SwapParams({method: SwapMethod.OneInch, data: abi.encode(oneInchParams)});
@@ -476,26 +468,30 @@ contract FlashLoanLoopingTest is BaseTest {
         console.log("After loop operation:");
         console.log("alice collateral token balance:", _after.alice.collateralTokenBalance);
         console.log("alice debt balance:", _after.alice.debtBalance);
-        console.log("alice borrowAToken balance:", _after.alice.borrowATokenBalance);
+        console.log("alice borrowToken balance:", _after.alice.borrowTokenBalance);
         console.log("flashLoanLooping USDC balance:", usdc.balanceOf(address(flashLoanLooping)));
         console.log("flashLoanLooping WETH balance:", weth.balanceOf(address(flashLoanLooping)));
 
         // Verify the loop was successful with multiple lenders
         assertGt(_after.alice.debtBalance, _before.alice.debtBalance, "User should have increased debt");
-        assertGt(_after.alice.collateralTokenBalance, _before.alice.collateralTokenBalance, "User should have increased collateral");
+        assertGt(
+            _after.alice.collateralTokenBalance,
+            _before.alice.collateralTokenBalance,
+            "User should have increased collateral"
+        );
 
         // Verify target leverage was achieved
         uint256 currentLeverage = flashLoanLooping.currentLeveragePercent(ISize(address(size)), alice);
         assertGe(currentLeverage, targetLeveragePercent, "Target leverage should be achieved");
     }
 
-    function test_FlashLoanLooping_getActionsBitmap() public {
+    function test_FlashLoanLooping_getActionsBitmap() public view {
         // Test that the contract returns the correct actions bitmap
         Action[] memory actions = new Action[](3);
         actions[0] = Action.DEPOSIT;
         actions[2] = Action.SELL_CREDIT_MARKET;
         uint256 expectedBitmap = Authorization.toUint256(Authorization.getActionsBitmap(actions));
-        
+
         assertEq(
             Authorization.toUint256(flashLoanLooping.getActionsBitmap()),
             expectedBitmap,
@@ -503,13 +499,11 @@ contract FlashLoanLoopingTest is BaseTest {
         );
     }
 
-    function test_FlashLoanLooping_description() public {
+    function test_FlashLoanLooping_description() public view {
         // Test the description function
         string memory desc = flashLoanLooping.description();
         assertEq(
-            desc,
-            "FlashLoanLooping (DexSwap takes SwapParams[] as input)",
-            "Description should match expected value"
+            desc, "FlashLoanLooping (DexSwap takes SwapParams[] as input)", "Description should match expected value"
         );
     }
 
@@ -518,15 +512,15 @@ contract FlashLoanLoopingTest is BaseTest {
         _setPrice(1e18);
         _deposit(alice, weth, 100e18);
         _deposit(alice, usdc, 100e6);
-        
+
         // Check initial leverage (should be 100% = no leverage)
         uint256 initialLeverage = flashLoanLooping.currentLeveragePercent(ISize(address(size)), alice);
         assertEq(initialLeverage, PERCENT, "Initial leverage should be 100%");
-        
+
         // Borrow some USDC to increase leverage
         _deposit(bob, usdc, 50e6);
         _buyCreditLimit(bob, block.timestamp + 365 days, YieldCurveHelper.pointCurve(365 days, 0.03e18));
-        
+
         // User borrows some USDC
         vm.prank(alice);
         size.sellCreditMarket(
@@ -542,9 +536,9 @@ contract FlashLoanLoopingTest is BaseTest {
                 rateProvider: address(0)
             })
         );
-        
+
         // Check leverage after borrowing (should be > 100%)
         uint256 leveragedLeverage = flashLoanLooping.currentLeveragePercent(ISize(address(size)), alice);
         assertGt(leveragedLeverage, PERCENT, "Leverage should be greater than 100% after borrowing");
     }
-} 
+}

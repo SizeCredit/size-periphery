@@ -3,7 +3,7 @@ pragma solidity 0.8.23;
 
 import {console} from "forge-std/console.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
-import {FixedPointMathLib} from "@solady/utils/FixedPointMathLib.sol";
+import {FixedPointMathLib} from "@solady/src/utils/FixedPointMathLib.sol";
 import {YieldCurvesValidationLibrary} from "src/libraries/YieldCurvesValidationLibrary.sol";
 import {PiecewiseIntersectionLibrary} from "src/libraries/PiecewiseIntersectionLibrary.sol";
 import {YieldCurveHelper} from "@size/test/helpers/libraries/YieldCurveHelper.sol";

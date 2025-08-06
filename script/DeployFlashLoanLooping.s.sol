@@ -14,10 +14,16 @@ contract DeployFlashLoanLooping is Script, Addresses {
         vm.startBroadcast();
 
         address addressProvider = addresses[block.chainid][CONTRACT.ADDRESS_PROVIDER];
-        address aggregator1inch = addresses[block.chainid][CONTRACT.AGGREGATOR_1INCH];
-        address unoswapRouter = addresses[block.chainid][CONTRACT.UNOSWAP_ROUTER];
+        address aggregator1inch = address(0x1);
+        address unoswapRouter = address(0x1);
         address uniswapV2Router = addresses[block.chainid][CONTRACT.UNISWAP_V2_ROUTER];
         address uniswapV3Router = addresses[block.chainid][CONTRACT.UNISWAP_V3_ROUTER];
+
+        console.log("addressProvider", addressProvider);
+        console.log("aggregator1inch", aggregator1inch);
+        console.log("unoswapRouter", unoswapRouter);
+        console.log("uniswapV2Router", uniswapV2Router);
+        console.log("uniswapV3Router", uniswapV3Router);
 
         FlashLoanLooping flashLoanLooping =
             new FlashLoanLooping(addressProvider, aggregator1inch, unoswapRouter, uniswapV2Router, uniswapV3Router);
